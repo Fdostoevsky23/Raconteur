@@ -1,0 +1,1204 @@
+---
+// src/pages/dashboard.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabase } from '../lib/supabase';
+
+// Note: In Astro, client-side auth checks for protected pages 
+// are usually handled by redirecting in the browser if not logged in.
+// We'll add the client-side protection script at the bottom.
+---
+
+<BaseLayout title="My Stories | Raconteur">
+    <main class="dashboard-container">
+        <script is:inline>
+      // Kill any stale service worker + its caches (fixes stale back-button renders)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
+      }
+      if ('caches' in window) {
+        caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+      }
+    </script>
+    <header class="dash-header">
+      <h1>Your Stories</h1>
+      <a href="/submit" class="btn-primary" id="writeNewBtn" style="display: none;">+ Write New Story/Poetry</a>
+    </header>
+    <p class="badges-note">✦ Writer badges are coming soon — earned for stories published, words written, and milestones reached. They'll appear on every writer's public page.</p>
+        <div id="recsWidget" class="recs-widget" style="display:none;">
+        <h3 class="recs-title">✦ Recommended for you</h3>
+        <div id="recsList"></div>
+    </div>
+    <!-- Writer Profile Editor — single preview (H-02 fix: removed duplicate) -->
+        <div id="profilePreview" class="profile-preview" style="display: none;">
+      <img id="previewAvatar" class="preview-avatar" alt="" hidden />
+      <div id="previewInitials" class="preview-initials">–</div>
+      <div class="preview-info">
+        <span id="previewName" class="preview-name"></span>
+        <p id="previewBio" class="preview-bio"></p>
+      </div>
+      <a id="viewPublicBtn" class="view-public" href="#">View public page →</a>
+    </div>
+    <button id="editProfileBtn" class="btn-primary" style="display: none; margin-bottom: 1rem; margin-right: 0.8rem; background: #3d5a3c; color: #f4ede0; border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold;">✎ Edit Profile</button>
+    <div id="profileEditor" class="profile-editor" style="display: none;">
+      <h2 class="profile-title">Writer Profile</h2>
+      <div class="form-group">
+        <label for="penNameInput">Pen Name</label>
+        <input type="text" id="penNameInput" placeholder="How your name appears on stories..." />
+      </div>
+            <div class="form-group">
+        <label for="bioInput">Short Bio</label>
+        <textarea id="bioInput" rows="3" class="editor-input" placeholder="Tell your readers who you are..." style="width:100%;margin-top:0.4rem;padding:0.6rem;background:rgba(244,237,224,0.06);border:1px solid rgba(228,221,200,0.2);border-radius:4px;color:#f4ede0;font-family:inherit;"></textarea>
+
+        <label class="editor-label" style="margin-top:1rem;display:block;color:#a8b89c;font-size:0.85rem;">Top 5 Book Recommendations (one per line, optional)</label>
+        <textarea id="bookRecsInput" rows="5" class="editor-input" placeholder="1. The Great Gatsby&#10;2. Beloved&#10;3. ..." style="width:100%;margin-top:0.4rem;padding:0.6rem;background:rgba(244,237,224,0.06);border:1px solid rgba(228,221,200,0.2);border-radius:4px;color:#f4ede0;font-family:inherit;"></textarea>
+        <button type="button" id="saveBookRecsBtn" style="margin-top:0.4rem;background:#3d5a3c;border:none;color:#f4ede0;cursor:pointer;font-size:0.85rem;padding:0.4rem 1rem;border-radius:4px;">Save Book Recommendations</button>
+        <label class="editor-label" style="margin-top:1rem;display:block;color:#a8b89c;font-size:0.85rem;">Change Email</label>
+        <input type="email" id="changeEmailInput" class="editor-input" placeholder="new@email.com" style="width:100%;margin-top:0.4rem;padding:0.6rem;background:rgba(244,237,224,0.06);border:1px solid rgba(228,221,200,0.2);border-radius:4px;color:#f4ede0;font-family:inherit;" />
+        <button type="button" id="changeEmailBtn" style="margin-top:0.4rem;background:transparent;border:none;color:#a8b89c;cursor:pointer;font-size:0.85rem;text-decoration:underline;">Send confirmation to new email</button>
+
+        <div style="margin-top:2rem;padding-top:1rem;border-top:1px solid rgba(228,221,200,0.1);">
+          <button type="button" id="deleteAccountBtn" style="background:transparent;border:none;color:#a85a32;cursor:pointer;font-size:0.85rem;text-decoration:underline;">Delete my account permanently</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="avatarInput">Profile picture (optional)</label>
+        <input type="file" id="avatarInput" accept="image/*" />
+        <button type="button" id="removeAvatarBtn" class="link-btn" style="margin-top: 0.5rem; background: transparent; border: none; color: #a85a32; cursor: pointer; font-size: 0.85rem; text-decoration: underline;">Remove Profile Picture</button>
+        <img id="avatarPreview" alt="" hidden style="max-width: 80px; border-radius: 50%; margin-top: 0.5rem; border: 1px solid #3d5a3c;" />
+      </div>
+      <div class="form-group">
+        <label for="xUrlInput">X / Twitter link (optional)</label>
+        <input type="text" id="xUrlInput" placeholder="https://x.com/yourname" />
+      </div>
+      <div class="form-group">
+        <label for="instagramUrlInput">Instagram link (optional)</label>
+        <input type="text" id="instagramUrlInput" placeholder="https://instagram.com/yourname" />
+      </div>
+      <div class="form-group">
+        <label for="facebookUrlInput">Facebook link (optional)</label>
+        <input type="text" id="facebookUrlInput" placeholder="https://facebook.com/yourname" />
+      </div>
+      <div class="form-group">
+        <label for="publicEmailInput">Public email (optional)</label>
+        <input type="text" id="publicEmailInput" placeholder="An address readers may write to" />
+      </div>
+      <div class="form-group">
+        <label for="phoneInput">Phone (optional — stored privately, never shown)</label>
+        <input type="text" id="phoneInput" placeholder="Kept private" />
+      </div>
+            <button id="saveProfileBtn" class="btn-primary" style="background: #3d5a3c; color: #f4ede0;">Save Profile</button>
+      <span id="profileStatus" class="profile-status"></span>
+    </div>
+
+    <!-- My Books manager -->
+    <button id="booksToggleBtn" class="btn-primary" style="display: none; margin-top: 1rem; margin-bottom: 1rem; background: #3d5a3c; color: #f4ede0;  border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold;"> 📚  My Books </button>
+    <a id="savedLink" href="/saved" class="btn-primary" style="display: none; margin-top: 1rem; margin-bottom: 1rem; margin-left: 0.8rem; background: #3d5a3c; color: #f4ede0; text-decoration: none; border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold;"> 🔖  Saved for Later </a>
+    <div id="booksPanel" style="display: none; margin-bottom: 2rem; padding: 1.2rem; border: 1px solid rgba(244,237,224,0.12); border-radius: 8px;">
+      <h2 style="font-family: 'Playfair Display', serif; color: #f4edda; margin-bottom: 1rem;">My Books</h2>
+      <div id="booksList" style="margin-bottom: 1.2rem;"></div>
+      <form id="bookForm">
+        <input type="hidden" id="bookId" />
+        <div class="form-group"><label for="bookTitle">Book title</label><input type="text" id="bookTitle" required /></div>
+        <div class="form-group"><label for="bookBlurb">One-line blurb (optional)</label><input type="text" id="bookBlurb" placeholder="A novel about..." /></div>
+        <div class="form-group"><label for="bookCover">Cover image (optional)</label><input type="file" id="bookCover" accept="image/*" /><img id="bookCoverPreview" alt="" hidden style="max-height: 120px; margin-top: 0.5rem; border: 1px solid #3d5a3c;" /></div>
+        <div class="form-group">
+        <label id="buyLinksLabel">Where to buy (add as many as you like)</label>
+        <div id="linkRows" aria-labelledby="buyLinksLabel"></div>
+          <button type="button" id="addLinkBtn" style="background: transparent; border: 1px dashed #a8b89c; color: #a8b89c; border-radius: 4px; padding: 0.4rem 0.8rem; cursor: pointer; font-family: inherit; margin-top: 0.4rem;">+ Add a store link</button>
+        </div>
+        <button type="submit" class="btn-primary" style="background: #3d5a3c; color: #f4ede0;">Save book</button>
+        <button type="button" id="cancelBookBtn" style="display: none; background: transparent; border: 1px solid #a8b89c; color: #a8b89c; border-radius: 4px; padding: 0.5rem 1rem; cursor: pointer; font-family: inherit; margin-left: 0.5rem;">Cancel</button>
+        <span id="bookStatus" style="margin-left: 1rem; font-size: 0.85rem; font-style: italic; color: #a8b89c;"></span>
+      </form>
+    </div>
+
+        <div id="collectionForm" style="display: none; margin-bottom: 2rem; padding: 1.2rem; border: 1px solid rgba(244,237,224,0.12); border-radius: 8px;">
+            <h3 id="collectionFormTitle" style="font-family: 'Playfair Display', serif; color: #f4ede0; margin-bottom: 1rem;">New Poetry Collection</h3>
+      <div class="form-group">
+        <label for="collectionName">Collection Name</label>
+        <input type="text" id="collectionName" placeholder="e.g., Raindrops of Dostoevsky" />
+      </div>
+      <div class="form-group">
+        <label for="collectionDesc">Description (optional)</label>
+        <textarea id="collectionDesc" rows="2" placeholder="A collection of poems about..." style="width:100%;margin-top:0.4rem;padding:0.6rem;background:rgba(244,237,224,0.06);border:1px solid rgba(228,221,200,0.2);border-radius:4px;color:#f4ede0;font-family:inherit;"></textarea>
+      </div>
+            <div class="form-group">
+        <label for="collectionCover">Cover image (optional)</label>
+        <input type="file" id="collectionCover" accept="image/*" />
+        <img id="collectionCoverPreview" alt="" hidden style="max-height: 120px; margin-top: 0.5rem; border: 1px solid #3d5a3c;" />
+      </div>
+      <button type="button" id="saveCollectionBtn" class="btn-primary" style="background: #3d5a3c; color: #f4ede0;">Save Collection</button>
+      <button type="button" id="cancelCollectionBtn" style="margin-left: 0.8rem; background: transparent; border: 1px solid #a8b89c; color: #a8b89c; border-radius: 4px; padding: 0.5rem 1rem; cursor: pointer; font-family: inherit;">Cancel</button>
+      <span id="collectionStatus" style="margin-left: 1rem; font-size: 0.85rem; font-style: italic; color: #a8b89c;"></span>
+    </div>
+
+    <div id="authCheck" class="loading-state">Checking login status...</div>
+
+    <div id="storiesList" class="stories-grid" style="display: none;">
+      <!-- Stories will be injected here by JS -->
+    </div>
+
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <p>You haven't written any stories yet.</p>
+      <p class="subtext">Every great author started with a blank page.</p>
+      <a href="/submit" class="btn-primary">Write Your First Story</a>
+    </div>
+  </main>
+
+  <style>
+    .badges-note { font-style: italic; font-size: 0.8rem; color: #8a9478; margin: -1rem 0 1.5rem; }
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 4rem auto;
+      padding: 0 1.5rem;
+      color: #f4edda; /* Matching your cream text */
+    }
+    .dash-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(244, 237, 218, 0.2);
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
+    }
+    .dash-header h1 {
+      font-family: serif; /* Will inherit your global serif */
+      font-size: 2rem;
+      margin: 0;
+    }
+    .btn-primary {
+      background: #f4ede0;
+      color: #1e2420;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .loading-state { text-align: center; padding: 2rem; font-style: italic; opacity: 0.7; }
+    .empty-state { text-align: center; padding: 4rem 0; }
+    .empty-state p { margin-bottom: 0.5rem; }
+    .empty-state .subtext { opacity: 0.6; font-size: 0.9rem; margin-bottom: 2rem; }
+    
+    .story-card {
+      background: rgba(244, 237, 218, 0.05);
+      border: 1px solid rgba(244, 237, 218, 0.1);
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    .story-card h3 { margin: 0 0 0.5rem 0; font-family: serif; }
+    .story-meta { font-size: 0.85rem; opacity: 0.7; display: flex; gap: 1rem; }
+    .status-badge {
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+    .status-draft { background: rgba(255,255,255,0.1); }
+        .status-published { background: rgba(76, 175, 80, 0.2); color: #81c784; }
+
+    /* Profile Editor Styles */
+    .profile-editor {
+      background: rgba(244, 237, 218, 0.05);
+      border: 1px solid rgba(244, 237, 218, 0.1);
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+    }
+    .profile-title {
+      font-family: serif;
+      font-size: 1.2rem;
+      margin: 0 0 1rem 0;
+      color: #f4edda;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      margin-bottom: 0.4rem;
+      opacity: 0.8;
+    }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 0.6rem;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(244, 237, 218, 0.2);
+      border-radius: 4px;
+      color: #f4edda;
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+    .form-group textarea {
+      resize: vertical;
+    }
+        .profile-status {
+      margin-left: 1rem;
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+
+    /* Identity preview card */
+    .profile-preview {
+      align-items: center;
+      gap: 1.2rem;
+      background: rgba(244, 237, 218, 0.05);
+      border: 1px solid rgba(244, 237, 218, 0.12);
+      border-left: 3px solid #3d5a3c;
+      border-radius: 8px;
+      padding: 1.2rem 1.4rem;
+      margin-bottom: 1.2rem;
+    }
+    .preview-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 1px solid #3d5a3c; }
+    .preview-initials {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: linear-gradient(135deg, #4a5d4e, #2c3e2d);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Playfair Display', serif; font-weight: 900; font-size: 1.4rem; color: #f4ede0;
+    }
+    .preview-info { flex: 1; }
+    .preview-name { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #f4edda; display: block; margin-bottom: 0.3rem; }
+    .preview-bio { margin: 0; font-size: 0.9rem; font-style: italic; color: #b0a890; line-height: 1.5; }
+    .view-public { white-space: nowrap; color: #a8b89c; font-size: 0.9rem; text-decoration: none; border-bottom: 1px solid rgba(168, 184, 156, 0.4); padding-bottom: 2px; }
+    .view-public:hover { color: #f4ede0; border-color: #f4ede0; }
+
+        /* Story tiles — homepage size, never giant */
+    .stories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.5rem;
+    }
+    .dash-tile {
+      background: #faf5ea;
+      border: 1px solid #ddd2bb;
+      border-top: 3px solid #3d5a3c;
+      border-radius: 2px;
+      color: #2e2a22;
+      box-shadow: 0 2px 14px rgba(46, 42, 34, 0.07);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .dash-tile:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25); }
+    .tile-cover { overflow: hidden; }
+    .tile-cover img { width: 100%; height: 220px; object-fit: cover; object-position: top; display: block; }
+    .tile-cover-empty {
+      height: 140px; display: flex; align-items: center; justify-content: center;
+      font-style: italic; color: #8a7d65; background: #efe7d6;
+    }
+    .tile-body { padding: 1rem 1rem 1.2rem; }
+    .tile-body h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; margin: 0 0 0.6rem; color: #2e2a22; }
+    .dash-tile .story-meta { color: #8a7d65; }
+    .story-card h3 { font-family: 'Playfair Display', serif; font-size: 1.2rem; margin-bottom: 0.8rem; line-height: 1.25; color: #2e2a22; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+    .story-card .excerpt { color: #5a5242; font-size: 0.88rem; margin-bottom: 1.2rem; font-style: italic; line-height: 1.55; flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+    .story-card .meta { font-size: 0.72rem; color: #8a7d65; display: flex; flex-direction: column; gap: 0.15rem; padding-top: 0.9rem; border-top: 1px solid #e8dfca; }
+    .card-cover { margin: -1.6rem -1.3rem 1.4rem; overflow: hidden; }
+    .card-cover img { width: 100%; height: auto; display: block; transition: transform 0.4s ease; }
+    .story-card:hover .card-cover img { transform: scale(1.05); }
+    .card-cover-empty { height: 180px; display: flex; align-items: center; justify-content: center; background: #efe7d6; color: #8a7d65; font-style: italic; font-size: 1.2rem; margin: -1.6rem -1.3rem 1.4rem; }
+    .poem-text-cover { background: #faf5ea; display: flex; align-items: center; justify-content: center; padding: 1.2rem 1rem; height: 220px; margin: -1.6rem -1.3rem 1.4rem; overflow: hidden; }
+    .poem-preview { font-family: 'Playfair Display', serif; font-size: 0.85rem; font-style: italic; color: #3a4a38; line-height: 1.6; text-align: center; margin: 0; }
+    .dash-tile { display: none; } /* legacy — replaced by story-card */
+    .tile-cover { overflow: hidden; }
+    .tile-cover img { width: 100%; height: auto; display: block; }
+    .tile-body { padding: 1rem 1rem 1.2rem; }
+  </style>
+
+  <style is:global>
+  body {
+    background: #1e2420;
+  }
+    .delete-btn {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(30, 36, 32, 0.55);
+      border: none;
+      border-radius: 4px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      opacity: 0.75;
+      transition: opacity 0.2s, transform 0.2s;
+      padding: 0.2rem 0.45rem;
+    }
+        .export-btn {
+      position: absolute;
+      top: 1rem;
+      right: 5.4rem;
+      background: rgba(30, 36, 32, 0.55);
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      color: #f4ede0;
+      opacity: 0.75;
+      transition: opacity 0.2s, transform 0.2s;
+      padding: 0.2rem 0.45rem;
+    }
+    .export-btn:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    .edit-btn {
+      position: absolute;
+      top: 1rem;
+      right: 3.2rem;
+      background: rgba(30, 36, 32, 0.55);
+      border-radius: 4px;
+      font-size: 1.1rem;
+      text-decoration: none;
+      color: #f4ede0;
+      opacity: 0.75;
+      transition: opacity 0.2s, transform 0.2s;
+      padding: 0.2rem 0.45rem;
+    }
+    .edit-btn:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+        .delete-btn:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    /* Dashboard tiles — global so JS-injected tiles get styled */
+    .stories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.5rem;
+    }
+    .dash-tile {
+      background: #faf5ea;
+      border: 1px solid #ddd2bb;
+      border-top: 3px solid #3d5a3c;
+      border-radius: 2px;
+      color: #2e2a22;
+      box-shadow: 0 2px 14px rgba(46, 42, 34, 0.07);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      overflow: hidden;
+    }
+    .dash-tile:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25); }
+    .tile-cover { overflow: hidden; }
+    .tile-cover img { width: 100%; height: 220px; object-fit: cover; object-position: top; display: block; }
+    .unbookmark-btn {
+      position: absolute; top: 1rem; right: 1rem;
+      background: rgba(30, 36, 32, 0.55); border: none; border-radius: 4px;
+      font-size: 1rem; cursor: pointer; color: #f4ede0; opacity: 0.75;
+      padding: 0.2rem 0.5rem;
+    }
+    .unbookmark-btn:hover { opacity: 1; }
+        .admin-badge {
+        display: inline-block; margin-left: 0.5rem; padding: 0.15rem 0.6rem;
+        border-radius: 999px; background: #3d5a3c; color: #f4ede0;
+        font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; vertical-align: middle;
+    }
+        .recs-widget { margin: 0 0 2rem; padding: 1.5rem; background: rgba(244,237,224,0.04); border: 1px solid rgba(228,221,200,0.12); border-radius: 6px; }
+    .recs-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: #f4ede0; margin-bottom: 1rem; }
+    .recs-item { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid rgba(228,221,200,0.08); text-decoration: none; color: inherit; }
+    .recs-item-title { font-family: 'Playfair Display', serif; color: #f4ede0; }
+    .recs-item-author { font-size: 0.85rem; color: #8a9478; font-style: italic; }
+    .tile-poem-cover {
+      height: 220px; display: flex; align-items: center; justify-content: center;
+      padding: 1.2rem; background: #faf5ea; overflow: hidden;
+    }
+
+    .saved-link {
+        display: inline-block;
+        font-family: 'Playfair Display', serif;
+        font-size: 1.1rem;
+        color: #a8b89c;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(168, 184, 156, 0.4);
+        padding-bottom: 2px;
+        transition: color 0.2s, border-color 0.2s;
+    }
+    .saved-link:hover {
+        color: #f4ede0;
+        border-color: #f4ede0;
+    }
+
+    .poem-preview-text {
+        font-family: 'Playfair Display', serif;
+        font-size: 0.85rem;
+        font-style: italic;
+        color: #3a4a38;
+        line-height: 1.6;
+        text-align: center;
+    }
+    .tile-cover-empty {
+      height: 140px; display: flex; align-items: center; justify-content: center;
+      font-style: italic; color: #8a7d65; background: #efe7d6;
+    }
+    .tile-body { padding: 1rem 1rem 1.2rem; }
+    .tile-body h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; margin: 0 0 0.6rem; color: #2e2a22; }
+    .dash-tile .story-meta { color: #8a7d65; display: flex; gap: 0.8rem; align-items: center; font-size: 0.8rem; }
+
+        .collection-tile {
+      background: #faf5ea;
+      border: 1px solid #ddd2bb;
+      border-top: 3px solid #a85a32;
+      border-radius: 2px;
+      padding: 1.2rem;
+      color: #2e2a22;
+      box-shadow: 0 2px 14px rgba(46, 42, 34, 0.07);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+    }
+    .collection-tile:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    }
+    .collection-tile h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      margin: 0 0 0.6rem;
+      color: #2e2a22;
+    }
+    .collection-tile .collection-count {
+      font-size: 0.85rem;
+      color: #8a7d65;
+      font-style: italic;
+    }
+    .move-to-collection-btn {
+      position: absolute;
+      top: 1rem;
+      right: 7.6rem;
+      background: rgba(30, 36, 32, 0.55);
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      color: #f4ede0;
+      opacity: 0.75;
+      transition: opacity 0.2s, transform 0.2s;
+      padding: 0.2rem 0.45rem;
+    }
+    .move-to-collection-btn:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+</style>
+
+  <script>
+    import { supabase } from '../lib/supabase';
+    import { esc } from '../lib/escape';
+
+        // If the browser restores this page from its cache (back button), force a fresh render
+    window.addEventListener('pageshow', (e) => {
+      if ((e as any).persisted) window.location.reload();
+    });
+
+
+    const authCheck = document.getElementById('authCheck')!;
+    const storiesList = document.getElementById('storiesList')!;
+    const emptyState = document.getElementById('emptyState')!;
+    const writeNewBtn = document.getElementById('writeNewBtn')!;
+
+    async function initDashboard() {
+      // 1. Check if user is logged in
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        // Not logged in, redirect to login
+        window.location.href = '/login';
+        return;
+      }
+
+      // Logged in! Hide loading, show write button & profile editor
+      authCheck.style.display = 'none';
+      writeNewBtn.style.display = 'inline-block';
+      // Show the "Edit Profile" button by default (editor stays collapsed)
+      const editProfileBtn = document.getElementById('editProfileBtn')!;
+      editProfileBtn.style.display = 'inline-block';
+      editProfileBtn.addEventListener('click', () => {
+          document.getElementById('profileEditor')!.style.display = 'block';
+          editProfileBtn.style.display = 'none';
+      });
+
+      // Fetch existing profile
+        const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      const penNameInput = document.getElementById('penNameInput') as HTMLInputElement;
+      const bioInput = document.getElementById('bioInput') as HTMLTextAreaElement;
+      const bookRecsInput = document.getElementById('bookRecsInput') as HTMLTextAreaElement;
+        if (bookRecsInput && profile?.book_recs) bookRecsInput.value = (profile.book_recs as string[]).join('\n');
+      const saveProfileBtn = document.getElementById('saveProfileBtn') as HTMLButtonElement;
+      const profileStatus = document.getElementById('profileStatus') as HTMLSpanElement;
+
+            const avatarInput = document.getElementById('avatarInput') as HTMLInputElement;
+      const avatarPreview = document.getElementById('avatarPreview') as HTMLImageElement;
+      const xUrlInput = document.getElementById('xUrlInput') as HTMLInputElement;
+      const instagramUrlInput = document.getElementById('instagramUrlInput') as HTMLInputElement;
+      const facebookUrlInput = document.getElementById('facebookUrlInput') as HTMLInputElement;
+      const publicEmailInput = document.getElementById('publicEmailInput') as HTMLInputElement;
+      const phoneInput = document.getElementById('phoneInput') as HTMLInputElement;
+
+      // C-01 FIX: phone is now stored in private_profiles (owner-only), not in public profiles
+      let privatePhone = '';
+      const { data: priv } = await supabase.from('private_profiles').select('phone').eq('user_id', session.user.id).maybeSingle();
+      if (priv?.phone) privatePhone = priv.phone;
+      if (profile) {
+        penNameInput.value = profile.pen_name || '';
+        bioInput.value = profile.bio || '';
+        xUrlInput.value = profile.x_url || '';
+        instagramUrlInput.value = profile.instagram_url || '';
+        facebookUrlInput.value = profile.facebook_url || '';
+        publicEmailInput.value = profile.public_email || '';
+        phoneInput.value = privatePhone || (profile as any).phone || ''; // fallback for legacy rows
+        if (profile.avatar_url) {
+          avatarPreview.src = profile.avatar_url;
+          avatarPreview.hidden = false;
+        }
+      } else {
+        phoneInput.value = privatePhone;
+      }
+
+      avatarInput.addEventListener('change', () => {
+        const file = avatarInput.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            avatarPreview.src = e.target?.result as string;
+            avatarPreview.hidden = false;
+          };
+                    reader.readAsDataURL(file);
+        }
+      });
+
+      // Render the identity preview card
+      const preview = document.getElementById('profilePreview')!;
+      preview.style.display = 'flex';
+      const displayName = profile?.pen_name || (session.user.email ?? 'writer').split('@')[0];
+     ( document . getElementById ( 'previewName' )  as   HTMLElement ). innerHTML   =   esc(displayName)   +   (( profile   as   any )?.is_admin   ?   ' <span class="admin-badge">✦ Admin</span>'   :   '' );
+      (document.getElementById('previewBio') as HTMLElement).textContent =
+          profile?.bio || 'No bio yet — introduce yourself to your readers.';
+      (document.getElementById('viewPublicBtn') as HTMLAnchorElement).href =
+          '/author/' + displayName.toLowerCase().replace(/\s+/g, '-');
+      const previewAvatar = document.getElementById('previewAvatar') as HTMLImageElement;
+      const previewInitials = document.getElementById('previewInitials') as HTMLElement;
+      if (profile?.avatar_url) {
+          previewAvatar.src = profile.avatar_url;
+          previewAvatar.hidden = false;
+          previewInitials.style.display = 'none';
+      } else {
+      previewInitials.textContent = displayName.substring(0, 2).toUpperCase();
+      }
+
+      saveProfileBtn.addEventListener('click', async () => {
+        saveProfileBtn.disabled = true;
+        profileStatus.textContent = 'Saving...';
+        profileStatus.style.color = '#a8b89c';
+
+               // Upload a new avatar if one was chosen
+        let avatarUrl: string | undefined = undefined;
+        const avatarFile = avatarInput.files?.[0];
+        if (avatarFile) {
+          const ext = avatarFile.name.split('.').pop();
+          const path = `avatars/${session.user.id}-${Date.now()}.${ext}`;
+          const { data: up, error: upErr } = await supabase.storage
+            .from('covers')
+            .upload(path, avatarFile);
+          if (upErr) {
+            console.error(upErr);
+            profileStatus.textContent = 'Error uploading avatar.';
+            profileStatus.style.color = '#ff6b6b';
+            saveProfileBtn.disabled = false;
+            return;
+          }
+          avatarUrl = supabase.storage.from('covers').getPublicUrl(up.path).data.publicUrl;
+        }
+
+        const payload: any = {
+          user_id: session.user.id,
+          pen_name: penNameInput.value.trim(),
+          bio: bioInput.value.trim(),
+          x_url: xUrlInput.value.trim(),
+          instagram_url: instagramUrlInput.value.trim(),
+          facebook_url: facebookUrlInput.value.trim(),
+          public_email: publicEmailInput.value.trim()
+        };
+        if (avatarUrl) payload.avatar_url = avatarUrl;
+
+        const { error } = await supabase
+          .from('profiles')
+          .upsert(payload, { onConflict: 'user_id' });
+        // C-01: phone lives in private_profiles (owner-only)
+        const phoneVal = phoneInput.value.trim();
+        if (!error) {
+          const { error: phoneErr } = await supabase.from('private_profiles').upsert({ user_id: session.user.id, phone: phoneVal || null }, { onConflict: 'user_id' });
+          if (phoneErr) console.warn('phone save failed (private_profiles):', phoneErr.message);
+        }
+
+        if (error) {
+          console.error(error);
+          profileStatus.textContent = 'Error saving profile.';
+          profileStatus.style.color = '#ff6b6b';
+          } else {
+          // Keep every story's byline in sync with the pen name — forever
+          const newName = penNameInput.value.trim();
+          if (newName) {
+              await supabase.from('stories').update({ author_name: newName }).eq('author_id', session.user.id);
+          }
+          profileStatus.textContent = 'Profile saved!';
+          setTimeout(() => {
+              document.getElementById('profileEditor')!.style.display = 'none';
+              document.getElementById('editProfileBtn')!.style.display = 'inline-block';
+              profileStatus.textContent = '';
+          }, 1200);
+        }
+        saveProfileBtn.disabled = false;
+      });
+
+      // 2. Fetch their stories from the DB
+      const { data: stories, error } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('author_id', session.user.id)
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching stories:', error);
+        authCheck.textContent = 'Error loading stories.';
+        authCheck.style.display = 'block';
+        return;
+      }
+
+      // 3. Render UI
+      if (!stories || stories.length === 0) {
+        emptyState.style.display = 'block';
+          } else {
+          storiesList.style.display = 'grid';
+          const storyTiles = stories.filter((s: any) => s.kind !== 'poem').map(story => `
+         <div class="dash-tile" style="position: relative;">
+             <a href="${story.status === 'published' ? `/story/${esc(story.id)}` : `/submit?edit=${esc(story.id)}`}" style="display: block; text-decoration: none; color: inherit;">
+            ${ story.cover_url
+            ? `<div class="tile-cover"><img src="${ esc(story.cover_url) }" alt="Cover of ${ esc(story.title || 'draft') }" style="width:100%;height:220px;object-fit:cover;object-position:top;display:block;" /></div>`
+            : `<div class="tile-cover tile-cover-empty">No cover yet</div>` }
+             <div class="tile-body">
+               <h3>${esc(story.title || 'Untitled Draft')}</h3>
+               <div class="story-meta">
+                 <span class="status-badge status-${esc(story.status)}">${esc(story.status)}</span>
+                 <span>${new Date(story.updated_at).toLocaleDateString()}</span>
+               </div>
+             </div>
+           </a>
+           <a class="edit-btn" href="/submit?edit=${esc(story.id)}" title="Edit story">✎</a>
+          <button class="export-btn" data-id="${ esc(story.id) }" data-title="${ esc(story.title || 'untitled') }" data-content="${ esc((story.content || '').replace(/"/g, '&quot;')) }" title="Download as .md">⬇</button>
+          <button class="delete-btn" data-id="${ esc(story.id) }" title="Delete story">🗑️</button>
+         </div>
+       `).join('');
+
+          const poemTiles = stories.filter((s: any) => s.kind === 'poem' && !s.collection_id).map(story => {
+              const preview = (story.content || '').replace(/<[^>]+>/g, ' ').trim().substring(0, 80);
+              return `
+         <div class="dash-tile" style="position: relative;">
+             <a href="${story.status === 'published' ? `/story/${esc(story.id)}` : `/submit?edit=${esc(story.id)}`}" style="display: block; text-decoration: none; color: inherit;">
+              ${ story.cover_url
+               ? `<div class="tile-cover"><img src="${ esc(story.cover_url) }" alt="Cover of ${ esc(story.title || 'draft') }" style="width:100%;height:220px;object-fit:cover;object-position:top;display:block;" /></div>`
+                : `<div class="tile-cover tile-cover-empty">No cover yet</div>` }
+             <div class="tile-body">
+               <h3>${esc(story.title || 'Untitled Poem')}</h3>
+               <div class="story-meta">
+                 <span class="status-badge status-${esc(story.status)}">${esc(story.status)}</span>
+                 <span>${new Date(story.updated_at).toLocaleDateString()}</span>
+               </div>
+             </div>
+           </a>
+           <a class="edit-btn" href="/submit?edit=${esc(story.id)}" title="Edit">✎</a>
+          <button class="move-to-collection-btn" data-id="${ esc(story.id) }" title="Move to collection">📚</button>
+          <button class="export-btn" data-id="${ esc(story.id) }" data-title="${ esc(story.title || 'untitled') }" data-content="${ esc((story.content || '').replace(/"/g, '&quot;')) }" title="Download as .md">⬇</button>
+          <button class="delete-btn" data-id="${ esc(story.id) }" title="Delete">🗑️</button>
+         </div>`;
+          }).join('');
+
+                   // === Poetry collections data ===
+          const { data: collections } = await supabase
+            .from('poetry_collections')
+            .select('*')
+            .eq('owner_id', session.user.id)
+            .order('created_at', { ascending: false });
+
+          const counts: Record<string, number> = {};
+          stories.filter((s: any) => s.kind === 'poem' && s.collection_id).forEach((p: any) => {
+            counts[p.collection_id] = (counts[p.collection_id] || 0) + 1;
+          });
+
+                    const collectionTiles = (collections || []).map((c: any) => `
+            <div class="dash-tile" style="position: relative; border-top-color: #a85a32;">
+              <a href="/poetry/${esc(c.id)}" style="display: block; text-decoration: none; color: inherit;">
+                ${c.cover_url
+                  ? `<div class="tile-cover"><img src="${esc(c.cover_url)}" alt="Cover of ${esc(c.name)}" style="width:100%;height:220px;object-fit:cover;object-position:top;display:block;" /></div>`
+                  : `<div style="height: 220px; background: linear-gradient(135deg, #efe7d6, #e2d6ba); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;">
+                      <span style="font-size: 2.2rem;">📚</span>
+                      <span style="font-family: 'Playfair Display', serif; font-weight: 700; color: #2e2a22; font-size: 1.05rem; text-align: center; padding: 0 0.8rem;">${esc(c.name)}</span>
+                    </div>`}
+                <div class="tile-body">
+                  <h3>${esc(c.name)}</h3>
+                  <div class="story-meta"><span>${counts[c.id] || 0} poems · open →</span></div>
+                </div>
+              </a>
+              <a class="edit-btn coll-edit-btn" href="#" data-id="${esc(c.id)}" title="Edit collection">✎</a>
+              <button class="delete-btn coll-del-btn" data-id="${esc(c.id)}" title="Delete collection">🗑️</button>
+            </div>`).join('');
+
+          let html = storyTiles;
+
+          // Collections row — between stories and poetry, button on the divider line
+          html += `
+            <div class="poetry-divider" style="grid-column: 1 / -1; margin: 2rem 0 1rem;">
+              <div style="height: 1px; background: rgba(228,221,200,0.15); margin-bottom: 1rem;"></div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="font-family: 'Playfair Display', serif; font-size: 1.2rem; color: #f4ede0; font-weight: 700;">Your Poetry Collections</h2>
+                <button id="newCollectionBtn" style="background: #3d5a3c; color: #f4ede0; border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold; font-family: inherit;">+ New Collection</button>
+              </div>
+            </div>`;
+          html += collectionTiles || '<p style="grid-column: 1 / -1; font-style: italic; color: #7d7560;">No collections yet — create your first one.</p>';
+
+          if (poemTiles) {
+              html += `
+                <div class="poetry-divider" style="grid-column: 1 / -1; margin: 2rem 0 1rem;">
+                    <div style="height: 1px; background: rgba(228,221,200,0.15); margin-bottom: 1rem;"></div>
+                    <h2 style="font-family: 'Playfair Display', serif; font-size: 1.2rem; color: #f4ede0; font-weight: 700;">Your Poetry</h2>
+                </div>
+                ${poemTiles}`;
+          }
+          storiesList.innerHTML = html;
+        // Attach delete handlers
+            document.querySelectorAll('.delete-btn:not(.coll-del-btn)').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault(); 
+          e.stopPropagation();
+          
+          const storyId = (e.target as HTMLElement).getAttribute('data-id');
+          if (!storyId) return;
+
+          const confirmed = confirm('Are you sure you want to permanently delete this story? This cannot be undone.');
+          if (!confirmed) return;
+
+          const { error } = await supabase
+            .from('stories')
+            .delete()
+            .eq('id', storyId);
+
+          if (error) {
+            alert('Error deleting story: ' + error.message);
+          } else {
+            (e.target as HTMLElement).closest('.dash-tile')?.remove();
+            if (document.querySelectorAll('.dash-tile').length === 0) {
+              storiesList.style.display = 'none';
+              emptyState.style.display = 'block';
+            }
+          }
+        });
+            });
+
+            // ===== STORY EXPORT (9.10) — download as .md =====
+      document.querySelectorAll('.export-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const el = btn as HTMLElement;
+          const title = el.dataset.title || 'untitled';
+          const rawHtml = el.dataset.content || '';
+          // Strip HTML to clean markdown-ish text
+          const text = rawHtml
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/p>/gi, '\n\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+          const md = `# ${title}\n\n${text}\n\n---\nExported from Raconteur · raconteur.stories\n`;
+          const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.md`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        });
+      });
+
+            // === Move to collection handler ===
+      document.querySelectorAll('.move-to-collection-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const storyId = (e.target as HTMLElement).getAttribute('data-id');
+          if (!storyId) return;
+
+          // Fetch collections
+          const { data: collections } = await supabase
+            .from('poetry_collections')
+            .select('id, name')
+            .eq('owner_id', session.user.id);
+
+          if (!collections || collections.length === 0) {
+            alert('Create a collection first.');
+            return;
+          }
+
+          const options = ['None (remove from collection)'].concat(collections.map((c: any) => c.name));
+          const choice = prompt('Move this poem to:\n' + options.map((o, i) => `${i}. ${o}`).join('\n') + '\n\nEnter the number:');
+          if (choice === null) return;
+
+          const index = parseInt(choice, 10);
+          if (isNaN(index) || index < 0 || index >= options.length) {
+            alert('Invalid choice.');
+            return;
+          }
+
+          const collectionId = index === 0 ? null : collections[index - 1].id;
+          const { error } = await supabase
+            .from('stories')
+            .update({ collection_id: collectionId })
+            .eq('id', storyId);
+
+          if (error) {
+            alert('Error: ' + error.message);
+          } else {
+            alert(collectionId ? 'Moved to collection!' : 'Removed from collection.');
+            window.location.reload();
+          }
+        });
+      });
+
+      // ===== MY BOOKS =====
+      const booksToggleBtn = document.getElementById('booksToggleBtn')!;
+      const booksPanel = document.getElementById('booksPanel')!;
+      const booksList = document.getElementById('booksList')!;
+      const bookForm = document.getElementById('bookForm') as HTMLFormElement;
+      const bookIdInput = document.getElementById('bookId') as HTMLInputElement;
+      const bookTitle = document.getElementById('bookTitle') as HTMLInputElement;
+      const bookBlurb = document.getElementById('bookBlurb') as HTMLInputElement;
+      const bookCover = document.getElementById('bookCover') as HTMLInputElement;
+      const bookCoverPreview = document.getElementById('bookCoverPreview') as HTMLImageElement;
+      const linkRows = document.getElementById('linkRows')!;
+      const addLinkBtn = document.getElementById('addLinkBtn')!;
+      const cancelBookBtn = document.getElementById('cancelBookBtn')!;
+      const bookStatus = document.getElementById('bookStatus')!;
+      booksToggleBtn.style.display = 'inline-block';
+      // M-04 fix: always show Saved link so /saved is discoverable, even at 0
+      const savedLink = document.getElementById('savedLink')!;
+      const { count: savedCount } = await supabase
+          .from('bookmarks')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', session.user.id);
+      savedLink.style.display = 'inline-block';
+      savedLink.textContent = savedCount && savedCount > 0 ? `🔖 Saved for Later (${savedCount})` : '🔖 Saved for Later';
+
+            // Remove profile photo (revert to initials)
+      document.getElementById('removeAvatarBtn')?.addEventListener('click', async () => {
+          if (!confirm('Remove your profile photo? Your initials will show instead.')) return;
+          await supabase.from('profiles').update({ avatar_url: null }).eq('user_id', session.user.id);
+          window.location.reload();
+      });
+
+        // Recommendations on the dashboard (skip your own work)
+      (async () => {
+          const widget = document.getElementById('recsWidget');
+          const list = document.getElementById('recsList');
+          if (!widget || !list) return;
+          const { data: rec } = await supabase.from('recommendations')
+              .select('admin_story_id, random_story_id').eq('user_id', session.user.id).maybeSingle();
+          if (!rec) return;
+          
+          const { data: myProf } = await supabase.from('profiles')
+              .select('pen_name').eq('user_id', session.user.id).maybeSingle();
+          
+          const ids = [rec.admin_story_id, rec.random_story_id].filter(Boolean);
+          if (ids.length === 0) return;
+          
+          const { data: recStories } = await supabase.from('stories')
+              .select('id, title, author_name').in('id', ids).eq('status', 'published');
+          
+          const filtered = (recStories || []).filter((s: any) => s.author_name !== myProf?.pen_name);
+          if (filtered.length === 0) return;
+          
+          list.innerHTML = filtered.map((s: any) =>
+              `<a href="/story/${esc(s.id)}" class="recs-item"><span class="recs-item-title">${esc(s.title)}</span><span class="recs-item-author">${esc(s.author_name)}</span></a>`
+          ).join('');
+          widget.style.display = 'block';
+      })();
+
+            // Save book recs (own button, independent of profile save)
+      document.getElementById('saveBookRecsBtn')?.addEventListener('click', async () => {
+          const raw = (document.getElementById('bookRecsInput') as HTMLTextAreaElement)?.value || '';
+          const recs = raw.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 5);
+          const { error } = await supabase.from('profiles').update({ book_recs: recs }).eq('user_id', session.user.id);
+          if (error) alert('Error saving book recs: ' + error.message);
+          else alert('Book recommendations saved.');
+      });
+
+      // Pre-fill book recs when the page loads
+      (async () => {
+          const ta = document.getElementById('bookRecsInput') as HTMLTextAreaElement;
+          if (!ta) return;
+          const { data: prof } = await supabase.from('profiles').select('book_recs').eq('user_id', session.user.id).maybeSingle();
+          if (prof?.book_recs) ta.value = (prof.book_recs as string[]).join('\n');
+      })();
+
+      // Change email
+      document.getElementById('changeEmailBtn')?.addEventListener('click', async () => {
+          const newEmail = (document.getElementById('changeEmailInput') as HTMLInputElement)?.value?.trim();
+          if (!newEmail) return alert('Enter a new email address.');
+          const { error } = await supabase.auth.updateUser({ email: newEmail });
+          if (error) alert('Error: ' + error.message);
+          else alert('Confirmation sent to ' + newEmail + '. Click the link in that email to confirm.');
+      });
+
+      // Delete account — server endpoint validates the session, cleans up every
+      // owned row (likes/comments/messages/notifications included) and deletes
+      // the auth user via the service-role key. The old client-side loop only
+      // removed a few rows and never touched auth.users.
+      document.getElementById('deleteAccountBtn')?.addEventListener('click', async () => {
+          if (!confirm('This permanently deletes your account, stories, bookmarks and follows. Are you sure?')) return;
+          if (!confirm('Really? This cannot be undone.')) return;
+          const { data: { session: delSession } } = await supabase.auth.getSession();
+          if (!delSession) { window.location.href = '/login'; return; }
+          const res = await fetch('/api/delete-account', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${delSession.access_token}` },
+          });
+          if (!res.ok) {
+              const body = await res.json().catch(() => ({} as any));
+              alert('Could not delete your account: ' + (body.error || res.status));
+              return;
+          }
+          await supabase.auth.signOut();
+          window.location.href = '/';
+      });
+
+      await supabase.rpc('refresh_work_counts');
+
+      booksToggleBtn.addEventListener('click', () => {
+        const open = booksPanel.style.display !== 'none';
+        booksPanel.style.display = open ? 'none' : 'block';
+        if (!open) loadBooks();
+      });
+
+      function addLinkRow(label = '', url = '') {
+  const row = document.createElement('div');
+  row.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
+  row.innerHTML = `
+    <input type="text" class="link-label" name="linkLabel" placeholder="Amazon" value="${label.replace(/"/g, '&quot;')}" style="flex: 0 0 140px; background: rgba(0,0,0,0.2); border: 1px solid rgba(228,221,200,0.15); border-radius: 4px; padding: 0.4rem; color: #e4ddc8; font-family: inherit;" />
+    <input type="url" class="link-url" name="linkUrl" placeholder="https://..." value="${url.replace(/"/g, '&quot;')}" style="flex: 1; background: rgba(0,0,0,0.2); border: 1px solid rgba(228,221,200,0.15); border-radius: 4px; padding: 0.4rem; color: #e4ddc8; font-family: inherit;" />
+    <button type="button" class="link-remove" style="background: transparent; border: none; color: #c0654a; cursor: pointer; font-size: 1.1rem;">✕</button>`;
+        row.querySelector('.link-remove')!.addEventListener('click', () => row.remove());
+        linkRows.appendChild(row);
+      }
+      addLinkBtn.addEventListener('click', () => addLinkRow());
+
+      function collectLinks() {
+        return Array.from(linkRows.querySelectorAll('div')).map(r => ({
+          label: (r.querySelector('.link-label') as HTMLInputElement).value.trim(),
+          url: (r.querySelector('.link-url') as HTMLInputElement).value.trim(),
+        })).filter(l => l.label && l.url);
+      }
+
+      async function loadBooks() {
+        const { data: books } = await supabase.from('books').select('*').eq('owner_id', session!.user.id).order('created_at', { ascending: true });
+        const all = books || [];
+        booksList.innerHTML = all.length === 0
+          ? '<p style="font-style: italic; color: #7d7560;">No books yet — add your first below.</p>'
+          : all.map((b: any) => `
+              <div style="display: flex; gap: 1rem; align-items: center; padding: 0.7rem 0; border-bottom: 1px solid rgba(228,221,200,0.08);">
+                ${b.cover_url ? `<img src="${esc(b.cover_url)}" style="height: 70px; border: 1px solid #3d5a3c;" />` : '<div style="width: 50px; height: 70px; background: #efe7d6; display:flex; align-items:center; justify-content:center; color:#8a7d65; font-style:italic; font-size:0.7rem;">no cover</div>'}
+                <div style="flex: 1;">
+                  <strong style="color: #f4edda;">${esc(b.title)}</strong>
+                  <div style="font-size: 0.8rem; color: #8a9478;">${(b.links || []).length} store link(s)${b.blurb ? ' · ' + esc(b.blurb) : ''}</div>
+                </div>
+                <button class="book-edit" data-id="${esc(b.id)}" style="background: transparent; border: 1px solid #a8b89c; color: #a8b89c; border-radius: 4px; padding: 0.3rem 0.7rem; cursor: pointer; font-family: inherit;">Edit</button>
+                <button class="book-del" data-id="${esc(b.id)}" style="background: transparent; border: none; color: #c0654a; cursor: pointer; font-size: 1.1rem;">🗑️</button>
+              </div>`).join('');
+        booksList.querySelectorAll('.book-del').forEach(b => b.addEventListener('click', async () => {
+          if (!confirm('Delete this book?')) return;
+          await supabase.from('books').delete().eq('id', (b as HTMLElement).dataset.id!);
+          loadBooks();
+        }));
+        booksList.querySelectorAll('.book-edit').forEach(b => b.addEventListener('click', async () => {
+          const id = (b as HTMLElement).dataset.id!;
+          const { data: book } = await supabase.from('books').select('*').eq('id', id).maybeSingle();
+          if (!book) return;
+          bookIdInput.value = book.id;
+          bookTitle.value = book.title;
+          bookBlurb.value = book.blurb || '';
+          linkRows.innerHTML = '';
+          (book.links || []).forEach((l: any) => addLinkRow(l.label, l.url));
+          if (linkRows.children.length === 0) addLinkRow();
+          if (book.cover_url) { bookCoverPreview.src = book.cover_url; bookCoverPreview.hidden = false; }
+          cancelBookBtn.style.display = 'inline-block';
+          bookStatus.textContent = 'Editing — change and save.';
+        }));
+      }
+
+      bookCover.addEventListener('change', () => {
+        const f = bookCover.files?.[0];
+        if (f) { const r = new FileReader(); r.onload = e => { bookCoverPreview.src = e.target?.result as string; bookCoverPreview.hidden = false; }; r.readAsDataURL(f); }
+      });
+
+      cancelBookBtn.addEventListener('click', () => {
+        bookForm.reset(); bookIdInput.value = ''; linkRows.innerHTML = ''; addLinkRow();
+        bookCoverPreview.hidden = true; cancelBookBtn.style.display = 'none'; bookStatus.textContent = '';
+      });
+
+      bookForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        bookStatus.textContent = 'Saving...';
+        let coverUrl: string | undefined;
+        const coverFile = bookCover.files?.[0];
+        if (coverFile) {
+          const ext = coverFile.name.split('.').pop();
+          const path = `book-covers/${session.user.id}-${Date.now()}.${ext}`;
+          const { data: up, error: upErr } = await supabase.storage.from('covers').upload(path, coverFile);
+          if (upErr) { bookStatus.textContent = 'Cover upload failed.'; return; }
+          coverUrl = supabase.storage.from('covers').getPublicUrl(up.path).data.publicUrl;
+        }
+        const payload: any = {
+          owner_id: session.user.id,
+          title: bookTitle.value.trim(),
+          blurb: bookBlurb.value.trim(),
+          links: collectLinks(),
+        };
+        if (coverUrl) payload.cover_url = coverUrl;
+        const existingId = bookIdInput.value;
+        const { error } = existingId
+          ? await supabase.from('books').update(payload).eq('id', existingId)
+          : await supabase.from('books').insert(payload);
+         if (error) { bookStatus.textContent = 'Error: ' + error.message; return; }
+        bookForm.reset(); bookIdInput.value = ''; linkRows.innerHTML = ''; addLinkRow();
+        bookCoverPreview.hidden = true; cancelBookBtn.style.display = 'none';
+        bookStatus.textContent = 'Saved!';
+        loadBooks();
+        // Auto-collapse: hide the panel, show only the toggle button + story tiles
+        setTimeout(() => {
+            booksPanel.style.display = 'none';
+            bookStatus.textContent = '';
+        }, 1200);
+      });
+
+      addLinkRow();
+
+      
+              // === Collection form handlers ===
+      const newCollectionBtn = document.getElementById('newCollectionBtn');
+      const collectionForm = document.getElementById('collectionForm')!;
+      const collectionFormTitle = document.getElementById('collectionFormTitle')!;
+      const saveCollectionBtn = document.getElementById('saveCollectionBtn') as HTMLButtonElement;
+      const cancelCollectionBtn = document.getElementById('cancelCollectionBtn')!;
+      const collectionStatus = document.getElementById('collectionStatus')!;
+      const collectionName = document.getElementById('collectionName') as HTMLInputElement;
+      const collectionDesc = document.getElementById('collectionDesc') as HTMLTextAreaElement;
+      const collectionCover = document.getElementById('collectionCover') as HTMLInputElement;
+      const collectionCoverPreview = document.getElementById('collectionCoverPreview') as HTMLImageElement;
+      let editingCollectionId: string | null = null;
+
+      collectionCover.addEventListener('change', () => {
+        const f = collectionCover.files?.[0];
+        if (f) { const r = new FileReader(); r.onload = e => { collectionCoverPreview.src = e.target?.result as string; collectionCoverPreview.hidden = false; }; r.readAsDataURL(f); }
+      });
+
+      newCollectionBtn?.addEventListener('click', () => {
+        editingCollectionId = null;
+        collectionFormTitle.textContent = 'New Poetry Collection';
+        collectionName.value = '';
+        collectionDesc.value = '';
+        collectionCover.value = '';
+        collectionCoverPreview.hidden = true;
+        collectionForm.style.display = 'block';
+        collectionForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+
+      cancelCollectionBtn.addEventListener('click', () => {
+        collectionForm.style.display = 'none';
+        collectionName.value = '';
+        collectionDesc.value = '';
+        collectionCover.value = '';
+        collectionCoverPreview.hidden = true;
+        collectionStatus.textContent = '';
+      });
+
+      document.querySelectorAll('.coll-edit-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const id = (btn as HTMLElement).dataset.id!;
+          const { data: coll } = await supabase.from('poetry_collections').select('*').eq('id', id).maybeSingle();
+          if (!coll) return;
+          editingCollectionId = id;
+          collectionName.value = coll.name;
+          collectionDesc.value = coll.description || '';
+          if (coll.cover_url) { collectionCoverPreview.src = coll.cover_url; collectionCoverPreview.hidden = false; }
+          collectionFormTitle.textContent = 'Edit Poetry Collection';
+          collectionForm.style.display = 'block';
+          collectionForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      });
+
+      document.querySelectorAll('.coll-del-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const id = (btn as HTMLElement).dataset.id!;
+          if (!confirm('Delete this collection? Its poems become singles — they are NOT deleted.')) return;
+          await supabase.from('poetry_collections').delete().eq('id', id);
+          window.location.reload();
+        });
+      });
+
+      saveCollectionBtn.addEventListener('click', async () => {
+        const name = collectionName.value.trim();
+        if (!name) {
+          collectionStatus.textContent = 'Collection name is required.';
+          collectionStatus.style.color = '#ff6b6b';
+          return;
+        }
+        saveCollectionBtn.disabled = true;
+        collectionStatus.textContent = 'Saving...';
+        collectionStatus.style.color = '#a8b89c';
+
+        let coverUrl: string | undefined;
+        const coverFile = collectionCover.files?.[0];
+        if (coverFile) {
+          const ext = coverFile.name.split('.').pop();
+          const path = `collection-covers/${session.user.id}-${Date.now()}.${ext}`;
+          const { data: up, error: upErr } = await supabase.storage.from('covers').upload(path, coverFile);
+          if (upErr) { collectionStatus.textContent = 'Cover upload failed.'; collectionStatus.style.color = '#ff6b6b'; saveCollectionBtn.disabled = false; return; }
+          coverUrl = supabase.storage.from('covers').getPublicUrl(up.path).data.publicUrl;
+        }
+
+        const payload: any = { owner_id: session.user.id, name, description: collectionDesc.value.trim() || null };
+        if (coverUrl) payload.cover_url = coverUrl;
+
+        const { error } = editingCollectionId
+          ? await supabase.from('poetry_collections').update(payload).eq('id', editingCollectionId)
+          : await supabase.from('poetry_collections').insert(payload);
+
+        if (error) {
+          collectionStatus.textContent = 'Error: ' + error.message;
+          collectionStatus.style.color = '#ff6b6b';
+        } else {
+          collectionStatus.textContent = editingCollectionId ? 'Collection updated!' : 'Collection saved!';
+          collectionStatus.style.color = '#a8b89c';
+          setTimeout(() => { window.location.reload(); }, 1200);
+        }
+        saveCollectionBtn.disabled = false;
+      });
+    }    
+    }
+
+    initDashboard();
+  </script>
+</BaseLayout>

@@ -1,0 +1,95 @@
+---
+// AuthorBooks.astro — left half: featured author's book covers (2x2 grid, images only)
+interface Book {
+    title: string;
+    cover: string;
+}
+
+interface Props {
+    authorName: string;
+    role?: string;
+    books: Book[];
+}
+
+const { authorName, role = 'Featured Author', books } = Astro.props;
+---
+
+<div class="ab-half">
+    <div class="ab-header">
+        <p class="ab-eyebrow">{role}</p>
+        <h3 class="ab-title">{authorName}'s Books</h3>
+    </div>
+
+    <div class="ab-shelf">
+        {books.map((book) => (
+            <div class="ab-cover-wrap" title={book.title}>
+                <img src={book.cover} alt={`Cover of ${book.title}`} loading="lazy" />
+            </div>
+        ))}
+    </div>
+</div>
+
+<style>
+     .ab-half {
+        flex: 1;
+        padding: 0 2rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .ab-header { text-align: center; margin-bottom: 1.6rem; }
+
+    .ab-eyebrow {
+        font-style: italic;
+        color: #a8b89c;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .ab-title {
+        font-family: 'Playfair Display', serif;
+        font-size: clamp(1.3rem, 2.2vw, 1.7rem);
+        font-weight: 900;
+        color: #f4ede0;
+        letter-spacing: -0.3px;
+    }
+
+    .ab-shelf {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1.6rem;
+        flex-wrap: wrap;
+    }
+
+    .ab-cover-wrap {
+        width: 120px;
+        height: 180px;
+        border-radius: 2px;
+        overflow: hidden;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+        transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s;
+        background: #2a2018;
+        cursor: pointer;
+    }
+
+    .ab-cover-wrap:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55);
+    }
+
+    .ab-cover-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    @media (max-width: 640px) {
+        .ab-half { padding: 0 1rem; }
+        .ab-cover-wrap { width: 92px; height: 138px; }
+    }
+</style>

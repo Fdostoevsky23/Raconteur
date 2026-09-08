@@ -1,0 +1,22 @@
+[
+    {
+        "name": "Nzan Kikon",
+        "role": "Featured author's books",
+        "bio": "Nzan Kikon is the quiet hand behind Raconteur — a writer based in Kohima, Nagaland. Author of The Starry Night, The Unlikely Indians, Loving Lauren & Lauren, and Raindrops of Dostoevsky. A humanist and existentialist at heart, Nzan immerses himself in science, philosophy, psychology, and mythology.",
+        "avatarInitials": "NK",
+        "avatarGradient": ["#3d5a3c", "#a85a32"],
+        "location": "Somewhere between yesterday and tomorrow",
+        "joinedDate": "August 2026",
+        "storyCount": 1,
+        "totalWords": 793,
+        "favoriteLine": "What if tomorrow makes today?",
+        "featuredStorySlug": "poets-from-tomorrow",
+        "featuredStoryTitle": "Poets From Tomorrow",
+        "books": [
+            { "title": "The Starry Night", "cover": "/books/1.jpg" },
+            { "title": "The Unlikely Indians", "cover": "/books/2.jpg" },
+             { "title": "Loving Lauren & Lauren", "cover": "/books/3.jpg" },
+             { "title": "Raindrops of Dostoevsky", "cover": "/books/4.jpg" }
+         ]
+    }
+]

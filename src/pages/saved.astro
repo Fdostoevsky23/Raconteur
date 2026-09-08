@@ -1,0 +1,153 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabase } from '../lib/supabase';
+---
+<BaseLayout title="Saved for Later — Raconteur">
+    <main class="saved-container">
+        <header class="saved-header">
+            <h1>Saved for Later</h1>
+            <p class="saved-sub">Stories you've bookmarked to return to.</p>
+        </header>
+        <div id="authCheck" class="loading-state">Checking login status...</div>
+        <div id="savedGrid" class="stories-grid" style="display: none;"></div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <p>No saved stories yet.</p>
+            <p class="subtext">Tap the 🔖 on any story to save it here.</p>
+            <a href="/stories" class="btn-primary">Browse the Shelf</a>
+        </div>
+    </main>
+
+    <style>
+        .saved-container {
+            max-width: 1200px;
+            margin: 4rem auto;
+            padding: 0 1.5rem;
+            color: #f4edda;
+        }
+        .saved-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        .saved-header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #f4ede0;
+            margin-bottom: 0.5rem;
+        }
+        .saved-sub {
+            font-style: italic;
+            color: #8a9478;
+            font-size: 0.95rem;
+        }
+        .loading-state { text-align: center; padding: 2rem; font-style: italic; opacity: 0.7; }
+        .empty-state { text-align: center; padding: 4rem 0; }
+        .empty-state p { margin-bottom: 0.5rem; }
+        .empty-state .subtext { opacity: 0.6; font-size: 0.9rem; margin-bottom: 2rem; }
+        .btn-primary {
+            background: #f4ede0;
+            color: #1e2420;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+
+    <style is:global>
+        body { background: #1e2420; }
+        .stories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+        .dash-tile {
+            background: #faf5ea;
+            border: 1px solid #ddd2bb;
+            border-top: 3px solid #3d5a3c;
+            border-radius: 2px;
+            color: #2e2a22;
+            box-shadow: 0 2px 14px rgba(46, 42, 34, 0.07);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+            position: relative;
+        }
+        .dash-tile:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25); }
+        .tile-cover { overflow: hidden; }
+       .tile-cover img { width: 100%; height: 220px; object-fit: cover; object-position: top; display: block; }
+        .tile-cover-empty {
+            height: 140px; display: flex; align-items: center; justify-content: center;
+            font-style: italic; color: #8a7d65; background: #efe7d6;
+        }
+        .tile-body { padding: 1rem 1rem 1.2rem; }
+        .tile-body h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; margin: 0 0 0.6rem; color: #2e2a22; }
+        .dash-tile .story-meta { color: #8a7d65; display: flex; gap: 0.8rem; align-items: center; font-size: 0.8rem; }
+        .unbookmark-btn {
+            position: absolute; top: 1rem; right: 1rem;
+            background: rgba(30, 36, 32, 0.55); border: none; border-radius: 4px;
+            font-size: 1rem; cursor: pointer; color: #f4ede0; opacity: 0.75;
+            padding: 0.2rem 0.5rem;
+        }
+        .unbookmark-btn:hover { opacity: 1; }
+    </style>
+
+    <script>
+        import { supabase } from '../lib/supabase';
+        import { esc } from '../lib/escape';
+        const authCheck = document.getElementById('authCheck')!;
+        const savedGrid = document.getElementById('savedGrid')!;
+        const emptyState = document.getElementById('emptyState')!;
+
+        async function initSaved() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = '/login';
+                return;
+            }
+            authCheck.style.display = 'none';
+
+            const { data: savedRows } = await supabase
+                .from('bookmarks')
+                .select('story_id, stories(id, title, cover_url, author_name)')
+                .eq('user_id', session.user.id);
+
+            const saved = (savedRows || []).filter((r: any) => r.stories);
+            if (saved.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            savedGrid.style.display = 'grid';
+            savedGrid.innerHTML = saved.map((r: any) => {
+                const s = r.stories;
+                return `
+                    <div class="dash-tile">
+                        <a href="/story/${esc(s.id)}" style="display: block; text-decoration: none; color: inherit;">
+                            ${s.cover_url
+                                ? `<div class="tile-cover"><img src="${esc(s.cover_url)}" alt="Cover of ${esc(s.title)}" /></div>`
+                                : `<div class="tile-cover tile-cover-empty">No cover yet</div>`}
+                            <div class="tile-body">
+                                <h3>${esc(s.title)}</h3>
+                                <div class="story-meta"><span>by ${esc(s.author_name)}</span></div>
+                            </div>
+                        </a>
+                        <button class="unbookmark-btn" data-id="${esc(s.id)}" title="Remove from saved">✕</button>
+                    </div>`;
+            }).join('');
+
+            document.querySelectorAll('.unbookmark-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    const id = (btn as HTMLElement).dataset.id!;
+                    await supabase.from('bookmarks').delete().eq('user_id', session.user.id).eq('story_id', id);
+                    (btn as HTMLElement).closest('.dash-tile')?.remove();
+                    if (document.querySelectorAll('.dash-tile').length === 0) {
+                        savedGrid.style.display = 'none';
+                        emptyState.style.display = 'block';
+                    }
+                });
+            });
+        }
+        initSaved();
+    </script>
+</BaseLayout>

@@ -1,0 +1,62 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout title="Terms of Service — Raconteur">
+  <main class="legal-page">
+    <article class="legal-card">
+      <p class="eyebrow">The Ground Rules</p>
+      <h1>Terms of Service</h1>
+      <p class="legal-date">Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+
+      <h2>Welcome to Raconteur</h2>
+      <p>Raconteur is a quiet literary home on the internet, a publishing platform for short fiction where stories get room to breathe. By creating an account and using this site, you agree to these terms. They're written in plain language because we believe clarity is kindness.</p>
+
+      <h2>Your Content, Your Ownership</h2>
+      <p>Everything you publish here — stories, poems, comments, notes, belongs to you. We do not claim ownership of your work. You grant Raconteur a non-exclusive license to display your content on the site and in our weekly digest, solely for the purpose of sharing it with readers. You can delete your work at any time from your dashboard.</p>
+
+      <h2>What We Ask of You</h2>
+      <ul>
+        <li><strong>Original work only.</strong> Publish your own writing. Plagiarism, AI-generated content passed off as human, and stolen work have no place here.</li>
+        <li><strong>Be kind in the Reading Room.</strong> Comments and notes should respect the writer and fellow readers. Harassment, hate speech, and spam will be removed.</li>
+        <li><strong>No illegal or harmful content.</strong> Stories that promote violence, exploitation, or illegal acts will be taken down.</li>
+        <li><strong>One account per person.</strong> Don't create multiple accounts to evade moderation or inflate engagement.</li>
+      </ul>
+
+      <h2>What We Reserve the Right to Do</h2>
+      <ul>
+        <li>Remove content that violates these terms, without prior notice.</li>
+        <li>Suspend or delete accounts that repeatedly break the rules.</li>
+        <li>Feature, curate, or recommend stories at our editorial discretion.</li>
+        <li>Change these terms with reasonable notice (we'll post updates here and in the Reading Room).</li>
+      </ul>
+
+      <h2>The House Stays Free</h2>
+      <p>Raconteur is free for writers and readers. We do not sell your data, run ads, or charge for publishing. If that ever changes, we'll tell you first and give you the choice to stay or leave with your work intact.</p>
+
+      <h2>Account Termination</h2>
+      <p>You can delete your account at any time from your dashboard. When you do, your stories, comments, bookmarks, and profile are permanently removed. We keep no copies. If we suspend your account for violating these terms, you'll receive an email explaining why.</p>
+
+      <h2>No Guarantees</h2>
+      <p>Raconteur is provided "as is." We strive for reliability, but we don't guarantee uninterrupted service, perfect uptime, or that your content will never be lost. Back up your own work we're a small house, not a fortress.</p>
+
+      <h2>Contact</h2>
+      <p>Questions about these terms? Write to us at the email on the About page. We read every message.</p>
+
+      <p class="legal-footer">Every story here was written to be remembered. These terms exist to protect that promise.</p>
+    </article>
+  </main>
+
+  <style>
+    .legal-page { max-width: 720px; margin: 4rem auto; padding: 0 1.5rem; }
+    .legal-card { background: #faf5ea; color: #2e2a22; padding: 3rem 2.8rem; border-radius: 6px; box-shadow: 0 4px 30px rgba(0,0,0,0.3); }
+    .eyebrow { font-style: italic; color: #3d5a3c; letter-spacing: 2px; text-transform: uppercase; font-size: 0.72rem; margin-bottom: 0.6rem; }
+    h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 900; color: #232e26; margin-bottom: 0.4rem; }
+    .legal-date { font-size: 0.85rem; color: #8a7d65; font-style: italic; margin-bottom: 2rem; }
+    h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: #3d5a3c; margin-top: 2rem; margin-bottom: 0.8rem; }
+    p, li { font-size: 0.95rem; line-height: 1.7; color: #3a3528; margin-bottom: 1rem; }
+    ul { padding-left: 1.5rem; }
+    li { margin-bottom: 0.6rem; }
+    .legal-footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #ddd2bb; font-style: italic; color: #8a7d65; text-align: center; }
+  </style>
+  <style is:global> body { background: #1e2420; } </style>
+</BaseLayout>

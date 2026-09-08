@@ -1,0 +1,205 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { supabase } from '../../lib/supabase';
+import { buildStoryFromDB } from '../../lib/storyLoader';
+import { esc } from '../../lib/escape';
+
+const { slug } = Astro.params;
+const { data: collection } = await supabase
+  .from('collections')
+  .select('*, collection_stories(story_id, sort_order)')
+  .eq('slug', slug)
+  .single();
+
+if (!collection) {
+  return Astro.redirect('/collections');
+}
+
+const storyIds = (collection.collection_stories || [])
+  .sort((a: any, b: any) => a.sort_order - b.sort_order)
+  .map((cs: any) => cs.story_id);
+
+const { data: storyRows } = storyIds.length > 0
+  ? await supabase.from('stories').select('*').in('id', storyIds).eq('status', 'published')
+  : { data: [] };
+
+const storiesMap = new Map((storyRows || []).map((r: any) => [r.id, buildStoryFromDB(r)]));
+const stories = storyIds.map((id: string) => storiesMap.get(id)).filter(Boolean);
+---
+<BaseLayout title={`${collection.title} — Raconteur`} description={collection.curator_note || `A curated collection on Raconteur.`}>
+    <section class="collection-page">
+    <div class="collection-bg">
+    <header class="collection-header">
+      <p class="section-eyebrow">Curated shelf</p>
+    <h1>{collection.title}</h1>
+      {collection.curator_note && <p class="collection-note">{collection.curator_note}</p>}
+      <p class="collection-signature">✦ Curated by Admin</p>
+    </header>
+    <div class="story-grid">
+      {stories.map((story: any, i: number) => (
+        <a href={`/story/${story.slug}`} class={`story-card reveal genre-${story.genre.toLowerCase().replace(/\s+/g, '-')}`} style={`transition-delay: ${(i + 1) * 0.08}s`}>
+          {story.cover ? (
+            <div class="card-cover">
+              <img src={story.cover} alt={`Cover of ${story.title}`} />
+            </div>
+          ) : (
+            <div class="card-cover card-cover-empty">✦</div>
+          )}
+          <span class="genre">{story.genre}</span>
+          <h3>{story.title}</h3>
+          <p class="excerpt">{story.excerpt}</p>
+          <div class="meta">
+            <span>By {story.author}</span>
+            <span>·</span>
+            <span>{story.wordCount.toLocaleString()} words</span>
+            <span>·</span>
+            <span>{story.readTime}</span>
+          </div>
+        </a>
+      ))}
+      {stories.length === 0 && (
+        <p class="collection-empty">This collection is being arranged — check back soon.</p>
+      )}
+    </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+      :global(body),
+  :global(.site-header) {
+    background: #232e26 !important;
+  }
+    .collection-bg {
+    background: #232e26;
+    min-height: 100vh;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    padding: 5rem 2rem;
+  }
+  .collection-page {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .collection-header {
+    text-align: center;
+    margin-bottom: 4rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+    .collection-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: #f4ede0;
+    margin-bottom: 1rem;
+    letter-spacing: -0.5px;
+  }
+    .collection-note {
+    font-size: 1.05rem;
+    font-style: italic;
+    color: rgba(244, 237, 224, 0.8);
+    max-width: 600px;
+    margin: 0 auto 1.5rem;
+    line-height: 1.7;
+  }
+  .collection-signature {
+    font-size: 0.85rem;
+    color: #3d5a3c;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .story-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.4rem;
+  }
+  .story-card {
+    display: flex;
+    flex-direction: column;
+    padding: 1.6rem 1.3rem;
+    background: #faf5ea;
+    border: 1px solid #ddd2bb;
+    border-top: 3px solid transparent;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 14px rgba(46, 42, 34, 0.07);
+  }
+  .story-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 40px rgba(61, 90, 60, 0.12);
+    background: #fdfaf2;
+  }
+  .story-card .genre,
+  .story-card h3,
+  .story-card .excerpt { display: none; }
+  .story-card .meta { margin-top: 1rem; }
+  .card-cover {
+    margin: -1.6rem -1.3rem 1.4rem;
+    overflow: hidden;
+  }
+  .card-cover img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    object-position: top;
+    display: block;
+    transition: transform 0.4s ease;
+}
+  .story-card:hover .card-cover img {
+    transform: scale(1.05);
+  }
+  .card-cover-empty {
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #efe7d6;
+    color: #8a7d65;
+    font-style: italic;
+    font-size: 1.2rem;
+    margin: -1.6rem -1.3rem 1.4rem;
+  }
+  .meta {
+    font-size: 0.72rem;
+    color: #8a7d65;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid #e8dfca;
+    letter-spacing: 0.3px;
+  }
+  .meta span:nth-child(even) { display: none; }
+    .collection-empty {
+    text-align: center;
+    font-style: italic;
+    color: rgba(244, 237, 224, 0.7);
+    padding: 4rem 2rem;
+    grid-column: 1 / -1;
+  }
+  @media (max-width: 1024px) {
+    .story-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .story-grid { grid-template-columns: 1fr; gap: 1.2rem; }
+    .collection-page { padding: 3rem 1.3rem; }
+  }
+</style>
+
+<script>
+  const revealEls = document.querySelectorAll('.reveal');
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('revealed');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  revealEls.forEach((el) => revealObserver.observe(el));
+</script>

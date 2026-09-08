@@ -1,0 +1,291 @@
+---
+// LiteraryGiants.astro — reads giants from data/giants.json; two featured per day
+import giants from '../data/giants.json';
+
+const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+);
+const first = (dayOfYear * 3) % giants.length;
+const todaysGiants = [
+    giants[first],
+    giants[(first + 1) % giants.length],
+    giants[(first + 2) % giants.length],
+];
+---
+
+<div class="giants-half">
+    <div class="g-header">
+        <p class="g-eyebrow">The Eternal Canon</p>
+        <h3 class="g-title">Know Your Literary Giants</h3>
+    </div>
+
+    <div class="giants-row">
+        {todaysGiants.map((g, i) => (
+            <button class="giant-tile" data-giant={i}>
+                <div class="giant-portrait">
+                    <img src={g.portrait} alt={`Portrait of ${g.name}`} loading="lazy" />
+                </div>
+                <span class="giant-name">{g.name}</span>
+                <span class="giant-years">{g.born} – {g.died}</span>
+            </button>
+        ))}
+    </div>
+
+    <script type="application/json" id="giants-data" set:html={JSON.stringify(todaysGiants)} />
+
+    <!-- Details modal -->
+    <div class="giant-modal" id="giantModal" hidden>
+        <div class="giant-modal-card">
+            <button class="giant-modal-close" aria-label="Close">×</button>
+            <h4 class="gm-name"></h4>
+            <p class="gm-years"></p>
+            <p class="gm-bio"></p>
+            <div class="gm-grid">
+                <div>
+                    <span class="gm-label">Magnum Opus</span>
+                    <p class="gm-opus"></p>
+                </div>
+                <div>
+                    <span class="gm-label">Active Years</span>
+                    <p class="gm-active"></p>
+                </div>
+            </div>
+            <span class="gm-label">Books</span>
+            <p class="gm-books"></p>
+            <span class="gm-label">A Fact Few Know</span>
+            <p class="gm-fact"></p>
+            <blockquote class="gm-line"></blockquote>
+        </div>
+    </div>
+</div>
+
+<style>
+    .giants-half {
+        flex: 1;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-end;
+    }
+
+    .g-header {
+        text-align: center;
+        margin-bottom: 1.6rem;
+        width: 100%;
+    }
+
+    .g-eyebrow {
+        font-style: italic;
+        color: #a8b89c;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .g-title {
+        font-family: 'Playfair Display', serif;
+        font-size: clamp(1.3rem, 2.2vw, 1.7rem);
+        font-weight: 900;
+        color: #f4ede0;
+        letter-spacing: -0.3px;
+    }
+
+    .giants-row {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 2.5rem;
+        width: 100%;
+        padding-right: 3rem;
+    }
+
+    .giant-tile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.55rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+        transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .giant-tile:hover { transform: translateY(-6px); }
+
+    .giant-portrait {
+        width: 150px;
+        height: 200px;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 2px solid rgba(244, 237, 224, 0.35);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+        background: #2a2018;
+    }
+
+    .giant-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* PHONE PIC4: 3 giants visible — even smaller to fit 390px */
+    @media (max-width: 640px) {
+        .giants-half { padding: 1.2rem 0.6rem; align-items: center; }
+       .giants-row {
+    justify-content: flex-start;
+    gap: 1rem;
+    padding: 0 1.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 1.5rem;
+    padding-bottom: 0.4rem;
+    scrollbar-width: none;
+    }
+.giants-row::-webkit-scrollbar { display: none; }
+.giants-row::-webkit-scrollbar { display: none; }
+       .giant-tile { flex: 0 0 auto; scroll-snap-align: start; }
+        .giant-portrait { width: 102px; height: 138px; border-width: 1.5px; }
+        .giant-name { font-size: 0.75rem; max-width: 92px; }
+        .giant-years { font-size: 0.62rem; }
+    }
+    @media (max-width: 380px) {
+    .giant-portrait { width: 92px; height: 124px; }
+    .giants-row { gap: 0.6rem; padding: 0 0.8rem; }
+}
+
+    .giant-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #f4ede0;
+    max-width: 102px;
+    text-align: center;
+    line-height: 1.2;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    }
+
+    .giant-years { font-size: 0.72rem; color: #a8b89c; letter-spacing: 1px; }
+        @media (min-width: 641px) {
+        .giants-half .giants-row {
+            justify-content: flex-end;
+            align-items: flex-start;
+            padding-right: 3rem;
+        }
+    }
+
+    /* === Modal === */
+    .giant-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        background: rgba(10, 16, 12, 0.72);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+    }
+
+    .giant-modal[hidden] { display: none; }
+
+    .giant-modal-card {
+        position: relative;
+        max-width: 640px;
+        width: 100%;
+        max-height: 84vh;
+        overflow-y: auto;
+        background: #f7f0dd;
+        color: #2e2a22;
+        border-radius: 6px;
+        padding: 2.5rem;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+    }
+
+    .giant-modal-close {
+        position: absolute;
+        top: 0.7rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        font-size: 1.7rem;
+        cursor: pointer;
+        color: #8a7d65;
+        line-height: 1;
+    }
+
+    .gm-name {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.8rem;
+        font-weight: 900;
+        color: #232e26;
+    }
+
+    .gm-years { font-size: 0.8rem; color: #8a7d65; letter-spacing: 1px; margin: 0.4rem 0 1rem; }
+    .gm-bio { font-size: 1rem; line-height: 1.7; font-style: italic; margin-bottom: 1.2rem; }
+
+    .gm-label {
+        display: block;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #3d5a3c;
+        font-weight: 600;
+        margin: 1rem 0 0.3rem;
+    }
+
+    .gm-opus { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; }
+    .gm-active, .gm-books, .gm-fact { font-size: 0.92rem; line-height: 1.6; }
+    .gm-grid { display: flex; gap: 2.5rem; flex-wrap: wrap; }
+
+    .gm-line {
+        margin-top: 1.4rem;
+        padding: 1.1rem 1.4rem;
+        border-left: 3px solid #3d5a3c;
+        background: rgba(61, 90, 60, 0.07);
+        font-family: 'Playfair Display', serif;
+        font-style: italic;
+        font-size: 1.1rem;
+        line-height: 1.5;
+        color: #2e2a22;
+    }
+</style>
+
+<script>
+    // === Giants modal logic ===
+    const giantsData = JSON.parse(
+        document.getElementById('giants-data')?.textContent || '[]'
+    );
+    const modal = document.getElementById('giantModal');
+    const tiles = document.querySelectorAll('.giant-tile');
+
+    function fillGiant(i: number) {
+        const g = giantsData[i];
+        if (!g || !modal) return;
+        modal.querySelector('.gm-name')!.textContent = g.name;
+        modal.querySelector('.gm-years')!.textContent = `${g.born} – ${g.died} · Active ${g.active}`;
+        modal.querySelector('.gm-bio')!.textContent = g.bio;
+        modal.querySelector('.gm-opus')!.textContent = g.magnumOpus;
+        modal.querySelector('.gm-active')!.textContent = g.active;
+        modal.querySelector('.gm-books')!.textContent = g.books.join(' · ');
+        modal.querySelector('.gm-fact')!.textContent = g.unknownFact;
+        modal.querySelector('.gm-line')!.textContent = '“' + g.greatestLine + '”';
+    }
+
+    function closeModal() {
+        modal?.setAttribute('hidden', '');
+        document.body.style.overflow = '';
+    }
+
+    tiles.forEach((tile, i) => {
+        tile.addEventListener('click', () => {
+            fillGiant(i);
+            modal?.removeAttribute('hidden');
+            document.body.style.overflow = 'hidden';
+        });
+    });
+
+    modal?.querySelector('.giant-modal-close')?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+</script>

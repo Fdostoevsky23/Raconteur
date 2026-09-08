@@ -1,0 +1,1175 @@
+---
+// src/pages/author/[slug].astro — serves both static JSON authors AND live database writers
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import authors from '../../data/authors.json';
+import { getVisibleStories } from '../../data/stories';
+import type { Story } from '../../data/stories';
+import { supabase } from '../../lib/supabase';
+import { buildStoryFromDB } from '../../lib/storyLoader';
+import ShelfMark from '../../components/ShelfMark.astro';
+
+// (Server-rendered on every request — output:'server', so getStaticPaths does
+// nothing here and was removed. Static authors and DB writers share this route.)
+interface Props {
+    author?: typeof authors[number];
+    isDbAuthor?: boolean;
+}
+
+// Get the slug from the URL
+const { slug } = Astro.params;
+
+let author: any = Astro.props.author;
+let authorStories: Story[] = [];
+let isDbAuthor = Astro.props.isDbAuthor || false;
+
+// 1. If it's a static author, use the existing logic
+if (author) {
+    const allStories = getVisibleStories();
+    authorStories = allStories.filter(
+        (s) => s.author.toLowerCase() === author.name.toLowerCase()
+    );
+    // Also pull DB-published stories by the same name (e.g. Nzan re-uploading via account)
+    const { data: dbRowsStatic } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('status', 'published')
+        .ilike('author_name', author.name);
+    if (dbRowsStatic && dbRowsStatic.length > 0) {
+        authorStories = [...dbRowsStatic.map(buildStoryFromDB), ...authorStories];
+    }
+    // Keep the stats honest
+    author.storyCount = authorStories.length;
+    author.totalWords = authorStories.reduce((sum, s) => sum + s.wordCount, 0);
+}
+// 2. If not found statically, check if it's a database writer
+else if (slug) {
+    // Query Supabase for published stories by this author name
+    const { data: dbRows } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('status', 'published')
+        .ilike('author_name', slug.replace(/-/g, ' ')) // Case-insensitive match
+        .order('created_at', { ascending: false });
+
+    if (dbRows && dbRows.length > 0) {
+        isDbAuthor = true;
+        // Convert DB rows to our Story shape
+        authorStories = dbRows.map(buildStoryFromDB);
+        
+        // Calculate total words for the stats row
+        const totalWords = authorStories.reduce((sum, s) => sum + s.wordCount, 0);
+                const displayName = dbRows[0].author_name || slug;
+
+        // Fetch the writer's real profile (bio, avatar, socials).
+        // Explicit columns (never select *) — anon loses the phone column once
+        // RLS-HARDENING STEP 3 runs, and select * fails wholesale on a denied column.
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('pen_name, bio, avatar_url, x_url, instagram_url, facebook_url, public_email, is_admin, verified, work_count, prose_count, poetry_count, book_recs')
+            .eq('user_id', dbRows[0].author_id)
+            .maybeSingle();
+
+        author = {
+            name: displayName,
+            bio: profile?.bio || `${displayName} is a writer sharing their voice on Raconteur.`,
+            avatarInitials: displayName.substring(0, 2).toUpperCase(),
+            avatarGradient: ['#4a5d4e', '#2c3e2d'],
+            avatarUrl: profile?.avatar_url || '',
+            userId :   dbRows [ 0 ].author_id,
+            isAdmin :  !!( profile   as   any )?.is_admin ,
+            verified :  !!( profile   as   any )?.verified ,
+            workCount :  ( profile   as   any )?.work_count   ||   0 ,
+            proseCount :  ( profile   as   any )?.prose_count   ||   0 ,
+            poetryCount :  ( profile   as   any )?.poetry_count   ||   0 ,
+            bookRecs :  ( profile   as   any )?.book_recs   ||   [] ,
+            role :  ( profile   as   any )?.is_admin   ?   ''   :   'Community Writer' ,
+            xUrl: profile?.x_url || '',
+            instagramUrl: profile?.instagram_url || '',
+            facebookUrl: profile?.facebook_url || '',
+            publicEmail: profile?.public_email || '',
+            location :  ( profile   as   any )?.is_admin   ?   ''   :   'The Raconteur Community' ,
+            joinedDate: new Date(dbRows[0].created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+            storyCount: dbRows.length,
+            totalWords: totalWords,
+            favoriteLine: '',
+            featuredStorySlug: '',
+            featuredStoryTitle: '',
+            books: []
+        } as any;
+    }
+}
+
+// 3. If still no author found, redirect to homepage safely
+if (!author) {
+    return Astro.redirect('/');
+}
+
+const authorSlug = author.name.toLowerCase().replace(/\s+/g, '-');
+
+// Fetch this writer's books (DB authors only; static authors get an empty shelf)
+let authorBooks: any[] = [];
+if (isDbAuthor && (author as any).userId) {
+    const { data: books } = await supabase
+        .from('books')
+        .select('*')
+        .eq('owner_id', (author as any).userId)
+        .order('created_at', { ascending: true });
+        authorBooks = books || [];
+}
+const authorPoems = authorStories.filter((s: any) => s.kind === 'poem');
+const authorProse = authorStories.filter((s: any) => s.kind !== 'poem');
+
+// === Poetry Collections (DB authors only) ===
+let authorCollections: any[] = [];
+let collectionCounts: Record<string, number> = {};
+let authorPoemSingles = authorPoems;
+
+if (isDbAuthor && (author as any).userId) {
+    const { data: colls } = await supabase
+        .from('poetry_collections')
+        .select('*')
+        .eq('owner_id', (author as any).userId)
+        .order('created_at', { ascending: false });
+    authorCollections = colls || [];
+
+    // Count poems per collection
+    const { data: poemRows } = await supabase
+        .from('stories')
+        .select('id, collection_id')
+        .eq('author_id', (author as any).userId)
+        .eq('kind', 'poem')
+        .eq('status', 'published');
+    (poemRows || []).forEach((p: any) => {
+        if (p.collection_id) collectionCounts[p.collection_id] = (collectionCounts[p.collection_id] || 0) + 1;
+    });
+
+    // Singles = poems NOT in a collection
+    authorPoemSingles = authorPoems.filter((s: any) => !s.collection_id);
+}
+---
+
+<BaseLayout title={`${author.name} — Raconteur`} description={author.bio}>
+    <main class="author-page">
+        {/* Hero: portrait + name + role */}
+        <header class="author-hero">
+            <div
+                class="author-avatar"
+                style={`background: linear-gradient(135deg, ${author.avatarGradient[0]}, ${author.avatarGradient[1]});`}
+            >
+                {author.avatarUrl ? (
+                    <img src={author.avatarUrl} alt={`Portrait of ${author.name}`} />
+                ) : (
+                    author.avatarInitials
+                )}
+            </div>
+        
+        <h1 class="author-name">{ author.name }<ShelfMark prose={(author as any).proseCount || 0} poetry={(author as any).poetryCount || 0} total={(author as any).workCount || 0} verified={(author as any).verified} /></h1>
+            { (author as any).isAdmin && (
+                <p class="admin-line"><span class="admin-badge">✦</span> Admin's Account</p>
+            )}
+            
+            {(author.xUrl || author.instagramUrl || author.facebookUrl || author.publicEmail) && (
+                                <div class="author-socials">
+                    {author.xUrl && (
+                        <a href={author.xUrl} target="_blank" rel="noopener" title="X">
+                            <svg viewBox="0 0 24 24" fill="#e7e7e7" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644z"/></svg>
+                        </a>
+                    )}
+                    {author.instagramUrl && (
+                        <a href={author.instagramUrl} target="_blank" rel="noopener" title="Instagram">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="url(#igGrad)" stroke-width="2" aria-hidden="true">
+                                <defs>
+                                    <linearGradient id="igGrad" x1="0" y1="1" x2="1" y2="0">
+                                        <stop offset="0%" stop-color="#f09433"/>
+                                        <stop offset="35%" stop-color="#dc2743"/>
+                                        <stop offset="70%" stop-color="#cc2366"/>
+                                        <stop offset="100%" stop-color="#bc1888"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="2.5" y="2.5" width="19" height="19" rx="5"/>
+                                <circle cx="12" cy="12" r="4.5"/>
+                                <circle cx="17.3" cy="6.7" r="1.4" fill="url(#igGrad)" stroke="none"/>
+                            </svg>
+                        </a>
+                    )}
+                    {author.facebookUrl && (
+                        <a href={author.facebookUrl} target="_blank" rel="noopener" title="Facebook">
+                            <svg viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true"><path d="M24 12.073C24 5.446 18.627.073 12 .073S0 5.446 0 12.073c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                        </a>
+                    )}
+                    { author.publicEmail && (
+                        <button class="copy-email-btn" data-email={author.publicEmail} title="Copy email address">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#7a9472" stroke-width="2" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="m3 6 9 7 9-7"/></svg>
+                        </button>
+                    )}
+                </div>
+                
+            )}
+             {author.userId && (
+                <div class="hero-actions">
+                    <button id="followBtn" class="follow-btn" type="button">Follow</button>
+                    <a id="messageBtn" class="follow-btn message-btn" href={`/messages?with=${author.userId}`} style="display: none;">✉ Message</a>
+                </div>
+            )}
+        </header>
+
+        {/* Bio */}
+        <section class="author-bio">
+            <p>{author.bio}</p>
+        </section>
+
+            {(author as any).bookRecs && (author as any).bookRecs.length > 0 && (
+          <section class="author-books-recs">
+            <h2 class="section-label">Top 5 Books Recommended by {author.name}</h2>
+            <ol class="book-recs-list">
+              {(author as any).bookRecs.map((b: string) => <li>{b}</li>)}
+            </ol>
+          </section>
+        )}
+        {/* Stats row */}
+        <section class="author-stats">
+            <div class="stat">
+                <span class="stat-num">{authorProse.length}</span>
+                <span class="stat-lbl">{authorProse.length === 1 ? 'Story' : 'Stories'}</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat">
+                <span class="stat-num">{authorPoems.length}</span>
+                <span class="stat-lbl">{authorPoems.length === 1 ? 'Poem' : 'Poems'}</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat">
+                <span class="stat-num">{author.totalWords.toLocaleString()}</span>
+                <span class="stat-lbl">Words</span>
+            </div>
+                        <div class="stat-divider"></div>
+            <div class="stat">
+                <span class="stat-num">{author.joinedDate}</span>
+                <span class="stat-lbl">Joined</span>
+            </div>
+            {author.userId && (
+                <>
+                    <div class="stat-divider"></div>
+                    <div class="stat stat-clickable" id="followersStat" role="button" tabindex="0">
+                        <span class="stat-num" id="followerCount">–</span>
+                        <span class="stat-lbl">Followers</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat stat-clickable" id="followingStat" role="button" tabindex="0">
+                        <span class="stat-num" id="followingCount">–</span>
+                        <span class="stat-lbl">Following</span>
+                    </div>
+                </>
+            )}
+        </section>
+
+                {/* Share this writer */}
+        <div class="share-writer-row">
+            <span class="share-writer-label">Share {author.name}'s shelf</span>
+            <button type="button" class="share-writer-btn" id="shareWriterCopy" title="Copy link">🔗 Copy</button>
+            <a class="share-writer-btn" id="shareWriterX" target="_blank" rel="noopener" title="Share on X">𝕏</a>
+            <a class="share-writer-btn" id="shareWriterFb" target="_blank" rel="noopener" title="Share on Facebook">f</a>
+            <a class="share-writer-btn" id="shareWriterWa" target="_blank" rel="noopener" title="Share on WhatsApp">WhatsApp</a>
+            <a class="share-writer-btn" id="shareWriterTg" target="_blank" rel="noopener" title="Share on Telegram">Telegram</a>
+        </div>
+
+        {/* Favorite line — only when the author actually has one */}
+        {author.favoriteLine && (
+            <blockquote class="author-favorite">
+                <p>"{author.favoriteLine}"</p>
+            </blockquote>
+        )}
+
+                {/* Their books — between two quiet lines */}
+        {authorBooks.length > 0 && (
+            <section class="author-books">
+                <div class="books-rule"></div>
+                <h2 class="books-heading">Books authored by {author.name}</h2>
+                <div class="books-shelf">
+                    {authorBooks.map((book: any) => (
+                            <div class="book-tile">
+                            {book.blurb && (
+                                <button class="blurb-btn" data-title={book.title} data-blurb={book.blurb}>Read the Blurb</button>
+                            )}
+                            {book.cover_url ? (
+                                <img src={book.cover_url} alt={`Cover of ${book.title}`} class="book-cover" />
+                            ) : (
+                                <div class="book-cover book-cover-empty">No cover</div>
+                            )}
+                            <h3 class="book-title">{book.title}</h3>
+                            {(book.links && book.links.length > 0) && (
+                                <div class="book-links">
+                                    {book.links.map((l: any) => (
+                                        <a href={l.url} target="_blank" rel="noopener" class="book-link">{l.label}</a>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+                <div class="books-rule"></div>
+            </section>
+        )}
+
+        {/* Their stories */}
+        <section class="author-stories">
+            <h2>Stories by {author.name}</h2>
+                {authorProse.length > 0 ? (
+                <div class="story-grid">
+                    {authorProse.map((story) => (
+                        <a
+                            href={`/story/${story.slug}`}
+                            class={`story-card genre-${story.genre.toLowerCase().replace(/\s+/g, '-')}`}
+                        >
+                            {story.cover && (
+                                <div class="card-cover">
+                                    <img src={story.cover} alt={`Cover of ${story.title}`} />
+                                </div>
+                            )}
+                            <span class="genre">{story.genre}</span>
+                            <h3>{story.title}</h3>
+                            <p class="excerpt">{story.excerpt}</p>
+                            <div class="meta">
+                                <span>{story.wordCount.toLocaleString()} words</span>
+                                <span>{story.readTime}</span>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            ) : (
+                <p class="no-stories">No stories published yet — check back soon.</p>
+            )}
+                </section>
+                {/* Their poetry collections */}
+        {authorCollections.length > 0 && (
+            <section class="author-stories author-collections">
+                <div class="books-rule"></div>
+                <h2>Poetry Collections by {author.name}</h2>
+                <div class="story-grid">
+                    {authorCollections.map((c: any) => (
+                        <a href={`/poetry/${c.id}`} class="story-card collection-card">
+                            {c.cover_url ? (
+                                <div class="card-cover"><img src={c.cover_url} alt={`Cover of ${c.name}`} /></div>
+                            ) : (
+                                <div class="card-cover collection-text-cover">
+                                    <span class="collection-icon">📚</span>
+                                    <span class="collection-name">{c.name}</span>
+                                </div>
+                            )}
+                            <h3>{c.name}</h3>
+                            <div class="meta">
+                                <span>{collectionCounts[c.id] || 0} {collectionCounts[c.id] === 1 ? 'poem' : 'poems'}</span>
+                                <span>Collection</span>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            </section>
+        )}
+
+        {/* Their poetry singles */}
+        {authorPoemSingles.length > 0 && (
+            <section class="author-stories author-poetry">
+                <div class="books-rule"></div>
+                <h2>Poetry by {author.name}</h2>
+                <div class="story-grid">
+                    {authorPoemSingles.map((story) => (
+                        <a href={`/story/${story.slug}`} class="story-card">
+                            {story.cover ? (
+                                <div class="card-cover"><img src={story.cover} alt={`Cover of ${story.title}`} /></div>
+                            ) : (
+                                <div class="card-cover poem-text-cover">
+                                    <p class="poem-text-preview">"{(story.content[0]?.text || '').replace(/<[^>]+>/g, ' ').substring(0, 90)}…"</p>
+                                </div>
+                            )}
+                            <h3>{story.title}</h3>
+                            <div class="meta">
+                                <span>{story.wordCount.toLocaleString()} words</span>
+                                <span>Poem</span>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            </section>
+        )}
+            <div id="author-meta" data-userid={author.userId || ''} hidden></div>
+
+        <script>
+            import { supabase } from '../../lib/supabase';
+
+            const meta = { userId: document.getElementById('author-meta')?.getAttribute('data-userid') || null };
+            const followBtn = document.getElementById('followBtn') as HTMLButtonElement | null;
+            const followerCount = document.getElementById('followerCount') as HTMLElement | null;
+
+            async function initFollow() {
+                if (!meta.userId || !followBtn || !followerCount) return;
+
+                const { count } = await supabase
+                    .from('follows')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('followed_id', meta.userId);
+                followerCount.textContent = String(count ?? 0);
+
+                const { count: followingCount } = await supabase
+                    .from('follows')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('follower_id', meta.userId);
+                const followingEl = document.getElementById('followingCount');
+                if (followingEl) followingEl.textContent = String(followingCount ?? 0);
+
+                const { data: { session } } = await supabase.auth.getSession();
+                let following = false;
+                if (session) {
+                     if (session.user.id === meta.userId) {
+                        followBtn.style.display = 'none'; // no following yourself
+                    } else {
+                        const msgBtn = document.getElementById('messageBtn');
+                        if (msgBtn) msgBtn.style.display = 'inline-block';
+                        const { data: row } = await supabase
+                            .from('follows')
+                            .select('id')
+                            .eq('follower_id', session.user.id)
+                            .eq('followed_id', meta.userId)
+                            .maybeSingle();
+                        following = !!row;
+                    }
+                }
+                paint(following);
+
+                followBtn.addEventListener('click', async () => {
+                    const { data: { session: s } } = await supabase.auth.getSession();
+                    if (!s) { window.location.href = '/login'; return; }
+                    if (following) {
+                        await supabase.from('follows').delete()
+                            .eq('follower_id', s.user.id)
+                            .eq('followed_id', meta.userId);
+                        following = false;
+                        followerCount.textContent = String(Math.max(0, Number(followerCount.textContent) - 1));
+                        } else {
+                        await supabase.from('follows').insert({ follower_id: s.user.id, followed_id: meta.userId });
+                        following = true;
+                        followerCount.textContent = String(Number(followerCount.textContent) + 1);
+
+                        // Notify the followed writer
+                        await supabase.from('notifications').insert({
+                            user_id: meta.userId,
+                            actor_id: s.user.id,
+                            type: 'follow',
+                        });
+                    }
+                    paint(following);
+                });
+            }
+
+            function paint(following: boolean) {
+                if (!followBtn) return;
+                followBtn.classList.toggle('following', following);
+                followBtn.textContent = following ? 'Following ✓' : 'Follow';
+            }
+
+            initFollow();
+                        // === Share this writer ===
+            const swUrl = window.location.href;
+            const swNameEl = document.querySelector('.author-name');
+            const swName = swNameEl ? swNameEl.textContent!.trim() : 'this writer';
+            const swText = `Read ${swName}'s stories on Raconteur`;
+            const enc = encodeURIComponent;
+            const setHref = (id: string, href: string) => document.getElementById(id)?.setAttribute('href', href);
+            setHref('shareWriterX', `https://twitter.com/intent/tweet?url=${enc(swUrl)}&text=${enc(swText)}`);
+            setHref('shareWriterFb', `https://www.facebook.com/sharer/sharer.php?u=${enc(swUrl)}`);
+            setHref('shareWriterWa', `https://wa.me/?text=${enc(swText + ' ' + swUrl)}`);
+            setHref('shareWriterTg', `https://t.me/share/url?url=${enc(swUrl)}&text=${enc(swText)}`);
+            document.getElementById('shareWriterCopy')?.addEventListener('click', async (e) => {
+                const btn = e.currentTarget as HTMLButtonElement;
+                try {
+                    await navigator.clipboard.writeText(swUrl);
+                    btn.textContent = '✓ Copied';
+                    setTimeout(() => { btn.textContent = '🔗 Copy'; }, 1800);
+                } catch {
+                    btn.textContent = 'Copy failed';
+                }
+            });
+        // === Clickable followers / following ===
+        const followModal = document.getElementById('followModal')!;
+        const fmTitle = document.getElementById('followModalTitle')!;
+        const fmList = document.getElementById('followModalList')!;
+        followModal.querySelector('.blurb-modal-close')!.addEventListener('click', () => followModal.hidden = true);
+        followModal.querySelector('.blurb-modal-backdrop')!.addEventListener('click', () => followModal.hidden = true);
+        async function openFollowList(kind: 'followers' | 'following') {
+            if (!meta.userId) return;
+            const { data } = await supabase.from('follows')
+                .select(kind === 'followers' ? 'follower_id' : 'followed_id')
+                .eq(kind === 'followers' ? 'followed_id' : 'follower_id', meta.userId);
+            const ids = (data || []).map((r: any) => kind === 'followers' ? r.follower_id : r.followed_id);
+            fmTitle.textContent = kind === 'followers' ? 'Followers' : 'Following';
+            if (!ids.length) {
+                fmList.innerHTML = '<p class="follow-empty">Nobody yet — quiet shelves fill slowly.</p>';
+            } else {
+                const { data: profs } = await supabase.from('profiles').select('user_id, pen_name, avatar_url').in('user_id', ids);
+                fmList.innerHTML = ids.map((id: string) => {
+                    const p = (profs || []).find((x: any) => x.user_id === id);
+                    const n = p?.pen_name || 'A Raconteur writer';
+                    const initials = n.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+                    const av = p?.avatar_url
+                        ? `<img src="${p.avatar_url}" alt="${n}" />`
+                        : `<span>${initials}</span>`;
+                    return `<a class="follow-row" href="/author/${n.toLowerCase().replace(/\s+/g, '-')}"><span class="follow-avatar">${av}</span>${n}</a>`;
+                }).join('');
+            }
+            followModal.hidden = false;
+        }
+        document.getElementById('followersStat')?.addEventListener('click', () => openFollowList('followers'));
+        document.getElementById('followingStat')?.addEventListener('click', () => openFollowList('following'));
+        </script>
+
+            <div id="followModal" class="blurb-modal" hidden>
+        <div class="blurb-modal-backdrop"></div>
+        <div class="blurb-modal-card">
+            <button class="blurb-modal-close" aria-label="Close">×</button>
+            <h3 id="followModalTitle" class="blurb-modal-title"></h3>
+            <div id="followModalList" class="follow-modal-list"></div>
+        </div>
+    </div>
+
+        <div class="back-home">
+            <a href="/">← Back to Raconteur</a>
+        </div>
+
+    {/* Blurb modal — quiet overlay like the Giants bio */}
+    <div id="blurbModal" class="blurb-modal" hidden>
+        <div class="blurb-modal-backdrop"></div>
+        <div class="blurb-modal-card">
+            <button class="blurb-modal-close" aria-label="Close">×</button>
+            <h3 id="blurbModalTitle" class="blurb-modal-title"></h3>
+            <p id="blurbModalBody" class="blurb-modal-body"></p>
+        </div>
+    </div>
+
+    <script>
+        const blurbModal = document.getElementById('blurbModal')!;
+        const blurbTitle = document.getElementById('blurbModalTitle')!;
+        const blurbBody = document.getElementById('blurbModalBody')!;
+        const blurbClose = blurbModal.querySelector('.blurb-modal-close')!;
+        const blurbBackdrop = blurbModal.querySelector('.blurb-modal-backdrop')!;
+
+        document.querySelectorAll('.blurb-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                blurbTitle.textContent = (btn as HTMLElement).dataset.title || '';
+                blurbBody.textContent = (btn as HTMLElement).dataset.blurb || '';
+                blurbModal.hidden = false;
+            });
+        });
+
+        function closeBlurb() { blurbModal.hidden = true; }
+        blurbClose.addEventListener('click', closeBlurb);
+        blurbBackdrop.addEventListener('click', closeBlurb);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeBlurb(); });
+    </script>
+    </main>
+</BaseLayout>
+
+<style>
+    :global(body) {
+        background-color: #1e2420;
+        color: #e4ddc8;
+    }
+
+    .author-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 2rem 5rem;
+    overflow-x: hidden;
+    }
+
+        .author-books-recs { margin-top: 2rem; }
+    .section-label {
+        font-family: 'Playfair Display', serif; font-size: 1.1rem;
+        color: #f4ede0; margin-bottom: 0.8rem;
+    }
+    .book-recs-list {
+        list-style: none; padding: 0; counter-reset: rec;
+    }
+    .book-recs-list li {
+        counter-increment: rec;
+        padding: 0.5rem 0; border-bottom: 1px solid rgba(228,221,200,0.1);
+        color: #d8d0bc; font-style: italic;
+    }
+    .book-recs-list li::before {
+        content: counter(rec) ". "; color: #8a9478; font-style: normal;
+        font-family: 'Playfair Display', serif; margin-right: 0.5rem;
+    }
+
+    /* Hero */
+    .author-hero {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .author-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Playfair Display', serif;
+        font-size: 2.4rem;
+        font-weight: 900;
+        color: #f4ede0;
+        margin: 0 auto 1.5rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .author-role {
+        font-style: italic;
+        color: #a8b89c;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .author-name {
+        font-family: 'Playfair Display', serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 900;
+        color: #f4ede0;
+        letter-spacing: -0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .author-location {
+        font-size: 0.9rem;
+        color: #a8b89c;
+    }
+
+    /* Bio */
+    .author-bio {
+        max-width: 640px;
+        margin: 0 auto 3rem;
+    }
+
+    .author-bio p {
+        font-size: 1.15rem;
+        line-height: 1.8;
+        color: #d8d0bc;
+        text-align: justify;
+        hyphens: none;
+        overflow-wrap: break-word;
+    }
+
+    /* Stats */
+    .author-stats {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2.5rem;
+    margin-bottom: 3rem;
+    padding: 2rem 0;
+    border-top: 1px solid rgba(228, 221, 200, 0.15);
+    border-bottom: 1px solid rgba(228, 221, 200, 0.15);
+    flex-wrap: wrap;
+    }
+
+    .stat { text-align: center; }
+
+    .stat-num {
+        display: block;
+        font-family: 'Playfair Display', serif;
+        font-size: 1.6rem;
+        font-weight: 900;
+        color: #a8b89c;
+    }
+
+    .stat-lbl {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #8a9478;
+    }
+
+    .stat-divider {
+        width: 1px;
+        height: 40px;
+        background: rgba(228, 221, 200, 0.2);
+    }
+
+    /* Favorite line */
+    .author-favorite {
+        max-width: 600px;
+        margin: 0 auto 4rem;
+        padding: 1.5rem 2rem;
+        border-left: 3px solid #a8b89c;
+        background: rgba(168, 184, 156, 0.06);
+    }
+
+    .author-favorite p {
+        font-family: 'Playfair Display', serif;
+        font-style: italic;
+        font-size: 1.2rem;
+        line-height: 1.6;
+        color: #e4ddc8;
+    }
+
+        /* === Books shelf — between two quiet lines === */
+    .author-books {
+        margin: 0 auto 3rem;
+        max-width: 900px;
+    }
+    .books-rule {
+        height: 1px;
+        background: rgba(228, 221, 200, 0.15);
+        margin: 2rem 0;
+    }
+    .books-heading {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #f4ede0;
+        text-align: center;
+        margin-bottom: 2rem;
+        letter-spacing: -0.3px;
+    }
+    .books-shelf {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 2.5rem;
+    }
+    .book-tile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        max-width: 200px;
+    }
+    .book-cover {
+        width: 160px;
+        height: auto;
+        border: 1px solid rgba(228, 221, 200, 0.2);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        margin-bottom: 1rem;
+    }
+    .book-cover-empty {
+        height: 220px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #efe7d6;
+        color: #8a7d65;
+        font-style: italic;
+        font-size: 0.8rem;
+    }
+    .book-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #f4ede0;
+        margin-bottom: 0.4rem;
+    }
+        .blurb-btn {
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #a8b89c;
+        background: transparent;
+        border: 1px solid rgba(168, 184, 156, 0.3);
+        border-radius: 999px;
+        padding: 0.3rem 0.8rem;
+        cursor: pointer;
+        font-family: inherit;
+        margin-bottom: 0.8rem;
+        transition: all 0.2s;
+    }
+    .blurb-btn:hover {
+        background: rgba(168, 184, 156, 0.12);
+        color: #f4ede0;
+        border-color: #a8b89c;
+    }
+
+    /* Blurb modal — quiet overlay */
+    .blurb-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+    }
+    .blurb-modal[hidden] { display: none; }
+    .blurb-modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+    }
+    .blurb-modal-card {
+        position: relative;
+        background: #faf5ea;
+        border: 1px solid #ddd2bb;
+        border-radius: 8px;
+        max-width: 600px;
+        width: 100%;
+        max-height: 80vh;
+        overflow-y: auto;
+        padding: 2.5rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        color: #2e2a22;
+    }
+    .blurb-modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: transparent;
+        border: none;
+        font-size: 1.5rem;
+        color: #8a7d65;
+        cursor: pointer;
+        line-height: 1;
+    }
+    .blurb-modal-close:hover { color: #2e2a22; }
+    .blurb-modal-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #2e2a22;
+        margin-bottom: 1.2rem;
+    }
+    .blurb-modal-body {
+        font-size: 0.95rem;
+        line-height: 1.7;
+        color: #3a4a38;
+        font-style: italic;
+    }
+    .book-links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    .book-link {
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #a8b89c;
+        text-decoration: none;
+        border: 1px solid rgba(168, 184, 156, 0.3);
+        border-radius: 999px;
+        padding: 0.3rem 0.8rem;
+        transition: all 0.2s;
+    }
+    .book-link:hover {
+        background: rgba(168, 184, 156, 0.12);
+        color: #f4ede0;
+        border-color: #a8b89c;
+    }
+
+    /* Stories grid */
+    .author-stories h2 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #f4ede0;
+        text-align: center;
+        margin-bottom: 2.5rem;
+    }
+
+    .story-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .story-card {
+        display: flex;
+        flex-direction: column;
+        background: #faf5ea;
+        border: 1px solid #ddd2bb;
+        border-top: 3px solid #3d5a3c;
+        border-radius: 2px;
+        padding: 1.6rem 1.3rem;
+        text-decoration: none;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: 0 2px 14px rgba(46, 42, 34, 0.07);
+    }
+
+    .story-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    }
+
+    .card-cover {
+        margin: -1.6rem -1.3rem 1.2rem;
+        overflow: hidden;
+    }
+    .card-cover img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    object-position: top;
+    display: block;
+    }
+
+        .genre {
+        display: inline-block;
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #3d5a3c;
+        margin-bottom: 0.6rem;
+    }
+
+    .story-card h3 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #2e2a22;
+        line-height: 1.3;
+        margin-bottom: 0.6rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+        .excerpt {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #5a5242;
+    }
+    .story-card h3 {
+        font-size: 1.05rem;
+    }
+
+    .meta {
+        font-size: 0.75rem;
+        color: #8a7d65;
+        display: flex;
+        justify-content: space-between;
+        border-top: 1px solid #e8dfca;
+        padding-top: 0.8rem;
+    }
+
+        /* Collections */
+    .author-collections h2 { margin-top: 0; }
+    .collection-card {
+        border-top: 3px solid #a85a32;
+    }
+    .collection-text-cover {
+        height: 220px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        background: #faf5ea;
+    }
+    .collection-icon {
+        font-size: 2.2rem;
+    }
+    .collection-name {
+        font-family: 'Playfair Display', serif;
+        font-weight: 700;
+        color: #2e2a22;
+        font-size: 1.05rem;
+        text-align: center;
+        padding: 0 0.8rem;
+    }
+
+
+    .author-poetry h2 { margin-top: 0; }
+    .poem-text-cover {
+        height: 220px; display: flex; align-items: center; justify-content: center;
+        padding: 1.2rem; background: #faf5ea; overflow: hidden;
+    }
+    .author-poetry .card-cover img {
+        height: 220px; object-fit: cover;
+    }
+    .poem-text-preview {
+        font-family: 'Playfair Display', serif; font-size: 0.85rem; font-style: italic;
+        color: #3a4a38; line-height: 1.6; text-align: center;
+    }
+
+    .no-stories {
+        text-align: center;
+        font-style: italic;
+        color: #8a9478;
+    }
+
+        /* Share this writer */
+    .share-writer-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+        margin: 0 auto 1rem;
+        max-width: 640px;
+    }
+    .share-writer-label {
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #8a9478;
+        margin-right: 0.3rem;
+    }
+    .share-writer-btn {
+        background: transparent;
+        border: 1px solid rgba(168, 184, 156, 0.3);
+        border-radius: 999px;
+        padding: 0.4rem 0.9rem;
+        color: #a8b89c;
+        font-family: inherit;
+        font-size: 0.85rem;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .share-writer-btn:hover {
+        border-color: #a8b89c;
+        color: #f4ede0;
+        background: rgba(168, 184, 156, 0.1);
+    }
+
+    .back-home {
+        text-align: center;
+        margin-top: 4rem;
+    }
+
+    .back-home a {
+        color: #a8b89c;
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 0.2s;
+    }
+
+    .back-home a:hover { color: #f4ede0; }
+
+        @media (max-width: 640px) {
+    .author-stats { gap: 1.5rem; }
+    .stat-num { font-size: 1.3rem; }
+    .author-page { padding: 2rem 1rem 4rem; }
+    }
+    
+    /* Avatar photo + social links */
+    .author-avatar { overflow: hidden; }
+    .author-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+    .author-socials {
+        display: flex;
+        justify-content: center;
+        gap: 1.2rem;
+        margin-top: 1rem;
+    }
+        .author-socials a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: rgba(244, 237, 224, 0.06);
+        border: 1px solid rgba(228, 221, 200, 0.15);
+        transition: transform 0.2s, background 0.2s;
+    }
+    .author-socials a:hover {
+        transform: translateY(-2px);
+        background: rgba(244, 237, 224, 0.12);
+    }
+        .author-socials svg { width: 18px; height: 18px; }
+    .follow-btn {
+        margin-top: 1.2rem;
+        padding: 0.55rem 1.6rem;
+        border-radius: 999px;
+        border: 1px solid #a8b89c;
+        background: transparent;
+        color: #a8b89c;
+        font-family: inherit;
+        font-size: 0.85rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .follow-btn:hover { background: rgba(168, 184, 156, 0.12); }
+    .follow-btn.following {
+        background: #3d5a3c;
+        border-color: #3d5a3c;
+        color: #f4ede0;
+    }
+    .hero-actions { display: flex; gap: 0.8rem; justify-content: center; margin-top: 1.2rem; }
+    .hero-actions .follow-btn { margin-top: 0; }
+    .message-btn { text-decoration: none; }
+    .message-btn:hover { background: rgba(168, 184, 156, 0.12); }
+    .admin-line { margin: 0.4rem 0 0.2rem; }
+    .admin-badge {
+        display: inline-block;
+        padding: 0.15rem 0.6rem;
+        border-radius: 999px;
+        background: #3d5a3c;
+        color: #f4ede0;
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        vertical-align: middle;
+    }
+    .stat-clickable { cursor: pointer; }
+    .stat-clickable:hover .stat-num { color: #f4ede0; }
+    .follow-modal-list { display: flex; flex-direction: column; }
+    .follow-row {
+        text-decoration: none; color: #3a4a38; padding: 0.6rem 0.4rem;
+        border-bottom: 1px solid #e8dfca; font-family: 'Playfair Display', serif;
+    }
+    .follow-row:hover { background: rgba(61, 90, 60, 0.06); }
+        :global(.follow-row) {
+        display: flex; align-items: center; gap: 0.8rem;
+        text-decoration: none; color: #3a4a38; padding: 0.6rem 0.4rem;
+        border-bottom: 1px solid #e8dfca; font-family: 'Playfair Display', serif;
+    }
+    :global(.follow-row:hover) { background: rgba(61, 90, 60, 0.06); }
+    :global(.follow-avatar) {
+        width: 38px; height: 38px; border-radius: 50%; overflow: hidden;
+        background: linear-gradient(135deg, #3d5a3c, #5a7052); color: #f4ede0;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-family: 'Playfair Display', serif; font-weight: 700; font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+    :global(.follow-avatar img) { width: 100%; height: 100%; object-fit: cover; }
+    .gold-tick {
+        display: inline-block;
+        margin-left: 0.5rem;
+        color: #c8a24a;
+        font-size: 0.75em;
+        vertical-align: middle;
+        font-weight: 700;
+        text-shadow: 0 0 10px rgba(200, 162, 74, 0.5);
+    }
+    .follow-empty { font-style: italic; color: #8a7d65; }
+    .author-socials { position: relative; }
+    .author-socials button {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 38px; height: 38px; border-radius: 50%;
+        background: rgba(244, 237, 224, 0.06); border: 1px solid rgba(228, 221, 200, 0.15);
+        cursor: pointer; transition: transform 0.2s, background 0.2s;
+    }
+    .author-socials button:hover { transform: translateY(-2px); background: rgba(244, 237, 224, 0.12); }
+    .copy-tip {
+        position: absolute; top: -2.2rem; left: 50%; transform: translateX(-50%);
+        background: #faf5ea; color: #2e2a22; font-size: 0.75rem; font-style: italic;
+        padding: 0.3rem 0.7rem; border-radius: 4px; white-space: nowrap;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    }
+</style>

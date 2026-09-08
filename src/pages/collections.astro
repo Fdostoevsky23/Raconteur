@@ -1,0 +1,117 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabase } from '../lib/supabase';
+
+const { data: collections } = await supabase
+  .from('collections')
+  .select('*, collection_stories(count)')
+  .order('created_at', { ascending: false });
+---
+<BaseLayout title="Collections — Raconteur" description="Curated reading bundles, hand-picked by the editor.">
+  <div class="collections-bg">
+    <section class="collections-page">
+      <header class="collections-header">
+        <p class="section-eyebrow">Curated shelves</p>
+        <h1>Collections</h1>
+        <p class="collections-sub">Themed bundles of stories, placed side by side because they speak to each other.</p>
+      </header>
+      <div class="collections-grid">
+        {(collections || []).map((c: any) => (
+          <a href={`/collection/${c.slug}`} class="collection-card">
+            <h2>{c.title}</h2>
+            {c.curator_note && <p class="collection-note">{c.curator_note}</p>}
+            <p class="collection-count">✦ {c.collection_stories?.[0]?.count || 0} stories</p>
+          </a>
+        ))}
+        {(!collections || collections.length === 0) && (
+          <p class="collections-empty">No collections yet — the curator is still arranging the shelves.</p>
+        )}
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+      :global(body),
+  :global(.site-header) {
+    background: #232e26 !important;
+  }
+    .collections-bg {
+    background: #232e26;
+    min-height: 100vh;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    padding: 5rem 2rem;
+  }
+  .collections-page {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .collections-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+  .collections-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: #f4ede0;
+    margin-bottom: 1rem;
+    letter-spacing: -0.5px;
+  }
+  .collections-sub {
+    font-size: 1.05rem;
+    font-style: italic;
+    color: rgba(244, 237, 224, 0.8);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+  .collections-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+  }
+  .collection-card {
+    background: #faf5ea;
+    border: 1px solid #ddd2bb;
+    border-left: 4px solid #3d5a3c;
+    border-radius: 6px;
+    padding: 2.5rem 2rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s;
+    box-shadow: 0 2px 14px rgba(46, 42, 34, 0.07);
+  }
+  .collection-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(61, 90, 60, 0.12);
+  }
+  .collection-card h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #2e2a22;
+    margin-bottom: 0.8rem;
+  }
+  .collection-note {
+    font-size: 0.92rem;
+    font-style: italic;
+    color: #5a5242;
+    line-height: 1.6;
+    margin-bottom: 1.2rem;
+  }
+  .collection-count {
+    font-size: 0.82rem;
+    color: #3d5a3c;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .collections-empty {
+    text-align: center;
+    font-style: italic;
+    color: rgba(244, 237, 224, 0.7);
+    padding: 4rem 2rem;
+    grid-column: 1 / -1;
+  }
+</style>

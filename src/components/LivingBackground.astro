@@ -1,0 +1,71 @@
+---
+// LivingBackground.astro — 10 photos, 30s each, memory-friendly lazy loading (public/bg has 10)
+const totalImages = 10;
+const images = Array.from({ length: totalImages }, (_, i) => `/bg/${i + 1}.jpg`);
+---
+
+<div class="living-bg" aria-hidden="true">
+    {images.map((src, i) => (
+        <div class={`bg-slide ${i === 0 ? 'active' : ''}`} data-src={src} />
+    ))}
+</div>
+
+<style>
+    .living-bg {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        overflow: hidden;
+    }
+
+    .bg-slide {
+        position: absolute;
+        inset: 0;
+        background-size: cover;
+        background-position: center;
+        opacity: 0;
+        transition: opacity 1.5s ease-in-out;
+    }
+
+    .bg-slide.active { opacity: 1; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .bg-slide { transition: none; }
+    }
+</style>
+
+<script>
+  // Memory-friendly lazy loading for the 10 background images
+  const slides = document.querySelectorAll('.bg-slide');
+  
+  if (slides[0]) {
+    const firstSrc = slides[0].getAttribute('data-src');
+    if (firstSrc) (slides[0] as HTMLElement).style.backgroundImage = `url('${firstSrc}')`;
+  }
+
+  let currentIndex = 0;
+  const totalImages = slides.length;
+
+  function preloadNext() {
+    const nextIndex = (currentIndex + 1) % totalImages;
+    const nextSlide = slides[nextIndex] as HTMLElement;
+    const nextSrc = nextSlide.getAttribute('data-src');
+    if (nextSrc && !nextSlide.style.backgroundImage) {
+      const img = new Image();
+      img.src = nextSrc;
+      img.onload = () => {
+        nextSlide.style.backgroundImage = `url('${nextSrc}')`;
+      };
+    }
+  }
+
+  setInterval(() => {
+    slides[currentIndex].classList.remove('active');
+    currentIndex = (currentIndex + 1) % totalImages;
+    slides[currentIndex].classList.add('active');
+    preloadNext();
+  }, 30000);
+
+  setTimeout(preloadNext, 2000);
+</script>

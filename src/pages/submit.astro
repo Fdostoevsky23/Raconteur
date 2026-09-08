@@ -1,0 +1,606 @@
+---
+// src/pages/submit.astro
+import BaseLayout from '../layouts/BaseLayout.astro';
+import TiptapEditor from '../components/TiptapEditor.astro';
+---
+
+<BaseLayout title="Write a Story — Raconteur">
+    <main class="submit">
+        <p class="eyebrow">Writing Desk</p>
+        <h1 id="pageTitle">Publish Your Work</h1>
+        <div class="rule"></div>
+
+        <!-- Auth Check / Editor Area -->
+        <div id="authArea" class="loading-state">Checking login status...</div>
+
+        <div id="loginPrompt" style="display: none; text-align: center; margin-top: 2rem;">
+            <p>To publish a story directly to your dashboard, you need an account.</p>
+            <a href="/login" class="btn-primary">Log in to Write</a>
+        </div>
+
+        <!-- The Writing Desk (Hidden until logged in) -->
+        <div id="editorArea" style="display: none; margin-top: 2rem;">
+                <form id="storyForm">
+                <div class="form-group">
+                    <div class="kind-toggle" role="group" aria-label="What are you writing?">
+                        <button type="button" class="kind-btn active" data-kind="story">Story</button>
+                        <button type="button" class="kind-btn" data-kind="poem">Poem</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="storyTitle">Title</label>
+                    <input type="text" id="storyTitle" placeholder="The Last Letter Home" required />
+                </div>
+                <div class="form-group">
+                    <label for="storyGenreTag">Genre</label>
+                    <select id="storyGenreTag" class="genre-select">
+                        <option value="Romance/Love">Romance/Love</option>
+                        <option value="Mystery/Crime">Mystery/Crime</option>
+                        <option value="Action/Adventure">Action/Adventure</option>
+                        <option value="Thriller/Suspense">Thriller/Suspense</option>
+                        <option value="Horror">Horror</option>
+                        <option value="Science Fiction">Science Fiction</option>
+                        <option value="Fantasy">Fantasy</option>
+                        <option value="Humor/Comedy">Humor/Comedy</option>
+                        <option value="Drama/Play">Drama/Play</option>
+                        <option value="Literary Fiction">Literary Fiction</option>
+                        <option value="Poetry">Poetry</option>
+                        <option value="custom">+ Add your own...</option>
+                    </select>
+                    <input type="text" id="customGenreTag" placeholder="Type your custom genre..." style="display: none; margin-top: 0.5rem;" />
+                </div>
+
+                    <div class="form-group" id="lengthGroup">
+                    <label>Length & Category <span id="liveWordCount" class="word-count-display">0 words</span></label>
+                    <input type="hidden" id="storyGenre" name="genre" value="Flash Fiction" />
+                    <div class="band-meter">
+                        <div class="band-segment active" data-band="Flash Fiction">
+                            <span class="band-label">Flash</span>
+                            <span class="band-sub">&lt; 1k</span>
+                        </div>
+                        <div class="band-segment" data-band="Short Story">
+                            <span class="band-label">Short</span>
+                            <span class="band-sub">1k–7.5k</span>
+                        </div>
+                        <div class="band-segment" data-band="Novelette">
+                            <span class="band-label">Novelette</span>
+                            <span class="band-sub">7.5k–17.5k</span>
+                        </div>
+                        <div class="band-segment" data-band="Novella">
+                            <span class="band-label">Novella</span>
+                            <span class="band-sub">17.5k+</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="storyCover">Cover image <span class="word-count-display">(optional — a book-jacket portrait looks best)</span></label>
+                    <input type="file" id="storyCover" accept="image/*" />
+                    <img id="coverPreview" alt="" hidden style="max-width: 140px; margin-top: 0.75rem; border-radius: 6px; border: 1px solid #3d5a3c;" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Your Story</label>
+                    <input type="hidden" id="storyContent" />
+                    <TiptapEditor />
+                </div>
+
+                                <!-- Collection selector (poems only) -->
+                <div id="collectionSelector" class="form-group" style="display: none;">
+                    <label for="collectionSelect">Add to collection (optional)</label>
+                    <select id="collectionSelect" class="genre-select" style="width:100%;">
+                        <option value="">None (standalone poem)</option>
+                    </select>
+                    <a href="/dashboard" style="display:inline-block;margin-top:0.4rem;font-size:0.85rem;color:#a8b89c;text-decoration:underline;">Create a new collection →</a>
+                </div>
+
+
+                <div class="form-actions">
+                    <button type="button" id="publishBtn" class="btn-primary">Publish Story</button>
+                    <button type="button" id="draftBtn" class="btn-secondary">Save as Draft</button>
+                    <span id="formStatus" class="status-msg"></span>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <style is:global>
+        body {
+            background-color: #1e2420;
+            color: #e4ddc8;
+        }
+    </style>
+
+    <style>
+        .submit {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 2rem 5rem;
+        }
+
+        .eyebrow {
+            font-style: italic;
+            color: #a8b89c;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 900;
+            line-height: 1.15;
+            text-align: center;
+            color: #f4ede0;
+        }
+
+        .rule {
+            height: 1px;
+            background: rgba(228, 221, 200, 0.25);
+            margin: 2.5rem 0 3rem;
+        }
+
+        p {
+            font-size: 1.15rem;
+            line-height: 1.8;
+            color: #d8d0bc;
+            margin-bottom: 1.6rem;
+            text-align: center;
+        }
+
+        /* Form Styles */
+        .loading-state { text-align: center; padding: 2rem; font-style: italic; opacity: 0.7; }
+        
+        .btn-primary {
+            background: #f4ede0;
+            color: #1e2420;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: opacity 0.2s;
+            display: inline-block;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-secondary {
+            background: transparent;
+            color: #a8b89c;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            border: 1px solid #a8b89c;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover { background: rgba(168, 184, 156, 0.1); }
+        .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .form-group { margin-bottom: 2rem; }
+        
+        label {
+            display: block;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.2rem;
+            color: #f4ede0;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="text"], textarea, select {
+            width: 100%;
+            background: rgba(244, 237, 224, 0.05);
+            border: 1px solid rgba(228, 221, 200, 0.2);
+            border-radius: 4px;
+            padding: 1rem;
+            color: #e4ddc8;
+            font-family: inherit;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            resize: vertical;
+        }
+
+        select option {
+            background: #1e2420;
+            color: #e4ddc8;
+        }
+        
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #a8b89c;
+            background: rgba(244, 237, 224, 0.08);
+        }
+
+        .form-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .status-msg {
+            font-size: 0.9rem;
+            color: #a8b89c;
+            font-style: italic;
+        }
+        .kind-toggle { display: flex; gap: 4px; justify-content: center; }
+    .kind-btn {
+        flex: 0 0 120px;
+        background: #2a332d;
+        border: 1px solid #3d5a3c;
+        color: #f4ede0;
+        padding: 0.55rem 1rem;
+        border-radius: 6px;
+        font-family: 'Playfair Display', serif;
+        font-size: 0.95rem;
+        cursor: pointer;
+        opacity: 0.5;
+        transition: all 0.3s ease;
+    }
+    .kind-btn.active {
+        background: #3d5a3c;
+        border-color: #c8b890;
+        opacity: 1;
+        box-shadow: 0 0 8px rgba(200, 184, 144, 0.2);
+    }
+        .poem-hint {
+        font-size: 0.85rem;
+        font-style: italic;
+        color: #a8b89c;
+        text-align: center;
+        margin-top: 0.7rem;
+    }
+        .word-count-display { font-weight: normal; color: #a8b89c; font-size: 0.9rem; margin-left: 0.5rem; }
+    .band-meter { display: flex; gap: 4px; margin-top: 0.5rem; }
+    .band-segment { flex: 1; background: #2a332d; border: 1px solid #3d5a3c; padding: 0.5rem; border-radius: 6px; text-align: center; transition: all 0.3s ease; opacity: 0.4; }
+    .band-segment.active { background: #3d5a3c; border-color: #c8b890; opacity: 1; box-shadow: 0 0 8px rgba(200, 184, 144, 0.2); }
+    .band-label { display: block; color: #f4ede0; font-size: 0.9rem; font-weight: bold; }
+    .band-sub { display: block; color: #a8b89c; font-size: 0.7rem; margin-top: 2px; }
+    </style>
+
+    <script>
+        import { supabase } from '../lib/supabase';
+
+        const authArea = document.getElementById('authArea')!;
+        const loginPrompt = document.getElementById('loginPrompt')!;
+        const editorArea = document.getElementById('editorArea')!;
+        const formStatus = document.getElementById('formStatus')!;
+        const titleInput = document.getElementById('storyTitle') as HTMLInputElement;
+        const genreInput = document.getElementById('storyGenre') as HTMLInputElement;
+        const contentInput = document.getElementById('storyContent') as HTMLTextAreaElement;
+        const publishBtn = document.getElementById('publishBtn') as HTMLButtonElement;
+        const draftBtn = document.getElementById('draftBtn') as HTMLButtonElement;
+        let currentKind: 'story' | 'poem' = 'story';
+        let isEditing = false;
+        const kindButtons = document.querySelectorAll('.kind-btn');
+        const lengthGroup = document.getElementById('lengthGroup');
+        const pageTitleEl = document.getElementById('pageTitle');
+        const poemHint = document.getElementById('poemHint');
+        function setKind(kind: 'story' | 'poem') {
+            currentKind = kind;
+            (window as any).raconteurPoemMode = (kind === 'poem');
+            kindButtons.forEach(b => b.classList.toggle('active', (b as HTMLElement).dataset.kind === kind));
+            if (lengthGroup) lengthGroup.style.display = kind === 'poem' ? 'none' : 'block';
+            if (poemHint) poemHint.style.display = kind === 'poem' ? 'block' : 'none';
+            publishBtn.textContent = isEditing
+                ? (kind === 'poem' ? 'Update Poetry' : 'Update & Publish')
+                : (kind === 'poem' ? 'Publish Poetry' : 'Publish Story');
+            if (pageTitleEl) pageTitleEl.textContent = isEditing
+                ? (kind === 'poem' ? 'Edit Your Poetry' : 'Edit Your Story')
+                : (kind === 'poem' ? 'Publish Your Poetry' : 'Publish Your Story');
+        }
+        kindButtons.forEach(b => b.addEventListener('click', () => setKind((b as HTMLElement).dataset.kind as 'story' | 'poem')));
+
+        async   function   initSubmitPage ()  {
+            const  { data: {  session  } }  =   await   supabase .auth. getSession ();
+
+            authArea.style.display = 'none';
+
+            if (!session) {
+                loginPrompt.style.display = 'block';
+                return;
+            }
+
+            editorArea.style.display = 'block';
+
+            // --- EDIT MODE: are we editing an existing story? ---
+            const editId = new URLSearchParams(window.location.search).get('edit');
+            let editingId: string | null = null;
+
+            if (editId) {
+                const { data: existing } = await supabase
+                    .from('stories')
+                    .select('*')
+                    .eq('id', editId)
+                    .eq('author_id', session.user.id) // security: only YOUR stories
+                    .single();
+
+                    if (existing) {
+                    editingId = existing.id;
+                    titleInput.value = existing.title;
+                    contentInput.value = existing.content;
+                    genreInput.value = existing.genre || 'Community';
+                    if ((existing as any).kind === 'poem') setKind('poem');
+                    // Load existing content into Tiptap once it's ready
+                    setTimeout(() => {
+                        if ((window as any).setTiptapContent) {
+                            // If it's plain text (old stories), convert newlines to paragraphs
+                            const htmlContent = existing.content.includes('<p>') 
+                                ? existing.content 
+                            : existing.content.split('\n\n').map((p: string) => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+                            (window as any).setTiptapContent(htmlContent);
+                        }
+                    }, 500);
+                    // Populate genre tag
+                    const genreTagSelect = document.getElementById('storyGenreTag') as HTMLSelectElement;
+                    const customGenreInput = document.getElementById('customGenreTag') as HTMLInputElement;
+                    if (existing.genre_tag) {
+                        const options = Array.from(genreTagSelect.options).map(o => o.value);
+                        if (options.includes(existing.genre_tag)) {
+                            genreTagSelect.value = existing.genre_tag;
+                        } else {
+                            genreTagSelect.value = 'custom';
+                            customGenreInput.style.display = 'block';
+                            customGenreInput.value = existing.genre_tag;
+                        }
+                    }
+
+
+                                       isEditing = true;
+                    publishBtn . textContent   =   'Update & Publish' ;
+                    draftBtn . textContent   =   'Update Draft' ;
+                    document . getElementById ( 'pageTitle' ) ! . textContent   =   'Edit Your Story' ;
+                    if ((existing as any).kind === 'poem') setKind('poem');
+                }
+            }
+
+            // === Fetch collections for poems ===
+            const collectionSelector = document.getElementById('collectionSelector')!;
+            const collectionSelect = document.getElementById('collectionSelect') as HTMLSelectElement;
+            
+            async function loadCollections() {
+                if (currentKind !== 'poem') {
+                    collectionSelector.style.display = 'none';
+                    return;
+                }
+                collectionSelector.style.display = 'block';
+                const { data: collections } = await supabase
+                    .from('poetry_collections')
+                    .select('id, name')
+                    .eq('owner_id', session!.user.id)
+                    .order('name');
+                
+                // Clear existing options except "None"
+                collectionSelect.innerHTML = '<option value="">None (standalone poem)</option>';
+                
+                if (collections && collections.length > 0) {
+                    collections.forEach((c: any) => {
+                        const option = document.createElement('option');
+                        option.value = c.id;
+                        option.textContent = c.name;
+                        collectionSelect.appendChild(option);
+                    });
+                }
+                
+                // If editing, pre-select the current collection
+                if (editingId) {
+                    const { data: story } = await supabase
+                        .from('stories')
+                        .select('collection_id')
+                        .eq('id', editingId)
+                        .maybeSingle();
+                    if (story?.collection_id) {
+                        collectionSelect.value = story.collection_id;
+                    }
+                }
+            }
+            
+            // Load collections on page load
+            await loadCollections();
+            
+            // Show/hide collection selector when kind changes
+            kindButtons.forEach(b => b.addEventListener('click', () => loadCollections()));
+
+            async function saveStory(status: 'published' | 'draft') {
+                const title = titleInput.value;
+                // Grab the clean HTML from Tiptap instead of the raw textarea
+                const content = (window as any).getTiptapContent ? (window as any).getTiptapContent() : contentInput.value;
+                const genre = genreInput.value;
+                
+                const genreTagSelect = document.getElementById('storyGenreTag') as HTMLSelectElement;
+                const customGenreInput = document.getElementById('customGenreTag') as HTMLInputElement;
+                const genreTag = genreTagSelect.value === 'custom' 
+                    ? (customGenreInput.value.trim() || 'Literary Fiction') 
+                    : genreTagSelect.value;
+
+                     if (!title || !content) {
+                    formStatus.textContent = 'Please add a title and some text.';
+                    formStatus.style.color = '#ff6b6b';
+                    return;
+                }
+                // Poems: unlimited, tagged Poetry. Stories: 40,000-word cap.
+                let effectiveGenre = genre;
+                let effectiveTag = genreTag;
+                if (currentKind === 'poem') {
+                    effectiveGenre = 'Poetry';
+                    effectiveTag = 'Poetry';
+                } else {
+                    const words = content.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+                    if (words > 40000) {
+                        formStatus.textContent = 'Raconteur hosts stories up to 40,000 words — the novella ceiling.';
+                        formStatus.style.color = '#ff6b6b';
+                        return;
+                    }
+                }
+
+                publishBtn.disabled = true;
+                draftBtn.disabled = true;
+                formStatus.textContent = editingId
+                    ? 'Updating...'
+                    : (status === 'published' ? 'Publishing...' : 'Saving draft...');
+
+                let error: any;
+                let coverUrl: string | undefined = undefined;
+
+                // --- COVER UPLOAD ---
+                const coverInput = document.getElementById('storyCover') as HTMLInputElement;
+                const coverFile = coverInput?.files?.[0];
+
+                if (coverFile) {
+                    formStatus.textContent = 'Uploading cover...';
+                    const fileExt = coverFile.name.split('.').pop();
+                    const fileName = `${Date.now()}.${fileExt}`;
+                    const filePath = `${session!.user.id}/${fileName}`;
+
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('covers')
+                        .upload(filePath, coverFile);
+
+                    if (uploadError) {
+                        console.error(uploadError);
+                        formStatus.textContent = 'Error uploading cover.';
+                        formStatus.style.color = '#ff6b6b';
+                        publishBtn.disabled = false;
+                        draftBtn.disabled = false;
+                        return;
+                    }
+
+                    const { data: urlData } = supabase.storage.from('covers').getPublicUrl(uploadData.path);
+                    coverUrl = urlData.publicUrl;
+                }
+
+                               if (editingId) {
+                    // UPDATE the existing story
+                        const   payload :   any   =  { title, content,
+                        genre: currentKind === 'poem' ? 'Poetry' : genre,
+                        genre_tag: currentKind === 'poem' ? 'Poetry' : genreTag,
+                        status, kind: currentKind, updated_at :   new   Date (). toISOString (),
+                        collection_id: currentKind === 'poem' ? (collectionSelect.value || null) : null };
+                    if (coverUrl) payload.cover_url = coverUrl; // Only overwrite if new cover uploaded
+                    const res = await supabase.from('stories').update(payload).eq('id', editingId);
+                    error = res.error;
+                } else {
+                    // INSERT a brand new story
+                                            // Use pen name from profiles if available, otherwise email prefix
+                    const { data: writerProfile } = await supabase
+                        .from('profiles')
+                        .select('pen_name')
+                        .eq('user_id', session!.user.id)
+                        .maybeSingle();
+                    const displayName = writerProfile?.pen_name || (session!.user.email ?? 'writer').split('@')[0];
+
+                                       const   payload :   any   =  {
+                        author_id :   session ! .user.id,
+                        author_name :   displayName ,
+                        title, content,
+                        genre: currentKind === 'poem' ? 'Poetry' : genre,
+                        genre_tag: currentKind === 'poem' ? 'Poetry' : genreTag,
+                        status, kind: currentKind,
+                        collection_id: currentKind === 'poem' ? (collectionSelect.value || null) : null
+                    };
+                    if (coverUrl) payload.cover_url = coverUrl;
+
+                    const res = await supabase.from('stories').insert([payload]);
+                    error = res.error;
+                }
+
+                if (error) {
+                    console.error(error);
+                    formStatus.textContent = 'Error saving. Please try again.';
+                    formStatus.style.color = '#ff6b6b';
+                    publishBtn.disabled = false;
+                    draftBtn.disabled = false;
+                } else {
+                    formStatus.textContent = editingId
+                        ? 'Story updated!'
+                        : (status === 'published' ? 'Story is live!' : 'Draft saved!');
+                    formStatus.style.color = '#a8b89c';
+                    setTimeout(() => { window.location.href = '/dashboard'; }, 1500);
+                }
+            }
+
+            publishBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await saveStory('published');
+            });
+
+            draftBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await saveStory('draft');
+            });
+        }
+
+        initSubmitPage ();
+        const wordCountDisplay = document.getElementById('liveWordCount');
+      const bandSegments = document.querySelectorAll('.band-segment');
+
+      const updateBandMeter = () => {
+          // H-01 FIX: count from Tiptap editor, not the hidden input which is never synced while typing
+          const editor = (window as any).tiptapEditor;
+          const raw = editor ? editor.getText() : contentInput.value;
+          const text = (raw || '').trim();
+          const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+          wordCountDisplay!.textContent = `${words.toLocaleString()} words`;
+
+          let currentBand = 'Flash Fiction';
+          if (words >= 17500) currentBand = 'Novella';
+          else if (words >= 7500) currentBand = 'Novelette';
+          else if (words >= 1000) currentBand = 'Short Story';
+
+          genreInput!.value = currentBand;
+
+          bandSegments.forEach((seg) => {
+              if (seg.getAttribute('data-band') === currentBand) {
+                  seg.classList.add('active');
+              } else {
+                  seg.classList.remove('active');
+              }
+          });
+      };
+      // Bind to Tiptap updates (with retry because editor init is async)
+      function bindBandMeter() {
+          const ed = (window as any).tiptapEditor;
+          if (ed && ed.on) { ed.on('update', updateBandMeter); ed.on('create', updateBandMeter); updateBandMeter(); return true; }
+          return false;
+      }
+      if (!bindBandMeter()) {
+          let tries = 0;
+          const iv = setInterval(() => { tries++; if (bindBandMeter() || tries > 20) clearInterval(iv); }, 300);
+      }
+      // Fallback: poll contentInput for edit-mode prefill
+      contentInput.addEventListener('input', updateBandMeter);
+            const coverInput = document.getElementById('storyCover') as HTMLInputElement;
+      const coverPreview = document.getElementById('coverPreview') as HTMLImageElement;
+      coverInput?.addEventListener('change', () => {
+          const file = coverInput.files?.[0];
+          if (file) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                  coverPreview.src = e.target?.result as string;
+                  coverPreview.hidden = false;
+              };
+              reader.readAsDataURL(file);
+          } else {
+              coverPreview.hidden = true;
+          }
+      });
+            const genreTagSelect = document.getElementById('storyGenreTag') as HTMLSelectElement;
+      const customGenreInput = document.getElementById('customGenreTag') as HTMLInputElement;
+      genreTagSelect?.addEventListener('change', () => {
+          if (genreTagSelect.value === 'custom') {
+              customGenreInput.style.display = 'block';
+              customGenreInput.focus();
+          } else {
+              customGenreInput.style.display = 'none';
+              customGenreInput.value = '';
+          }
+      });
+    </script>
+</BaseLayout>

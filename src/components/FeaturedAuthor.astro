@@ -1,0 +1,319 @@
+---
+interface Props {
+  admin: {
+    name: string;
+    avatarUrl?: string;
+    avatarInitials: string;
+    avatarGradient: string;
+    bio: string;
+    favoriteLine: string;
+    featuredStorySlug?: string | null;
+    featuredStoryTitle: string;
+    socialLinks?: { x?: string; instagram?: string; facebook?: string; email?: string };
+    favoriteBook?: string;
+  };
+  writers: Array<{
+    name: string;
+    role: string;
+    bio: string;
+    avatarUrl?: string;
+    avatarInitials: string;
+    avatarGradient: string;
+    location: string;
+    joinedDate: string;
+    storyCount: number;
+    totalWords: number;
+    favoriteLine: string;
+    featuredStorySlug?: string | null;
+    featuredStoryTitle: string;
+    favoriteBook?: string;
+  }>;
+}
+const { admin, writers } = Astro.props;
+---
+<section class="featured-trio reveal">
+  <p class="trio-eyebrow">✦ Featured authors of the day ✦</p>
+  <div class="trio-grid">
+    <!-- Left: Admin (you) -->
+    <article class="trio-card trio-admin">
+      <div class="trio-avatar">
+        {admin.avatarUrl ? (
+          <img src={admin.avatarUrl} alt={admin.name} />
+        ) : (
+          <span style={`background: ${Array.isArray(admin.avatarGradient) ? `linear-gradient(135deg, ${admin.avatarGradient[0]}, ${admin.avatarGradient[1]})` : admin.avatarGradient};`}>{admin.avatarInitials}</span>
+        )}
+      </div>
+      <a href="/author/nzan-kikon" class="trio-name-link"><h3 class="trio-name">{admin.name}</h3></a>
+      <p class="trio-admin-badge">Admin's Account <span class="gold-tick">✓</span></p>
+      {admin.socialLinks && (
+        <div class="trio-socials">
+          {admin.socialLinks.x && <a href={admin.socialLinks.x} target="_blank" rel="noopener" title="X">𝕏</a>}
+          {admin.socialLinks.instagram && <a href={admin.socialLinks.instagram} target="_blank" rel="noopener" title="Instagram">📷</a>}
+          {admin.socialLinks.facebook && <a href={admin.socialLinks.facebook} target="_blank" rel="noopener" title="Facebook">f</a>}
+          {admin.socialLinks.email && <a href={`mailto:${admin.socialLinks.email}`} title="Email">✉</a>}
+        </div>
+      )}
+      {admin.favoriteBook && (
+        <p class="trio-fav-book">📚 Favorite book: {admin.favoriteBook}</p>
+      )}
+      <p class="trio-bio">{admin.bio}</p>
+      <blockquote class="trio-line">
+        <p class="trio-line-label">A line I carry with me</p>
+        <p>{admin.favoriteLine}</p>
+      </blockquote>
+      {admin.featuredStorySlug && (
+        <a href={`/story/${admin.featuredStorySlug}`} class="trio-story-link">
+          <span class="trio-story-eyebrow">✦ Read their featured story</span>
+          <span class="trio-story-title">{admin.featuredStoryTitle} →</span>
+        </a>
+      )}
+    </article>
+
+    <!-- Center + Right: Two rotating writers -->
+    {writers.map((w) => (
+      <article class="trio-card">
+        <div class="trio-avatar">
+          {w.avatarUrl ? (
+            <img src={w.avatarUrl} alt={w.name} />
+          ) : (
+            <span style={`background: ${Array.isArray(w.avatarGradient) ? w.avatarGradient[0] : w.avatarGradient};`}>{w.avatarInitials}</span>
+          )}
+        </div>
+        <a href={`/author/${w.name.toLowerCase().replace(/\s+/g, '-')}`} class="trio-name-link"><h3 class="trio-name">{w.name}</h3></a>
+        <p class="trio-role">{w.role}</p>
+        {w.favoriteBook && (
+          <p class="trio-fav-book">📚 Favorite book: {w.favoriteBook}</p>
+        )}
+        <p class="trio-meta">
+          <span>📍 {w.location}</span>
+          <span>✦ Joined {w.joinedDate}</span>
+          <span>📖 {w.storyCount} {w.storyCount === 1 ? 'story' : 'stories'} published</span>
+          <span>✎ {w.totalWords.toLocaleString()} words written</span>
+        </p>
+        <p class="trio-bio">{w.bio}</p>
+        <blockquote class="trio-line">
+          <p class="trio-line-label">A line I can't stop thinking about</p>
+          <p>{w.favoriteLine}</p>
+        </blockquote>
+        {w.featuredStorySlug && (
+          <a href={`/story/${w.featuredStorySlug}`} class="trio-story-link">
+            <span class="trio-story-eyebrow">✦ Read their featured story</span>
+            <span class="trio-story-title">{w.featuredStoryTitle} →</span>
+          </a>
+        )}
+      </article>
+    ))}
+  </div>
+</section>
+
+<style>
+    .featured-trio {
+    width: 100%;
+    padding: 3rem 2rem;
+    background: transparent;
+  }
+  .trio-eyebrow {
+    text-align: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #f4ede0;
+    margin-bottom: 2rem;
+    letter-spacing: 0.5px;
+  }
+  .trio-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .trio-card {
+    background: #faf5ea;
+    border-radius: 6px;
+    padding: 1.5rem 1.2rem;
+    border-left: 4px solid #3d5a3c;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+  }
+  .trio-admin {
+    border-left-color: #c8a24a;
+  }
+  .trio-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin: 0 auto 0.8rem;
+    border: 3px solid rgba(61, 90, 60, 0.2);
+  }
+  .trio-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .trio-avatar span {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-size: 1.2rem;
+    color: #f4ede0;
+    letter-spacing: 1px;
+  }
+  .trio-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #2e2a22;
+    text-align: center;
+    margin-bottom: 0.3rem;
+  }
+    .trio-name-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: opacity 0.2s;
+  }
+  .trio-name-link:hover {
+    opacity: 0.7;
+  }
+    .trio-admin-badge {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #3d5a3c;
+    margin-bottom: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .gold-tick {
+    display: inline-block;
+    margin-left: 0.3rem;
+    color: #c8a24a;
+    font-size: 0.85em;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(200, 162, 74, 0.5);
+  }
+  .trio-role {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #3d5a3c;
+    text-align: center;
+    margin-bottom: 0.6rem;
+    font-weight: 600;
+  }
+  .trio-socials {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+  .trio-socials a {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(61, 90, 60, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 0.7rem;
+    transition: background 0.2s;
+  }
+  .trio-socials a:hover {
+    background: rgba(61, 90, 60, 0.2);
+  }
+  .trio-fav-book {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: #5a5242;
+    text-align: center;
+    margin-bottom: 0.6rem;
+    padding: 0.4rem;
+    background: rgba(61, 90, 60, 0.05);
+    border-radius: 4px;
+  }
+  .trio-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    color: #5a5242;
+    margin-bottom: 0.8rem;
+    padding-left: 0.8rem;
+  }
+  .trio-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .trio-bio {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: #3a3528;
+    margin-bottom: 1rem;
+    flex: 1;
+  }
+  .trio-line {
+    background: rgba(61, 90, 60, 0.06);
+    border-left: 3px solid #3d5a3c;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+  }
+  .trio-line-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #3d5a3c;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+  }
+  .trio-line p:last-child {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: #3a3528;
+    margin: 0;
+  }
+  .trio-story-link {
+    display: flex;
+    flex-direction: column;
+    padding: 0.6rem 0.8rem;
+    background: rgba(61, 90, 60, 0.04);
+    border: 1px solid rgba(61, 90, 60, 0.15);
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .trio-story-link:hover {
+    background: rgba(61, 90, 60, 0.08);
+    border-color: rgba(61, 90, 60, 0.3);
+  }
+  .trio-story-eyebrow {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #3d5a3c;
+    margin-bottom: 0.2rem;
+    font-weight: 600;
+  }
+  .trio-story-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #2e2a22;
+  }
+  @media (max-width: 1024px) {
+    .trio-grid {
+      grid-template-columns: 1fr;
+      gap: 1.2rem;
+    }
+  }
+</style>

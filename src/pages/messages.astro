@@ -1,0 +1,235 @@
+---
+// src/pages/messages.astro — quiet private messaging between writers
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout title="Messages — Raconteur">
+    <main class="messages-page">
+        <div id="authGate" class="loading-state">Checking login status...</div>
+
+        <div id="messagesApp" style="display: none;">
+            <header class="msg-header">
+                <h1>Messages</h1>
+                <a href="/dashboard" class="back-link">← My Shelf</a>
+            </header>
+
+            <div class="msg-layout">
+                <!-- Conversation list -->
+                <aside class="conv-list" id="convList">
+                    <p class="conv-empty">No conversations yet.</p>
+                </aside>
+
+                <!-- Thread view -->
+                <section class="thread" id="threadPane">
+                    <div class="thread-empty" id="threadEmpty">
+                        <p>Select a conversation to begin.</p>
+                    </div>
+                    <div id="threadActive" style="display: none;">
+                        <div class="thread-head">
+                            <span id="threadName" class="thread-name"></span>
+                        </div>
+                        <div class="thread-body" id="threadBody"></div>
+                        <form id="msgForm" class="msg-form">
+                            <textarea id="msgInput" class="msg-input" rows="2" maxlength="2000"
+                                placeholder="Write a message..."></textarea>
+                            <button type="submit" class="msg-send">Send</button>
+                        </form>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        import { supabase } from '../lib/supabase';
+
+        const authGate = document.getElementById('authGate')!;
+        const app = document.getElementById('messagesApp')!;
+        const convList = document.getElementById('convList')!;
+        const threadEmpty = document.getElementById('threadEmpty')!;
+        const threadActive = document.getElementById('threadActive')!;
+        const threadName = document.getElementById('threadName')!;
+        const threadBody = document.getElementById('threadBody')!;
+        const msgForm = document.getElementById('msgForm') as HTMLFormElement;
+        const msgInput = document.getElementById('msgInput') as HTMLTextAreaElement;
+
+        let me: any = null;
+        let activeWith: string | null = null;
+        let nameMap: Record<string, string> = {};
+        let pollTimer: any = null;
+
+        function esc(s: string) {
+            return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]!));
+        }
+        function timeAgo(iso: string) {
+            const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+            if (m < 1) return 'now'; if (m < 60) return m + 'm'; const h = Math.floor(m / 60);
+            if (h < 24) return h + 'h'; return Math.floor(h / 24) + 'd';
+        }
+
+        async function resolveNames(ids: string[]) {
+            const missing = ids.filter(id => !nameMap[id]);
+            if (missing.length) {
+                const { data } = await supabase.from('profiles').select('user_id, pen_name').in('user_id', missing);
+                (data || []).forEach((p: any) => { nameMap[p.user_id] = p.pen_name; });
+            }
+        }
+        const nameOf = (id: string) => nameMap[id] || 'Writer';
+
+        async function loadConversations() {
+            const { data: rows } = await supabase
+                .from('messages')
+                .select('id, sender_id, recipient_id, body, created_at, read')
+                .or(`sender_id.eq.${me.id},recipient_id.eq.${me.id}`)
+                .order('created_at', { ascending: false })
+                .limit(200);
+            const all = rows || [];
+
+            // Group by counterpart
+            const convs: Record<string, { last: any; unread: number }> = {};
+            all.forEach(m => {
+                const other = m.sender_id === me.id ? m.recipient_id : m.sender_id;
+                if (!convs[other]) convs[other] = { last: m, unread: 0 };
+                if (m.recipient_id === me.id && !m.read) convs[other].unread++;
+            });
+
+            const ids = Object.keys(convs);
+            await resolveNames(ids);
+
+            // If URL has ?with= and no conversation exists yet, seed it
+            const params = new URLSearchParams(window.location.search);
+            const withId = params.get('with');
+            if (withId && withId !== me.id && !convs[withId]) {
+                convs[withId] = { last: { created_at: new Date().toISOString(), body: '' }, unread: 0 };
+                ids.push(withId);
+                await resolveNames([withId]);
+            }
+
+            if (ids.length === 0) {
+                convList.innerHTML = '<p class="conv-empty">No conversations yet. Visit a writer\'s page and hit ✉ Message to start one.</p>';
+            } else {
+                const sorted = ids.sort((a, b) =>
+                    new Date(convs[b].last.created_at).getTime() - new Date(convs[a].last.created_at).getTime());
+                convList.innerHTML = sorted.map(id => {
+                    const c = convs[id];
+                    const preview = c.last.body ? esc(c.last.body.slice(0, 50)) : '<i>No messages yet</i>';
+                    const dot = c.unread > 0 ? `<span class="conv-dot">${c.unread}</span>` : '';
+                    return `<button class="conv-item ${id === activeWith ? 'active' : ''}" data-id="${id}">
+                        <span class="conv-name">${esc(nameOf(id))}</span>
+                        <span class="conv-preview">${preview}</span>
+                        ${dot}
+                    </button>`;
+                }).join('');
+                convList.querySelectorAll('.conv-item').forEach(el => el.addEventListener('click', () => {
+                    openThread((el as HTMLElement).dataset.id!);
+                }));
+            }
+
+            // Auto-open the ?with= thread
+            if (withId && withId !== me.id && !activeWith) openThread(withId);
+        }
+
+        async function openThread(userId: string) {
+            activeWith = userId;
+            threadEmpty.style.display = 'none';
+            threadActive.style.display = 'flex';
+            threadName.textContent = nameOf(userId);
+            convList.querySelectorAll('.conv-item').forEach(el =>
+                el.classList.toggle('active', (el as HTMLElement).dataset.id === userId));
+            await loadThread();
+            // Mark incoming as read
+            await supabase.from('messages').update({ read: true })
+                .eq('sender_id', userId).eq('recipient_id', me.id).eq('read', false);
+            msgInput.focus();
+        }
+
+        async function loadThread() {
+            if (!activeWith) return;
+            const { data: rows } = await supabase
+                .from('messages')
+                .select('id, sender_id, body, created_at')
+                .or(`and(sender_id.eq.${me.id},recipient_id.eq.${activeWith}),and(sender_id.eq.${activeWith},recipient_id.eq.${me.id})`)
+                .order('created_at', { ascending: true });
+            const all = rows || [];
+            threadBody.innerHTML = all.length === 0
+                ? '<p class="thread-start">Say hello. This conversation is private — only the two of you can see it.</p>'
+                : all.map(m => `
+                    <div class="bubble ${m.sender_id === me.id ? 'mine' : 'theirs'}">
+                        <p>${esc(m.body)}</p>
+                        <span class="bubble-time">${timeAgo(m.created_at)}</span>
+                    </div>`).join('');
+            threadBody.scrollTop = threadBody.scrollHeight;
+        }
+
+        msgForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = msgInput.value.trim();
+            if (!body || !activeWith) return;
+            const { error: sendErr } = await supabase.from('messages').insert({
+                sender_id: me.id, recipient_id: activeWith, body,
+            });
+            if (sendErr) { alert('Could not send: ' + sendErr.message); return; }
+            await supabase.from('notifications').insert({
+                user_id: activeWith, actor_id: me.id, type: 'message', body_preview: body.slice(0, 60),
+            });
+            msgInput.value = '';
+            await loadThread();
+            await loadConversations();
+        });
+
+        async function init() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { window.location.href = '/login'; return; }
+            me = session.user;
+            authGate.style.display = 'none';
+            app.style.display = 'block';
+            await loadConversations();
+            pollTimer = setInterval(async () => {
+                await loadConversations();
+                if (activeWith) await loadThread();
+            }, 8000);
+        }
+
+        init();
+    </script>
+
+    <style is:global>
+        body { background: #1e2420; color: #e4ddc8; }
+        .messages-page { max-width: 1100px; margin: 0 auto; padding: 2rem 2rem 5rem; }
+        .loading-state { text-align: center; font-style: italic; color: #7d7560; padding: 3rem; }
+        .msg-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2rem; border-bottom: 1px solid rgba(228,221,200,0.15); padding-bottom: 1rem; }
+        .msg-header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; color: #f4ede0; }
+        .back-link { color: #a8b89c; text-decoration: none; font-size: 0.9rem; }
+        .back-link:hover { color: #f4ede0; }
+        .msg-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; min-height: 500px; }
+        @media (max-width: 700px) { .msg-layout { grid-template-columns: 1fr; } }
+
+        /* Conversation list */
+        .conv-list { border-right: 1px solid rgba(228,221,200,0.1); padding-right: 1rem; max-height: 70vh; overflow-y: auto; }
+        .conv-empty { font-style: italic; color: #7d7560; font-size: 0.9rem; }
+        .conv-item { display: flex; flex-direction: column; gap: 0.2rem; width: 100%; text-align: left; background: transparent; border: none; border-bottom: 1px solid rgba(228,221,200,0.06); padding: 0.8rem 0.5rem; cursor: pointer; position: relative; color: inherit; font-family: inherit; }
+        .conv-item:hover { background: rgba(244,237,224,0.04); }
+        .conv-item.active { background: rgba(168,184,156,0.1); border-left: 2px solid #a8b89c; }
+        .conv-name { font-weight: 700; color: #f4ede0; font-size: 0.95rem; }
+        .conv-preview { font-size: 0.8rem; color: #8a9478; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+        .conv-dot { position: absolute; top: 0.8rem; right: 0.5rem; background: #a85a32; color: #fff; font-size: 0.7rem; border-radius: 999px; padding: 0.1rem 0.45rem; }
+
+        /* Thread */
+        .thread { display: flex; flex-direction: column; background: rgba(244,237,224,0.03); border: 1px solid rgba(228,221,200,0.1); border-radius: 8px; overflow: hidden; }
+        .thread-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #7d7560; font-style: italic; }
+        #threadActive { flex: 1; display: flex; flex-direction: column; min-height: 500px; }
+        .thread-head { padding: 1rem 1.2rem; border-bottom: 1px solid rgba(228,221,200,0.1); }
+        .thread-name { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: #f4ede0; }
+        .thread-body { flex: 1; overflow-y: auto; padding: 1.2rem; display: flex; flex-direction: column; gap: 0.7rem; max-height: 55vh; }
+        .thread-start { text-align: center; font-style: italic; color: #7d7560; margin: auto; max-width: 320px; }
+        .bubble { max-width: 75%; padding: 0.7rem 1rem; border-radius: 12px; font-size: 0.95rem; line-height: 1.5; }
+        .bubble p { margin: 0 0 0.3rem; white-space: pre-wrap; word-break: break-word; }
+        .bubble-time { font-size: 0.7rem; opacity: 0.6; }
+        .bubble.mine { align-self: flex-end; background: #3d5a3c; color: #f4ede0; border-bottom-right-radius: 4px; }
+        .bubble.theirs { align-self: flex-start; background: rgba(244,237,224,0.08); color: #e4ddc8; border-bottom-left-radius: 4px; }
+        .msg-form { display: flex; gap: 0.6rem; padding: 1rem 1.2rem; border-top: 1px solid rgba(228,221,200,0.1); }
+        .msg-input { flex: 1; background: rgba(0,0,0,0.2); border: 1px solid rgba(228,221,200,0.15); border-radius: 6px; padding: 0.7rem; color: #e4ddc8; font-family: inherit; font-size: 0.95rem; resize: vertical; }
+        .msg-input:focus { outline: none; border-color: #a8b89c; }
+        .msg-send { background: #3d5a3c; color: #f4ede0; border: none; border-radius: 6px; padding: 0 1.4rem; font-family: inherit; cursor: pointer; font-size: 0.9rem; }
+        .msg-send:hover { background: #4a6b48; }
+    </style>
+</BaseLayout>

@@ -1,0 +1,41 @@
+---
+interface Props { prose?: number; poetry?: number; total?: number; verified?: boolean; }
+const { prose = 0, poetry = 0, total = 0, verified = false } = Astro.props;
+
+// OPTION B — earned, never given
+function getMark(p: number, v: number, t: number) {
+  if (t >= 75) return { glyph: '❖❖', color: '#d8d8d0', label: 'The Archive' };
+  if (t >= 40) return { glyph: '❖', color: '#3d5a3c', label: 'Omnibus' };
+  const m = Math.max(p, v);
+  if (m >= 20) return { glyph: '✦', color: '#c8a24a', label: 'Collection' };
+  if (m >= 10) return { glyph: '✦', color: '#b8b8b0', label: 'Volume' };
+  if (m >= 5)  return { glyph: '✦', color: '#a8763e', label: 'Pamphlet' };
+  return null;
+}
+const mark = getMark(prose, poetry, total);
+---
+{mark && (
+  <span class="shelf-mark" style={`color: ${mark.color};`} title={`${mark.label} · ${prose} prose · ${poetry} poetry`}>
+    {mark.glyph}
+  </span>
+)}
+{verified && (
+  <span class="gold-tick" title="Verified by Raconteur">✓</span>
+)}
+<style>
+  .shelf-mark {
+    display: inline-block;
+    margin-left: 0.4rem;
+    font-size: 0.85em;
+    vertical-align: middle;
+  }
+  .gold-tick {
+    display: inline-block;
+    margin-left: 0.4rem;
+    color: #c8a24a;
+    font-size: 0.75em;
+    vertical-align: middle;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(200, 162, 74, 0.5);
+  }
+</style>

@@ -1,0 +1,86 @@
+[
+    {
+        "name": "Virginia Woolf",
+        "portrait": "/giants/1.jpg",
+        "born": "1882",
+        "died": "1941",
+        "active": "1904 – 1941",
+        "bio": "English writer and pioneer of the stream-of-consciousness novel, at the heart of the Bloomsbury Group. She rebuilt the novel's interior architecture and gave modernism its most lyrical voice.",
+        "books": ["Mrs Dalloway", "To the Lighthouse", "Orlando", "The Waves", "A Room of One's Own"],
+        "magnumOpus": "To the Lighthouse",
+        "greatestLine": "A woman must have money and a room of her own if she is to write fiction.",
+        "unknownFact": "She wrote much of her work standing at a tall writing desk, and hand-bound her own books at the Hogarth Press she ran with her husband."
+    },
+    {
+        "name": "Ernest Hemingway",
+        "portrait": "/giants/2.jpg",
+        "born": "1899",
+        "died": "1961",
+        "active": "1917 – 1961",
+        "bio": "American novelist whose iceberg theory — omitting everything the reader could feel anyway — reshaped twentieth-century prose into something lean, hard, and true.",
+        "books": ["The Sun Also Rises", "A Farewell to Arms", "For Whom the Bell Tolls", "The Old Man and the Sea"],
+        "magnumOpus": "The Old Man and the Sea",
+        "greatestLine": "A man can be destroyed but not defeated.",
+        "unknownFact": "He stood while writing, sometimes on one leg, to force himself to say things as briefly as possible."
+    },
+    {
+        "name": "Gabriel García Márquez",
+        "portrait": "/giants/3.jpg",
+        "born": "1927",
+        "died": "2014",
+        "active": "1947 – 2014",
+        "bio": "Colombian novelist who made magical realism a world literature, folding miracles into the everyday until the extraordinary felt like memory.",
+        "books": ["One Hundred Years of Solitude", "Love in the Time of Cholera", "Chronicle of a Death Foretold", "The Autumn of the Patriarch"],
+        "magnumOpus": "One Hundred Years of Solitude",
+        "greatestLine": "It's enough for me to be sure that you and I exist at this moment.",
+        "unknownFact": "Before fame, he pawned the family silver to post the manuscript of One Hundred Years of Solitude — sent in two parcels because he couldn't afford the full postage."
+    },
+    {
+        "name": "Jane Austen",
+        "portrait": "/giants/4.jpg",
+        "born": "1775",
+        "died": "1817",
+        "active": "1787 – 1817",
+        "bio": "English novelist whose irony and free indirect dialogue turned the marriage plot into a precision instrument for reading society — and the heart.",
+        "books": ["Sense and Sensibility", "Pride and Prejudice", "Mansfield Park", "Emma", "Persuasion"],
+        "magnumOpus": "Pride and Prejudice",
+        "greatestLine": "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
+        "unknownFact": "She published anonymously (as 'By a Lady') and hid her manuscripts under a blotting paper whenever a door creaked."
+    },
+    {
+        "name": "Leo Tolstoy",
+        "portrait": "/giants/5.jpg",
+        "born": "1828",
+        "died": "1910",
+        "active": "1847 – 1910",
+        "bio": "Russian novelist who turned the epic into a microscope — War and Peace and Anna Karenina hold entire societies in one hand and a single trembling conscience in the other.",
+        "books": ["War and Peace", "Anna Karenina", "The Death of Ivan Ilyich", "Resurrection", "A Confession"],
+        "magnumOpus": "Anna Karenina",
+        "greatestLine": "All happy families are alike; each unhappy family is unhappy in its own way.",
+        "unknownFact": "In his eighties he secretly learned to ride a bicycle, and once wrote an entire novella while standing at a lectern because sitting made him too comfortable to think."
+    },
+    {
+        "name": "Toni Morrison",
+        "portrait": "/giants/6.jpg",
+        "born": "1931",
+        "died": "2019",
+        "active": "1970 – 2019",
+        "bio": "American novelist whose lyrical, unflinching prose gave the Black American experience its most mythic voice — and won her the Nobel Prize in Literature in 1993.",
+        "books": ["Beloved", "Song of Solomon", "The Bluest Eye", "Sula", "Jazz"],
+        "magnumOpus": "Beloved",
+        "greatestLine": "If there's a book that you want to read, but it hasn't been written yet, then you must write it.",
+        "unknownFact": "She wrote her first novel, The Bluest Eye, in the early hours before dawn while raising two sons alone and working a full-time editing job."
+    },
+    {
+        "name": "Franz Kafka",
+        "portrait": "/giants/7.jpg",
+        "born": "1883",
+        "died": "1924",
+        "active": "1904 – 1924",
+        "bio": "Prague writer whose name became an adjective — Kafkaesque — for the absurd bureaucracies and quiet terrors that trap ordinary people in impossible systems.",
+        "books": ["The Metamorphosis", "The Trial", "The Castle", "Amerika", "A Hunger Artist"],
+        "magnumOpus": "The Metamorphosis",
+        "greatestLine": "A book must be the axe for the frozen sea within us.",
+        "unknownFact": "He asked his friend Max Brod to burn all his unpublished work after his death — Brod disobeyed, and the world got The Trial and The Castle because of it."
+    }
+]

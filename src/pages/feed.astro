@@ -1,0 +1,133 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabase } from '../lib/supabase';
+---
+<BaseLayout title="Your Feed — Raconteur">
+    <main class="feed-container">
+        <header class="feed-header">
+            <p class="section-eyebrow">From writers you follow</p>
+            <h1>Your Feed</h1>
+        </header>
+        <div id="authCheck" class="loading-state">Checking login status...</div>
+        <div id="feedList" class="feed-grid" style="display: none;"></div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <p>You're not following anyone yet.</p>
+            <p class="subtext">Visit a writer's page and tap Follow — their new stories will appear here.</p>
+            <a href="/stories" class="btn-primary">Browse the Shelf</a>
+        </div>
+    </main>
+
+    <style>
+        .feed-container { max-width: 720px; margin: 4rem auto; padding: 0 1.5rem; color: #f4edda; }
+        .feed-header { text-align: center; margin-bottom: 3rem; }
+        .section-eyebrow { font-size: 0.72rem; letter-spacing: 3px; text-transform: uppercase; color: #8a9478; margin-bottom: 0.6rem; }
+        .feed-header h1 { font-family: 'Playfair Display', serif; font-size: 2.4rem; font-weight: 900; color: #f4ede0; }
+        .loading-state { text-align: center; padding: 2rem; font-style: italic; opacity: 0.7; }
+        .empty-state { text-align: center; padding: 4rem 0; }
+        .empty-state p { margin-bottom: 0.5rem; }
+        .empty-state .subtext { opacity: 0.6; font-size: 0.9rem; margin-bottom: 2rem; }
+        .btn-primary { background: #f4ede0; color: #1e2420; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        .feed-item {
+            display: block; text-decoration: none; color: inherit;
+            padding: 1.4rem 0; border-bottom: 1px solid rgba(228, 221, 200, 0.12);
+            transition: opacity 0.2s;
+        }
+        .feed-item:hover { opacity: 0.75; }
+        .feed-item h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: #f4ede0; margin: 0 0 0.4rem; }
+        .feed-meta { font-size: 0.85rem; color: #8a9478; font-style: italic; }
+        .feed-meta .author { color: #a8b89c; font-style: normal; }
+    </style>
+
+        <style is:global>
+        body { background: #1e2420; }
+        .feed-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+        .feed-tile {
+            display: block;
+            background: #faf5ea;
+            border: 1px solid #ddd2bb;
+            border-top: 3px solid #3d5a3c;
+            border-radius: 2px;
+            color: #2e2a22;
+            text-decoration: none;
+            box-shadow: 0 2px 14px rgba(46, 42, 34, 0.07);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+        }
+        .feed-tile:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25); }
+        .feed-cover { overflow: hidden; }
+        .feed-cover img { width: 100%; height: 220px; object-fit: cover; display: block; }
+        .feed-cover-empty {
+            height: 220px; display: flex; align-items: center; justify-content: center;
+            font-style: italic; color: #8a7d65; background: #efe7d6;
+        }
+        .feed-tile-body { padding: 1rem 1rem 1.2rem; }
+        .feed-tile-body h3 {
+            font-family: 'Playfair Display', serif; font-size: 1.05rem;
+            margin: 0 0 0.6rem; color: #2e2a22;
+        }
+        .feed-meta {
+            display: flex; justify-content: space-between; gap: 0.8rem;
+            font-size: 0.8rem; color: #8a7d65;
+        }
+        .feed-meta .author { color: #5a7052; font-weight: 600; }
+    </style>
+
+    <script>
+        import { supabase } from '../lib/supabase';
+        import { esc } from '../lib/escape';
+        const authCheck = document.getElementById('authCheck')!;
+        const feedList = document.getElementById('feedList')!;
+        const emptyState = document.getElementById('emptyState')!;
+
+        async function initFeed() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { window.location.href = '/login'; return; }
+            authCheck.style.display = 'none';
+
+            // Who do I follow?
+            const { data: follows } = await supabase
+                .from('follows')
+                .select('followed_id')
+                .eq('follower_id', session.user.id);
+            const ids = (follows || []).map((f: any) => f.followed_id);
+
+            if (ids.length === 0) { emptyState.style.display = 'block'; return; }
+
+            // Their published stories, newest first
+            const { data: stories } = await supabase
+                .from('stories')
+                .select('id, title, author_name, created_at, kind, genre_tag, cover_url')
+                .in('author_id', ids)
+                .eq('status', 'published')
+                .order('created_at', { ascending: false })
+                .limit(40);
+
+            if (!stories || stories.length === 0) { emptyState.style.display = 'block'; return; }
+
+            feedList.style.display = 'grid';
+            feedList.innerHTML = stories.map((s: any) => {
+                const isPoem = s.kind === 'poem' || s.genre_tag === 'Poetry';
+                const date = new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                const cover = s.cover_url
+                    ? `<div class="feed-cover"><img src="${esc(s.cover_url)}" alt="Cover of ${esc(s.title)}" /></div>`
+                    : `<div class="feed-cover feed-cover-empty">${isPoem ? '✦ Poem' : 'No cover yet'}</div>`;
+                return `
+                    <a href="/story/${esc(s.id)}" class="feed-tile">
+                        ${cover}
+                        <div class="feed-tile-body">
+                            <h3>${esc(s.title)}</h3>
+                            <div class="feed-meta">
+                                <span class="author">${esc(s.author_name)}</span>
+                                <span>${isPoem ? 'Poem' : 'Story'} · ${date}</span>
+                            </div>
+                        </div>
+                    </a>`;
+            }).join('');
+        }
+        initFeed();
+    </script>
+</BaseLayout>

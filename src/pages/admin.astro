@@ -1,0 +1,361 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabase } from '../lib/supabase';
+---
+<BaseLayout title="Admin — Raconteur">
+  <main class="admin-container">
+    <header class="admin-header">
+      <h1>The Editor's Desk</h1>
+      <p class="admin-sub">Curate the shelf, moderate the room, guide the readers.</p>
+    </header>
+    <div id="authCheck" class="loading-state">Checking credentials...</div>
+    <div id="adminPanel" style="display: none;">
+      <section class="admin-section">
+        <h2>Homepage Shelf</h2>
+        <p class="admin-hint">Everything below appears on the homepage. ✦ Feature pins a work to the top with an Editor's Pick mark. "Remove from home" hides it from the front page only — it stays published in the archive.</p>
+        <div id="featuredList" class="admin-list"></div>
+      </section>
+      <section class="admin-section">
+        <h2>Hidden from Homepage</h2>
+        <p class="admin-hint">Published and in the archive, but resting off the front page.</p>
+        <div id="allWorksList" class="admin-list"></div>
+      </section>
+      <section class="admin-section">
+        <h2>Reading Room Notes</h2>
+        <div id="notesList" class="admin-list"></div>
+      </section>
+      <section class="admin-section">
+        <h2>Story Comments</h2>
+        <div id="commentsList" class="admin-list"></div>
+      </section>
+            <section class="admin-section">
+        <h2>Reports</h2>
+        <p class="admin-hint">Flagged comments and notes. Dismiss or delete the content.</p>
+        <div id="reportsList" class="admin-list"></div>
+      </section>
+            <section class="admin-section">
+        <h2>Collections</h2>
+        <p class="admin-hint">Curated reading bundles. Create a collection, then add stories to it.</p>
+        <form id="collectionForm" class="admin-form">
+          <input type="text" id="collectionTitle" placeholder="Collection title (e.g. Rainy Sunday Reads)" required />
+          <input type="text" id="collectionSlug" placeholder="slug (e.g. rainy-sunday-reads)" required />
+          <textarea id="collectionNote" placeholder="Curator's note (optional)" rows="2"></textarea>
+          <button type="submit" class="admin-btn btn-feature">Create Collection</button>
+        </form>
+        <div id="collectionsList" class="admin-list"></div>
+      </section>
+      <section class="admin-section">
+        <h2>Per-User Recommendations</h2>
+        <p class="admin-hint">Pick one of your stories for a reader; the house adds one random piece beside it. They'll see both on their dashboard and at the end of stories.</p>
+        <button id="autoRecsBtn" class="admin-btn btn-feature" style="margin-bottom: 1rem;">🔄 Auto-fill recommendations for all accounts</button>
+        <div id="recsPanel" class="recs-panel"></div>
+      </section>
+      <section class="admin-section">
+        <h2>All Writers</h2>
+        <div id="writersList" class="admin-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <style>
+    .admin-container { max-width: 900px; margin: 3rem auto; padding: 0 1.5rem; color: #f4edda; }
+    .admin-header { text-align: center; margin-bottom: 3rem; }
+    .admin-header h1 { font-family: 'Playfair Display', serif; font-size: 2.4rem; font-weight: 900; color: #f4ede0; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .admin-sub { font-style: italic; color: #8a9478; font-size: 0.95rem; }
+    .loading-state { text-align: center; padding: 2rem; font-style: italic; opacity: 0.7; }
+    .admin-section { margin-bottom: 3rem; padding: 1.5rem; background: rgba(244,237,224,0.03); border: 1px solid rgba(228,221,200,0.08); border-radius: 6px; }
+    .admin-section h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; color: #f4ede0; margin-bottom: 0.4rem; padding-bottom: 0.6rem; border-bottom: 1px solid rgba(228,221,200,0.12); }
+    .admin-hint { font-size: 0.85rem; color: #8a9478; font-style: italic; margin-bottom: 1rem; }
+    .admin-list { display: flex; flex-direction: column; gap: 0.8rem; }
+    .admin-row { display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 1.2rem; background: rgba(244,237,224,0.05); border: 1px solid rgba(228,221,200,0.1); border-radius: 4px; transition: background 0.2s; }
+    .admin-row:hover { background: rgba(244,237,224,0.08); }
+    .admin-row-info { flex: 1; }
+    .admin-row-title { font-family: 'Playfair Display', serif; color: #f4ede0; font-size: 1rem; display: block; margin-bottom: 0.2rem; }
+    .admin-row-meta { font-size: 0.8rem; color: #8a9478; font-style: italic; }
+    .admin-btn { padding: 0.4rem 1rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-family: 'Playfair Display', serif; font-weight: 600; margin-left: 0.5rem; transition: all 0.2s; }
+    .btn-feature { background: #3d5a3c; color: #f4ede0; }
+    .btn-feature:hover { background: #4a6b48; }
+    .btn-unfeature { background: #a85a32; color: #f4ede0; }
+    .btn-unfeature:hover { background: #c06a3a; }
+    .btn-delete { background: transparent; color: #a85a32; border: 1px solid #a85a32; }
+    .btn-delete:hover { background: #a85a32; color: #f4ede0; }
+    .recs-panel { display: flex; flex-direction: column; gap: 1rem; }
+    .recs-row { display: flex; align-items: center; gap: 1rem; padding: 0.8rem; background: rgba(244,237,224,0.04); border-radius: 4px; }
+    .recs-row span { min-width: 140px; color: #d8d0bc; font-family: 'Playfair Display', serif; }
+    .recs-row select { flex: 1; padding: 0.5rem; background: #1e2420; color: #f4ede0; border: 1px solid #5a7052; border-radius: 4px; font-family: inherit; }
+    .admin-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: rgba(250, 245, 234, 0.05);
+        border: 1px solid rgba(221, 210, 187, 0.2);
+        border-radius: 6px;
+    }
+    .admin-form input,
+    .admin-form textarea {
+        width: 100%;
+        padding: 0.8rem 1rem;
+        background: #faf5ea;
+        border: 1px solid #ddd2bb;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 0.9rem;
+        color: #2e2a22;
+    }
+    .admin-form input:focus,
+    .admin-form textarea:focus {
+        outline: none;
+        border-color: #3d5a3c;
+    }
+    .admin-form textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+    .admin-form button {
+        align-self: flex-start;
+    }
+  </style>
+  <style is:global> body { background: #1e2420; } </style>
+
+  <script>
+    import { supabase } from '../lib/supabase';
+    import { esc } from '../lib/escape';
+    const authCheck = document.getElementById('authCheck')!;
+    const adminPanel = document.getElementById('adminPanel')!;
+
+    async function initAdmin() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { window.location.href = '/login'; return; }
+      const { data: prof } = await supabase.from('profiles').select('is_admin').eq('user_id', session.user.id).maybeSingle();
+      if (!prof?.is_admin) { authCheck.textContent = 'Access denied — this page is for the editor only.'; return; }
+      authCheck.style.display = 'none';
+      adminPanel.style.display = 'block';
+
+      // ===== Stories =====
+      const { data: stories } = await supabase.from('stories')
+        .select('id, title, author_name, is_featured, kind, genre_tag, on_homepage')
+        .eq('status', 'published').order('created_at', { ascending: false });
+      const allStories: any[] = stories || [];
+
+      function renderWorks() {
+        const onHome = allStories.filter((s: any) => s.on_homepage !== false);
+        const hidden = allStories.filter((s: any) => s.on_homepage === false);
+        onHome.sort((a: any, b: any) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
+        document.getElementById('featuredList')!.innerHTML = onHome.length === 0
+          ? '<p class="admin-hint">Nothing on the homepage shelf.</p>'
+          : onHome.map((s: any) => `
+            <div class="admin-row">
+              <div class="admin-row-info"><span class="admin-row-title">${s.is_featured ? '✦ ' : ''}${esc(s.title)}</span><br><span class="admin-row-meta">${esc(s.author_name)}</span></div>
+              <div>
+                <button class="admin-btn ${s.is_featured ? 'btn-unfeature' : 'btn-feature'}" data-id="${s.id}" data-act="feature">${s.is_featured ? 'Unfeature' : 'Feature'}</button>
+                <button class="admin-btn btn-delete" data-id="${s.id}" data-act="hide">Remove from home</button>
+                <button class="admin-btn btn-feature" data-id="${s.id}" data-act="add-to-collection">+ Collection</button>
+                <button class="admin-btn btn-delete" data-id="${s.id}" data-act="delete">Delete</button>
+              </div>
+            </div>`).join('');
+        document.getElementById('allWorksList')!.innerHTML = hidden.length === 0
+          ? '<p class="admin-hint">Nothing hidden.</p>'
+          : hidden.map((s: any) => `
+            <div class="admin-row">
+              <div class="admin-row-info"><span class="admin-row-title">${esc(s.title)}</span><br><span class="admin-row-meta">${esc(s.author_name)}</span></div>
+              <button class="admin-btn btn-feature" data-id="${s.id}" data-act="restore">Restore to home</button>
+            </div>`).join('');
+        attachWorkHandlers();
+      }
+
+      async function setStory(id: string, patch: any) {
+        const { error } = await supabase.from('stories').update(patch).eq('id', id);
+        if (error) { alert('Error: ' + error.message); return; }
+        const s = allStories.find((x: any) => x.id === id);
+        if (s) Object.assign(s, patch);
+        renderWorks();
+      }
+
+      function attachWorkHandlers() {
+        document.querySelectorAll('[data-act="feature"]').forEach(b => b.addEventListener('click', () => {
+          const id = (b as HTMLElement).dataset.id!;
+          const s = allStories.find((x: any) => x.id === id);
+          setStory(id, { is_featured: !(s && s.is_featured) });
+        }));
+        document.querySelectorAll('[data-act="hide"]').forEach(b => b.addEventListener('click', () => {
+          if (!confirm('Hide this story from the homepage? It stays in the archive.')) return;
+          setStory((b as HTMLElement).dataset.id!, { on_homepage: false, is_featured: false });
+        }));
+        document.querySelectorAll('[data-act="restore"]').forEach(b => b.addEventListener('click', () => {
+          setStory((b as HTMLElement).dataset.id!, { on_homepage: true });
+        }));
+        document.querySelectorAll('[data-act="delete"]').forEach(b => b.addEventListener('click', async () => {
+          if (!confirm('Delete this story permanently?')) return;
+          const id = (b as HTMLElement).dataset.id!;
+          const { error } = await supabase.from('stories').delete().eq('id', id);
+          if (error) { alert('Error: ' + error.message); return; }
+          const idx = allStories.findIndex((x: any) => x.id === id);
+          if (idx >= 0) allStories.splice(idx, 1);
+          renderWorks();
+        }));
+      }
+      renderWorks();
+
+      // Add-to-collection dropdown for each story
+      document.querySelectorAll('[data-act="add-to-collection"]').forEach(b => b.addEventListener('click', async () => {
+        const storyId = (b as HTMLElement).dataset.id!;
+        const { data: cols } = await supabase.from('collections').select('id,title,slug');
+        if (!cols || cols.length === 0) { alert('Create a collection first!'); return; }
+        const choice = prompt(`Add to collection:\n${cols.map((c, i) => `${i + 1}. ${c.title}`).join('\n')}\n\nEnter number:`);
+        if (!choice) return;
+        const idx = parseInt(choice) - 1;
+        if (idx < 0 || idx >= cols.length) return;
+        const col = cols[idx];
+        const { data: existing } = await supabase.from('collection_stories').select('sort_order').eq('collection_id', col.id).order('sort_order', { ascending: false }).limit(1);
+        const nextOrder = (existing?.[0]?.sort_order || 0) + 1;
+        const { error } = await supabase.from('collection_stories').insert({ collection_id: col.id, story_id: storyId, sort_order: nextOrder });
+        if (error) { alert('Error: ' + error.message); return; }
+        alert(`Added to "${col.title}"!`);
+      }));
+
+      // ===== Notes =====
+      const { data: notes } = await supabase.from('community_notes').select('*').order('created_at', { ascending: false }).limit(50);
+      document.getElementById('notesList')!.innerHTML = (notes || []).map((n: any) => `
+        <div class="admin-row">
+          <div class="admin-row-info"><span class="admin-row-meta">${esc(n.note_type || 'note')} · ${esc(n.display_name || 'Anonymous')}</span><br><span class="admin-row-title" style="font-size:0.85rem;">${esc((n.body || '').slice(0, 100))}</span></div>
+          <button class="admin-btn btn-delete" data-id="${n.id}" data-type="note">Delete</button>
+        </div>`).join('') || '<p class="admin-hint">No notes yet.</p>';
+      document.querySelectorAll('.btn-delete[data-type="note"]').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Delete this note?')) return;
+        const { error } = await supabase.from('community_notes').delete().eq('id', (b as HTMLElement).dataset.id!);
+        if (error) { alert('Error: ' + error.message); return; }
+        (b as HTMLElement).closest('.admin-row')?.remove();
+      }));
+
+      // ===== Comments =====
+      const { data: comments } = await supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(50);
+      document.getElementById('commentsList')!.innerHTML = (comments || []).map((c: any) => `
+        <div class="admin-row">
+          <div class="admin-row-info"><span class="admin-row-meta">${esc(c.author_name || c.display_name || c.pen_name || 'Reader')} · on story ${esc((c.story_id || '').slice(0, 8))}</span><br><span class="admin-row-title" style="font-size:0.85rem;">${esc((c.body || c.text || '').slice(0, 100))}</span></div>
+          <button class="admin-btn btn-delete" data-id="${c.id}" data-type="comment">Delete</button>
+        </div>`).join('') || '<p class="admin-hint">No comments yet.</p>';
+      document.querySelectorAll('.btn-delete[data-type="comment"]').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Delete this comment?')) return;
+        const { error } = await supabase.from('comments').delete().eq('id', (b as HTMLElement).dataset.id!);
+        if (error) { alert('Error: ' + error.message); return; }
+        (b as HTMLElement).closest('.admin-row')?.remove();
+      }));
+
+            // ===== Collections =====
+      const { data: collections } = await supabase.from('collections').select('*, collection_stories(story_id, sort_order)').order('created_at', { ascending: false });
+      document.getElementById('collectionsList')!.innerHTML = (collections || []).length === 0
+        ? '<p class="admin-hint">No collections yet. Create your first curated bundle above.</p>'
+        : (collections || []).map((c: any) => `
+          <div class="admin-row">
+            <div class="admin-row-info">
+              <span class="admin-row-title">${esc(c.title)}</span><br>
+              <span class="admin-row-meta">/${esc(c.slug)} · ${c.collection_stories?.length || 0} stories</span>
+            </div>
+            <div>
+              <button class="admin-btn btn-feature" data-slug="${esc(c.slug)}" data-act="view-collection">View</button>
+              <button class="admin-btn btn-delete" data-id="${c.id}" data-act="delete-collection">Delete</button>
+            </div>
+          </div>`).join('');
+      document.querySelectorAll('[data-act="view-collection"]').forEach(b => b.addEventListener('click', () => {
+        window.open(`/collection/${(b as HTMLElement).dataset.slug}`, '_blank');
+      }));
+      document.querySelectorAll('[data-act="delete-collection"]').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Delete this collection and all its story links?')) return;
+        const { error } = await supabase.from('collections').delete().eq('id', (b as HTMLElement).dataset.id!);
+        if (error) { alert('Error: ' + error.message); return; }
+        (b as HTMLElement).closest('.admin-row')?.remove();
+      }));
+      document.getElementById('collectionForm')!.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = (document.getElementById('collectionTitle') as HTMLInputElement).value.trim();
+        const slug = (document.getElementById('collectionSlug') as HTMLInputElement).value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        const note = (document.getElementById('collectionNote') as HTMLTextAreaElement).value.trim();
+        if (!title || !slug) return;
+        const { error } = await supabase.from('collections').insert({ title, slug, curator_note: note || null });
+        if (error) { alert('Error: ' + error.message); return; }
+        alert('Collection created! Now add stories to it from the story list below.');
+        location.reload();
+      });
+
+      // ===== Reports =====
+      const { data: reports } = await supabase.from('reports').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+      document.getElementById('reportsList')!.innerHTML = (reports || []).length === 0
+        ? '<p class="admin-hint">No pending reports. The room is quiet.</p>'
+        : (reports || []).map((r: any) => `
+          <div class="admin-row">
+            <div class="admin-row-info">
+              <span class="admin-row-meta">${r.target_type} · ${r.reason} · ${new Date(r.created_at).toLocaleDateString()}</span><br>
+              <span class="admin-row-title" style="font-size:0.85rem;">ID: ${r.target_id.slice(0, 8)}…</span>
+            </div>
+            <div>
+              <button class="admin-btn btn-feature" data-id="${r.id}" data-act="dismiss">Dismiss</button>
+              <button class="admin-btn btn-delete" data-id="${r.id}" data-tid="${r.target_id}" data-ttype="${r.target_type}" data-act="delete-reported">Delete content</button>
+            </div>
+          </div>`).join('');
+      document.querySelectorAll('[data-act="dismiss"]').forEach(b => b.addEventListener('click', async () => {
+        const { error } = await supabase.from('reports').update({ status: 'dismissed' }).eq('id', (b as HTMLElement).dataset.id!);
+        if (error) { alert('Error: ' + error.message); return; }
+        (b as HTMLElement).closest('.admin-row')?.remove();
+      }));
+      document.querySelectorAll('[data-act="delete-reported"]').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Delete the reported content and resolve the report?')) return;
+        const tid = (b as HTMLElement).dataset.tid!;
+        const ttype = (b as HTMLElement).dataset.ttype!;
+        const table = ttype === 'comment' ? 'comments' : 'community_notes';
+        const { error: delErr } = await supabase.from(table).delete().eq('id', tid);
+        const { error: repErr } = await supabase.from('reports').update({ status: 'resolved' }).eq('id', (b as HTMLElement).dataset.id!);
+        if (delErr || repErr) { alert('Error: ' + (delErr || repErr)?.message); return; }
+        (b as HTMLElement).closest('.admin-row')?.remove();
+      }));
+
+      // ===== Writers =====
+      const { data: writers } = await supabase.from('profiles').select('user_id, pen_name, work_count, is_admin, verified').order('pen_name');
+      document.getElementById('writersList')!.innerHTML = (writers || []).map((w: any) => `
+        <div class="admin-row">
+          <div class="admin-row-info"><span class="admin-row-title">${esc(w.pen_name)}${w.is_admin ? ' ✦ Admin' : ''}${w.verified ? ' ✓' : ''}</span><br><span class="admin-row-meta">${w.work_count || 0} works</span></div>
+        </div>`).join('');
+
+      // ===== Per-user recommendations =====
+      const { data: myProf } = await supabase.from('profiles').select('pen_name').eq('user_id', session.user.id).maybeSingle();
+      const myStories = allStories.filter((s: any) => s.author_name === myProf?.pen_name);
+            const { data: allUsers } = await supabase.from('profiles')
+          .select('user_id, pen_name')
+          .neq('user_id', session.user.id);
+      const recsPanel = document.getElementById('recsPanel')!;
+      recsPanel.innerHTML = (allUsers || []).map((u: any) => `
+        <div class="recs-row">
+          <span>${esc(u.pen_name)}</span>
+          <select data-uid="${esc(u.user_id)}" class="recs-select">
+            <option value="">— pick your story —</option>
+            ${myStories.map((s: any) => `<option value="${esc(s.id)}">${esc(s.title)}</option>`).join('')}
+          </select>
+          <button class="admin-btn btn-feature recs-save" data-uid="${esc(u.user_id)}">Save</button>
+        </div>`).join('');
+      document.querySelectorAll('.recs-save').forEach(b => b.addEventListener('click', async () => {
+        const uid = (b as HTMLElement).dataset.uid!;
+        const sel = document.querySelector(`.recs-select[data-uid="${uid}"]`) as HTMLSelectElement;
+        const adminStoryId = sel.value || null;
+        if (!adminStoryId) { alert('Pick one of your stories first.'); return; }
+        const randomPool = allStories.filter((s: any) => s.id !== adminStoryId);
+        const randomStoryId = randomPool.length > 0 ? randomPool[Math.floor(Math.random() * randomPool.length)].id : null;
+        const { error } = await supabase.from('recommendations').upsert(
+          { user_id: uid, admin_story_id: adminStoryId, random_story_id: randomStoryId, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        );
+        if (error) { alert('Error: ' + error.message); return; }
+        alert('Recommendation saved for ' + uid.slice(0, 8) + '…');
+      }));
+            // Auto-fill recommendations
+      document.getElementById('autoRecsBtn')?.addEventListener('click', async () => {
+        if (!confirm('Auto-assign one of your stories + one random story to every account without a manual pick?')) return;
+        const { error } = await supabase.rpc('auto_assign_recommendations');
+        if (error) { alert('Error: ' + error.message); return; }
+        alert('Recommendations auto-filled for all accounts.');
+        window.location.reload();
+      });
+    }
+    initAdmin();
+  </script>
+</BaseLayout>

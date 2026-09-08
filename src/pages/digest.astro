@@ -1,0 +1,312 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabase } from '../lib/supabase';
+---
+<BaseLayout title="The Raconteur Weekly">
+    <main class="digest-container">
+        <div id="authCheck" class="loading-state">Setting the type...</div>
+
+        <article id="digestPaper" class="sunday-paper" style="display: none;">
+            <header class="paper-masthead">
+                <p class="paper-edition">Sunday Edition</p>
+                <h1 class="paper-title">THE RACONTEUR WEEKLY</h1>
+                <p class="paper-date" id="paperDate"></p>
+                <div class="double-rule"></div>
+            </header>
+
+            <section id="followedSection" class="paper-section" style="display: none;">
+                <h2 class="section-head">From Writers You Follow</h2>
+                <div id="followedList" class="paper-list"></div>
+            </section>
+
+            <section id="newPoemsSection" class="paper-section" style="display: none;">
+                <h2 class="section-head">Fresh Poetry</h2>
+                <div id="newPoemsList" class="paper-list"></div>
+            </section>
+
+            <section id="appreciatedSection" class="paper-section" style="display: none;">
+                <h2 class="section-head">Most Appreciated This Week</h2>
+                <div id="appreciatedList" class="paper-list"></div>
+            </section>
+
+            <footer class="paper-colophon">
+                <div class="double-rule"></div>
+                <p>Every story here was written to be remembered.</p>
+            </footer>
+        </article>
+
+        <div id="subBox" class="sub-box" style="display: none;">
+            <p id="subText" class="sub-text">Get the Sunday Paper in your inbox, every week.</p>
+            <button id="subBtn" class="sub-btn" type="button">✉ Subscribe to the Weekly</button>
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <p>A quiet week on the shelf.</p>
+            <p class="subtext">No new stories landed in the past seven days. Check back next Sunday.</p>
+            <a href="/stories" class="btn-primary">Browse the Full Shelf</a>
+        </div>
+    </main>
+
+    <style is:global>
+        body { background: #1e2420; }
+
+        /* === THE SUNDAY PAPER === */
+        .digest-container {
+            max-width: 680px;
+            margin: 4rem auto;
+            padding: 0 1.5rem;
+        }
+        .loading-state {
+            text-align: center; padding: 3rem; font-style: italic;
+            color: #8a9478; opacity: 0.7;
+        }
+        .sunday-paper {
+            background: #faf5ea;
+            border: 1px solid #ddd2bb;
+            padding: 3rem 2.8rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+            color: #2e2a22;
+        }
+
+        /* Masthead */
+        .paper-masthead { text-align: center; margin-bottom: 2rem; }
+        .paper-edition {
+            font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase;
+            color: #8a7d65; margin-bottom: 0.4rem;
+        }
+        .paper-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.8rem, 5vw, 2.6rem);
+            font-weight: 900; letter-spacing: 0.15em;
+            color: #2e2a22; line-height: 1.1; margin-bottom: 0.5rem;
+        }
+        .paper-date {
+            font-family: 'Lora', serif; font-style: italic;
+            font-size: 0.9rem; color: #8a7d65;
+        }
+        .double-rule {
+            height: 4px;
+            border-top: 2px solid #2e2a22;
+            border-bottom: 1px solid #2e2a22;
+            margin: 0.8rem 0;
+        }
+
+        /* Sections */
+        .paper-section { margin-bottom: 2rem; }
+        .section-head {
+            font-family: 'Playfair Display', serif;
+            font-size: 0.75rem; font-weight: 700;
+            letter-spacing: 3px; text-transform: uppercase;
+            color: #3d5a3c; margin-bottom: 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid #ddd2bb;
+        }
+
+        /* List items with dotted leaders */
+        .paper-item {
+            display: flex; align-items: baseline; gap: 0.5rem;
+            padding: 0.5rem 0; text-decoration: none; color: inherit;
+            transition: opacity 0.2s;
+        }
+        .paper-item:hover { opacity: 0.65; }
+        .paper-item-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.05rem; font-weight: 700; color: #2e2a22;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .paper-leader {
+            flex: 1;
+            border-bottom: 1px dotted #c8bfa8;
+            margin-bottom: 0.35rem;
+            min-width: 2rem;
+        }
+        .paper-item-meta {
+            font-family: 'Lora', serif; font-style: italic;
+            font-size: 0.82rem; color: #8a7d65;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .paper-likes {
+            font-style: normal; color: #3d5a3c; font-weight: 600;
+        }
+
+        /* Colophon */
+        .paper-colophon {
+            text-align: center; margin-top: 1.5rem;
+        }
+        .paper-colophon p {
+            font-family: 'Lora', serif; font-style: italic;
+            font-size: 0.82rem; color: #8a7d65; margin-top: 0.8rem;
+        }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 4rem 0; color: #f4edda; }
+        .empty-state p { margin-bottom: 0.5rem; }
+        .empty-state .subtext { opacity: 0.6; font-size: 0.9rem; margin-bottom: 2rem; }
+        .btn-primary {
+            background: #f4ede0; color: #1e2420; padding: 0.5rem 1rem;
+            border-radius: 4px; text-decoration: none; font-weight: bold;
+        }
+
+        .sub-box { text-align: center; margin: 2.5rem auto 0; }
+        .sub-text { color: #8a9478; font-style: italic; font-size: 0.95rem; margin-bottom: 0.8rem; }
+        .sub-btn {
+            background: #3d5a3c; color: #f4ede0; border: 1px solid #c8b890; border-radius: 999px;
+            padding: 0.6rem 1.6rem; font-family: 'Playfair Display', serif; font-size: 0.9rem;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .sub-btn:hover { background: #4a6b48; }
+
+        @media (max-width: 640px) {
+            .sunday-paper { padding: 2rem 1.5rem; }
+            .paper-title { letter-spacing: 0.08em; }
+            .paper-item { flex-wrap: wrap; gap: 0.2rem; }
+            .paper-leader { display: none; }
+            .paper-item-meta { width: 100%; padding-left: 0.5rem; }
+        }
+    </style>
+
+    <script>
+        import { supabase } from '../lib/supabase';
+        import { esc } from '../lib/escape';
+
+        const authCheck = document.getElementById('authCheck')!;
+        const digestPaper = document.getElementById('digestPaper')!;
+        const paperDate = document.getElementById('paperDate')!;
+        const followedSection = document.getElementById('followedSection')!;
+        const followedList = document.getElementById('followedList')!;
+        const newPoemsSection = document.getElementById('newPoemsSection')!;
+        const newPoemsList = document.getElementById('newPoemsList')!;
+        const appreciatedSection = document.getElementById('appreciatedSection')!;
+        const appreciatedList = document.getElementById('appreciatedList')!;
+        const emptyState = document.getElementById('emptyState')!;
+
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+        // Set the edition date
+        paperDate.textContent = new Date().toLocaleDateString(undefined, {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        function renderPaperItem(s: any, extra?: string) {
+            const date = new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            const meta = extra ? `${extra} · ${date}` : date;
+            return `
+                <a href="/story/${esc(s.id)}" class="paper-item">
+                    <span class="paper-item-title">${esc(s.title)}</span>
+                    <span class="paper-leader"></span>
+                    <span class="paper-item-meta">${esc(s.author_name)} · ${meta}</span>
+                </a>`;
+        }
+
+        async function initDigest() {
+            const { data: { session } } = await supabase.auth.getSession();
+            authCheck.style.display = 'none';
+
+            let hasContent = false;
+
+            // 1. From writers you follow
+            if (session) {
+                const { data: follows } = await supabase
+                    .from('follows').select('followed_id')
+                    .eq('follower_id', session.user.id);
+                const ids = (follows || []).map((f: any) => f.followed_id);
+
+                if (ids.length > 0) {
+                    const { data: stories } = await supabase
+                        .from('stories')
+                        .select('id, title, author_name, created_at, kind, genre_tag')
+                        .in('author_id', ids)
+                        .eq('status', 'published')
+                        .gte('created_at', sevenDaysAgo)
+                        .order('created_at', { ascending: false });
+
+                    if (stories && stories.length > 0) {
+                        followedSection.style.display = 'block';
+                        followedList.innerHTML = stories.map(s => renderPaperItem(s)).join('');
+                        hasContent = true;
+                    }
+                }
+            }
+
+            // 2. Fresh poetry
+            const { data: poems } = await supabase
+                .from('stories')
+                .select('id, title, author_name, created_at, kind, genre_tag')
+                .eq('status', 'published')
+                .or('kind.eq.poem,genre_tag.eq.Poetry')
+                .gte('created_at', sevenDaysAgo)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            if (poems && poems.length > 0) {
+                newPoemsSection.style.display = 'block';
+                newPoemsList.innerHTML = poems.map(s => renderPaperItem(s, 'Poem')).join('');
+                hasContent = true;
+            }
+
+            // 3. Most appreciated
+            const { data: recentLikes } = await supabase
+                .from('likes').select('story_id')
+                .gte('created_at', sevenDaysAgo);
+
+            if (recentLikes && recentLikes.length > 0) {
+                const counts: Record<string, number> = {};
+                recentLikes.forEach((l: any) => { counts[l.story_id] = (counts[l.story_id] || 0) + 1; });
+                const topIds = Object.entries(counts)
+                    .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id);
+
+                if (topIds.length > 0) {
+                    const { data: topStories } = await supabase
+                        .from('stories')
+                        .select('id, title, author_name, created_at, kind, genre_tag')
+                        .in('id', topIds).eq('status', 'published');
+
+                    if (topStories && topStories.length > 0) {
+                        const sorted = topStories.sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
+                        appreciatedSection.style.display = 'block';
+                        appreciatedList.innerHTML = sorted.map(s =>
+                            renderPaperItem(s, `♡ ${counts[s.id] || 0}`)
+                        ).join('');
+                        hasContent = true;
+                    }
+                }
+            }
+
+            if (hasContent) {
+                digestPaper.style.display = 'block';
+            } else {
+                emptyState.style.display = 'block';
+            }
+        }
+
+    initDigest();
+            // --- Subscribe / unsubscribe box ---
+        (async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            const box = document.getElementById('subBox')!;
+            const btn = document.getElementById('subBtn')!;
+            const text = document.getElementById('subText')!;
+            box.style.display = 'block';
+            let row = await supabase.from('digest_subscribers')
+                .select('subscribed').eq('user_id', session.user.id).maybeSingle();
+            const paint = (on: boolean) => {
+                btn.textContent = on ? '✓ Subscribed — tap to unsubscribe' : '✉ Subscribe to the Weekly';
+                text.textContent = on
+                    ? 'The Sunday Paper will arrive in your inbox each week.'
+                    : 'Get the Sunday Paper in your inbox, every week.';
+            };
+            paint(!!row.data?.subscribed);
+            btn.addEventListener('click', async () => {
+                const on = !row.data?.subscribed;
+                const { error } = await supabase.from('digest_subscribers').upsert(
+                    { user_id: session.user.id, email: session.user.email!, subscribed: on },
+                    { onConflict: 'user_id' }
+                );
+                if (error) { alert('Could not update subscription: ' + error.message); return; }
+                row = { data: { subscribed: on } } as any;
+                paint(on);
+            });
+        })();
+    </script>
+</BaseLayout>

@@ -1,0 +1,551 @@
+---
+// src/pages/stories.astro — the full library: every story, searchable & filterable
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getVisibleStories } from '../data/stories';
+import { supabase } from '../lib/supabase';
+import { buildStoryFromDB, bandFromWords } from '../lib/storyLoader';
+
+const staticStories = getVisibleStories();
+
+const { data: dbRows } = await supabase
+    .from('stories')
+    .select('*')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false });
+
+const dbStories = (dbRows || []).map(buildStoryFromDB);
+
+// Force every story (static + DB) to use the computed length band — poems keep 'Poetry'
+const stories = [...dbStories, ...staticStories].map(s => ({
+    ...s,
+    genre: ((s as any).kind === 'poem' || s.genreTag === 'Poetry') ? 'Poetry' : bandFromWords(s.wordCount)
+}));
+const baseBands = ['Flash Fiction', 'Short Story', 'Novelette', 'Novella'];
+const extra = Array.from(new Set(stories.map((s) => s.genre))).filter((g) => !baseBands.includes(g) && g !== 'Poetry');
+const proseStories = stories.filter((s) => s.genre !== 'Poetry');
+const poemStories = stories.filter((s) => s.genre === 'Poetry');
+const genres = ['All', ...baseBands, ...extra];
+
+// Collect all unique genre tags for the second filter row
+const genreTags = ['All', ...Array.from(new Set(stories.map((s) => s.genreTag).filter(Boolean) as string[]))];
+// 7.5 Trending — most-read in the last 7 days.
+// Uses the reads_weekly aggregate view (story_id + count only) instead of raw
+// `reads` rows, so it keeps working once reads SELECT is locked down by RLS.
+const { data: weekReads } = await supabase
+  .from('reads_weekly')
+  .select('story_id, read_count');
+const weekCounts: Record<string, number> = {};
+(weekReads || []).forEach((r: any) => { weekCounts[r.story_id] = r.read_count || 0; });
+const trending = (Object.entries(weekCounts)
+  .sort((a, b) => b[1] - a[1])
+  .map(([id, n]) => {
+    const s = stories.find((st) => st.slug === id);
+    return s ? { title: s.title, slug: s.slug, n } : null;
+  })
+  .filter(Boolean) as { title: string; slug: string; n: number }[]).slice(0, 3);
+---
+
+<BaseLayout title="All Stories — Raconteur" description="Browse the full Raconteur shelf — flash fiction, novellas, and everything between.">
+    <main class="archive">
+        <header class="archive-header">
+            <p class="eyebrow">The Full Shelf</p>
+            <h1>All Stories</h1>
+            <p class="archive-sub">{stories.length} {stories.length === 1 ? 'story' : 'stories'} on the shelf</p>
+        </header>
+
+                {trending.length > 0 && (
+          <div class="trending-strip">
+            <span class="trending-label">✦ Trending this week</span>
+            {trending.map((t) => (
+              <a href={`/story/${t.slug}`} class="trending-item">
+                <span class="trending-title">{t.title}</span>
+                <span class="trending-count">{t.n} {t.n === 1 ? 'reader' : 'readers'}</span>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Controls: search + genre chips + sort */}
+        <div class="controls">
+            <div class="search-wrap">
+                <input
+                    type="search"
+                    id="storySearch"
+                    class="search-input"
+                    placeholder="Search by title, author, or feeling..."
+                    aria-label="Search stories"
+                />
+            </div>
+
+                        <div class="genre-chips" id="genreChips">
+                {genres.map((g, i) => (
+                    <button
+                        type="button"
+                        class={`chip ${i === 0 ? 'active' : ''}`}
+                        data-genre={g}
+                    >
+                        {g}
+                    </button>
+                ))}
+            </div>
+
+            <div class="genre-chips" id="genreTagChips" style="margin-top: 0.5rem;">
+                {genreTags.map((g, i) => (
+                    <button
+                        type="button"
+                        class={`chip chip-tag ${i === 0 ? 'active' : ''}`}
+                        data-genretag={g}
+                    >
+                        {g}
+                    </button>
+                ))}
+            </div>
+
+            <div class="sort-wrap">
+                <label for="storySort" class="sort-label">Sort</label>
+                <select id="storySort" class="sort-select">
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="shortest">Shortest first</option>
+                    <option value="longest">Longest first</option>
+                </select>
+            </div>
+        </div>
+
+        {/* The grid */}
+        <div class="story-grid" id="storyGrid">
+             {proseStories.map((story) => (
+            <a
+                href={`/story/${story.slug}`}
+                class="story-card"
+                data-genre={story.genre}
+                data-genretag={story.genreTag || ''}
+                data-title={story.title.toLowerCase()}
+                data-author={story.author.toLowerCase()}
+                data-excerpt={story.excerpt.toLowerCase()}
+                data-words={story.wordCount}
+                data-date={story.publishedDate}
+            >
+                    {story.cover && (
+                        <div class="card-cover">
+                            <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" width="400" height="600" />
+                        </div>
+                    )}
+                    <span class="genre-tag">{story.genre}</span>
+                    <h3>{story.title}</h3>
+                    <p class="excerpt">{story.excerpt}</p>
+                    <div class="meta">
+                        <span>By {story.author}</span>
+                        <span>{story.wordCount.toLocaleString()} words · {story.readTime}</span>
+                    </div>
+                </a>
+            ))}
+                </div>
+        {poemStories.length > 0 && (
+            <div class="poetry-section-divider" id="poetryDivider">
+                <div class="divider-rule"></div>
+                <h2 class="poetry-heading">Poetry</h2>
+            </div>
+        )}
+        <div class="story-grid" id="poemGrid">
+            {poemStories.map((story) => (
+            <a
+                href={`/story/${story.slug}`}
+                class="story-card poem-card"
+                data-genre={story.genre}
+                data-genretag={story.genreTag || ''}
+                data-title={story.title.toLowerCase()}
+                data-author={story.author.toLowerCase()}
+                data-excerpt={story.excerpt.toLowerCase()}
+                data-words={story.wordCount}
+                data-date={story.publishedDate}
+            >
+                {story.cover ? (
+                    <div class="card-cover">
+                        <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" width="400" height="600" />
+                    </div>
+                ) : (
+                    <div class="card-cover poem-text-cover">
+                        <p class="poem-preview">"{(story.content[0]?.text || '').replace(/<[^>]+>/g, ' ').substring(0, 90)}…"</p>
+                    </div>
+                )}
+                <span class="genre-tag">{story.genre}</span>
+                <h3>{story.title}</h3>
+                <div class="meta">
+                    <span>By {story.author}</span>
+                    <span>{story.wordCount.toLocaleString()} words · Poem</span>
+                </div>
+            </a>
+            ))}
+        </div>
+        {/* Empty state */}
+
+        {/* Empty state */}
+        <p class="empty-state" id="emptyState" hidden>
+            No stories match that search — try another word or feeling.
+        </p>
+
+        <div class="back-home">
+            <a href="/">← Back to Raconteur</a>
+        </div>
+    </main>
+
+    <style>
+    .sort-select { background: #1e2420; color: #f4ede0; border: 1px solid #5a7052; }
+    .sort-select option { background: #1e2420; color: #f4ede0; }
+    
+    :global(body) {
+        background-color: #1e2420;
+        color: #e4ddc8;
+    }
+
+    .archive {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 3rem 2rem 5rem;
+    }
+
+    /* Header */
+    .archive-header { text-align: center; margin-bottom: 2.5rem; }
+
+    .eyebrow {
+        font-style: italic;
+        color: #a8b89c;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        margin-bottom: 0.6rem;
+    }
+
+    h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 900;
+        color: #f4ede0;
+        letter-spacing: -0.5px;
+    }
+
+    .archive-sub {
+        font-size: 0.9rem;
+        color: #8a9478;
+        margin-top: 0.5rem;
+    }
+
+        /* Trending strip */
+    .trending-strip {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1.2rem;
+        margin: 0 auto 2.2rem;
+        padding: 0.8rem 1.4rem;
+        border: 1px solid rgba(200, 162, 74, 0.35);
+        border-radius: 999px;
+        background: rgba(200, 162, 74, 0.07);
+    }
+    .trending-label {
+        font-family: 'Playfair Display', serif;
+        font-style: italic;
+        font-size: 0.78rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: #c8a24a;
+    }
+    .trending-item { display: inline-flex; align-items: baseline; gap: 0.45rem; text-decoration: none; }
+    .trending-title {
+        font-family: 'Playfair Display', serif;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: #f4ede0;
+        border-bottom: 1px dotted rgba(200, 162, 74, 0.6);
+    }
+    .trending-item:hover .trending-title { color: #c8a24a; }
+    .trending-count { font-size: 0.72rem; font-style: italic; color: #8a9478; }
+
+    /* Controls */
+    .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.9rem 1.2rem;
+        font-size: 1rem;
+        font-family: inherit;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(228, 221, 200, 0.25);
+        border-radius: 4px;
+        color: #f4ede0;
+    }
+
+    .search-input::placeholder { color: #8a9478; }
+    .search-input:focus {
+        outline: none;
+        border-color: #a8b89c;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .genre-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        justify-content: center;
+    }
+
+    .chip {
+        padding: 0.45rem 1rem;
+        font-size: 0.8rem;
+        font-family: inherit;
+        letter-spacing: 0.5px;
+        background: transparent;
+        border: 1px solid rgba(228, 221, 200, 0.3);
+        border-radius: 999px;
+        color: #d8d0bc;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .chip:hover { border-color: #a8b89c; color: #f4ede0; }
+
+    .chip.active {
+        background: #3d5a3c;
+        border-color: #3d5a3c;
+        color: #f4ede0;
+    }
+
+    .sort-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+    }
+
+    .sort-label {
+        font-size: 0.8rem;
+        color: #8a9478;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .sort-select {
+        padding: 0.4rem 0.8rem;
+        font-family: inherit;
+        font-size: 0.85rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(228, 221, 200, 0.25);
+        border-radius: 4px;
+        color: #f4ede0;
+        cursor: pointer;
+    }
+
+    /* Grid */
+    .story-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1.8rem;
+    }
+
+    .story-card {
+        display: flex;
+        flex-direction: column;
+        background: #faf5ea;
+        border: 1px solid #ddd2bb;
+        border-top: 3px solid #3d5a3c;
+        border-radius: 2px;
+        padding: 1.6rem 1.3rem;
+        text-decoration: none;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: 0 2px 14px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+    }
+
+    .story-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    .card-cover {
+        margin: -1.6rem -1.3rem 1.2rem;
+        overflow: hidden;
+    }
+
+    .card-cover img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    object-position: top;
+    display: block;
+    }
+
+    /* Keep genre/h3/excerpt visible but clamped — prevents long sentences leaking outside card */
+    .story-card .genre-tag { display: inline-block; }
+    .story-card h3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+    .story-card .excerpt {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+    .story-card .meta { margin-top: 1rem; }
+
+    .genre-tag {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #3d5a3c;
+        margin-bottom: 0.6rem;
+    }
+
+    .story-card h3 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #2e2a22;
+        line-height: 1.3;
+        margin-bottom: 0.6rem;
+    }
+
+    .excerpt {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #5a5242;
+        flex: 1;
+        margin-bottom: 1rem;
+    }
+
+    .meta {
+        font-size: 0.75rem;
+        color: #6b5e4a;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        border-top: 1px solid #e8dfca;
+        padding-top: 0.8rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        font-style: italic;
+        color: #8a9478;
+        padding: 3rem 0;
+    }
+
+    .back-home { text-align: center; margin-top: 4rem; }
+    .back-home a {
+        color: #a8b89c;
+        text-decoration: none;
+        font-size: 0.95rem;
+    }
+        .back-home a:hover { color: #f4ede0; }
+    /* === Poetry section — own shelf, compact tiles === */
+    .poetry-section-divider { margin: 3rem 0 2rem; }
+    .divider-rule { height: 1px; background: rgba(228, 221, 200, 0.25); margin-bottom: 1.5rem; }
+    .poetry-heading {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.8rem; font-weight: 700; color: #f4ede0; text-align: center;
+    }
+    .story-card.poem-card { border-top-color: #4a6b6b; }
+   .story-card.poem-card .card-cover img {
+    height: 220px;
+    object-fit: cover;
+    object-position: top;
+    }
+    .poem-text-cover {
+        height: 220px; display: flex; align-items: center; justify-content: center;
+        padding: 1.2rem; background: #faf5ea; overflow: hidden;
+    }
+    .poem-preview {
+        font-family: 'Playfair Display', serif; font-size: 0.85rem; font-style: italic;
+        color: #3a4a38; line-height: 1.6; text-align: center; margin: 0;
+    }
+    .story-card.poem-card h3 { display: block; }
+</style>
+
+<script>
+    // === Live search + genre filter + sort ===
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.story-card'));
+    const searchInput = document.getElementById('storySearch') as HTMLInputElement;
+    const bandChips = Array.from(document.querySelectorAll<HTMLElement>('#genreChips .chip'));
+    const tagChips = Array.from(document.querySelectorAll<HTMLElement>('#genreTagChips .chip'));
+    const sortSelect = document.getElementById('storySort') as HTMLSelectElement;
+    const grid = document.getElementById('storyGrid')!;
+    const emptyState = document.getElementById('emptyState')!;
+
+    let activeBand = 'All';
+    let activeTag = 'All';
+
+    function applyFilters() {
+        const query = searchInput.value.trim().toLowerCase();
+        let visibleCount = 0;
+
+        cards.forEach((card) => {
+            const matchesBand = activeBand === 'All' || card.dataset.genre === activeBand;
+            const matchesTag = activeTag === 'All' || card.dataset.genretag === activeTag;
+            const matchesSearch =
+                !query ||
+                card.dataset.title!.includes(query) ||
+                card.dataset.author!.includes(query) ||
+                card.dataset.excerpt!.includes(query);
+            
+            const show = matchesBand && matchesTag && matchesSearch;
+            card.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        emptyState.hidden = visibleCount !== 0;
+        const anyPoemVisible = cards.some((c) => c.closest('#poemGrid') !== null && c.style.display !== 'none');
+        const divider = document.getElementById('poetryDivider');
+        if (divider) divider.style.display = anyPoemVisible ? 'block' : 'none';
+    }
+        function applySort() {
+        const mode = sortSelect.value;
+        ['storyGrid', 'poemGrid'].forEach((gid) => {
+            const g = document.getElementById(gid);
+            if (!g) return;
+            const gCards = Array.from(g.querySelectorAll<HTMLElement>('.story-card'));
+            const sorted = [...gCards].sort((a, b) => {
+                if (mode === 'shortest') return Number(a.dataset.words) - Number(b.dataset.words);
+                if (mode === 'longest') return Number(b.dataset.words) - Number(a.dataset.words);
+                if (mode === 'oldest') return (a.dataset.date ?? '').localeCompare(b.dataset.date ?? '');
+                return (b.dataset.date ?? '').localeCompare(a.dataset.date ?? '');
+            });
+            sorted.forEach((card) => g.appendChild(card));
+        });
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+
+        bandChips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+            bandChips.forEach((c) => c.classList.remove('active'));
+            chip.classList.add('active');
+            activeBand = chip.dataset.genre!;
+            applyFilters();
+        });
+    });
+
+    tagChips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+            tagChips.forEach((c) => c.classList.remove('active'));
+            chip.classList.add('active');
+            activeTag = chip.dataset.genretag!;
+            applyFilters();
+        });
+    });
+
+    sortSelect.addEventListener('change', applySort);
+</script>
+</BaseLayout>

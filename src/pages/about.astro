@@ -1,0 +1,148 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+    title="About — Raconteur"
+    description="The story behind Raconteur, a home for storytellers."
+>
+    <article class="about">
+        <header class="about-header">
+            <p class="eyebrow">About</p>
+            <h1>The story behind Raconteur</h1>
+        </header>
+
+        <div class="about-body">
+            <p class="lede">
+                The idea of Raconteur began with a passing thought and a simple need to own 
+                a short story publishing site where it can run, work and function the way I envisioned.
+                A site dedicated to the art of writing and the love for reading. A site dedicated to writers and readers.  
+            </p>
+
+            <p>
+                So after several iterations, this is the result. A website where the only thing
+                that matters is the writing. Where a six-hundred-word flash piece sits
+                with the same dignity as a 14 line poety or a forty-thousand-word novella. 
+                Where dark mode exists because reading at midnight should feel like reading at
+                midnight, not like staring into a flashlight.
+            </p>
+
+            <h2>What you'll find here</h2>
+
+            <p>
+                Short stories, literary fiction, flash, poetry and novella.
+            </p>
+
+            <p>
+                There are no likes to chase here (You sure bud? because there are like buttons on each stories and you should definitely give a like to celebrate each story). 
+                No follower counts to inflate (that's a lie because there are follow buttons, so you should definitely follow each other).
+                No share buttons to abuse (ahem! oh my lawd, he can lie because you can share your stories and account to everyone)
+                No comment sections to...(Just stop the cap 🙄)
+                Nonetheless, beyond the likes, the follows, comments and the sharing, this is a site where writers publish work they're proud of, and readers showing up for the love of the game itself.
+            </p>
+
+            <p>
+                So, if this looks like a place you'd want to write, or read, create an account and start writing.
+                Cheers!
+            </p>
+
+            <div class="signature">
+                <p class="sign-off">— Nzan Kikon</p>
+            </div>
+        </div>
+    </article>
+</BaseLayout>
+
+<style>
+    :global(body) {
+        background-color: #1e2420;
+        color: #e4ddc8;
+    }
+
+    .about {
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 4rem 2rem 6rem;
+    }
+
+    .about-header {
+        text-align: center;
+        margin-bottom: 4rem;
+        padding-bottom: 3rem;
+        border-bottom: 1px solid #e8dcc5;
+    }
+
+    .eyebrow {
+        font-style: italic;
+        color: #a8b89c;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        margin-bottom: 1.5rem;
+    }
+
+    h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: clamp(2rem, 5vw, 3.2rem);
+        font-weight: 900;
+        color: #f4ede0;
+        line-height: 1.15;
+        letter-spacing: -0.5px;
+    }
+
+    .about-body {
+        font-size: 1.15rem;
+    }
+
+    .about-body p {
+        margin-bottom: 1.6rem;
+        text-align: justify;
+        hyphens: none;
+        overflow-wrap: break-word;
+        word-break: normal;
+    }
+
+    .lede {
+        font-size: 1.3rem;
+        color: #e4ddc8;
+        line-height: 1.7;
+        text-align: justify;
+        hyphens: none;
+        overflow-wrap: break-word;
+        word-break: normal;
+    }
+
+    .about-body h2 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.8rem;
+        margin: 3rem 0 1.5rem;
+        color: #a8b89c;
+        font-weight: 700;
+    }
+
+    .about-body em {
+        font-style: italic;
+        color: #c8b890;
+    }
+
+    .signature {
+        margin-top: 4rem;
+        padding-top: 2rem;
+        border-top: 1px solid rgba(228, 221, 200, 0.25);
+        color: #d8d0bc;
+        text-align: right;
+    }
+
+    .sign-off {
+        font-family: 'Playfair Display', serif;
+        font-style: italic;
+        font-size: 1.2rem;
+        color: #c8b890;
+    }
+
+    @media (max-width: 640px) {
+        .about { padding: 2rem 1.2rem 4rem; }
+        .about-body { font-size: 1.05rem; }
+        .lede { font-size: 1.15rem; }
+    }
+</style>

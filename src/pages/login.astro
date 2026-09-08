@@ -1,0 +1,183 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Log In — Raconteur">
+    <main class="auth-page">
+        <div class="auth-card">
+            <p class="eyebrow">Welcome back</p>
+            <h1>Log in</h1>
+            <p class="auth-sub">Your shelf missed you.</p>
+
+            <form id="loginForm" class="auth-form">
+                <label for="email">Email</label>
+               <input type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
+                <label for="password">Password</label>
+                <div class="password-wrap">
+                <input type="password" id="password" placeholder="Your password" required autocomplete="current-password" />
+                <button type="button" class="pw-toggle" id="pwToggle" aria-label="Show password">👁</button>
+                </div>
+                <button type="submit" class="auth-btn">Log in</button>
+                <p class="forgot-link"><a href="/reset-password">Forgot password?</a></p>
+                <p class="auth-msg" id="authMsg"></p>
+            </form>
+
+            <p class="auth-alt">New here? <a href="/signup">Create an account</a></p>
+        </div>
+    </main>
+</BaseLayout>
+
+<style>
+    :global(body) { background-color: #1e2420; color: #e4ddc8; }
+
+    .auth-page {
+        min-height: 70vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 1.5rem;
+    }
+
+    .auth-card {
+        width: 100%;
+        max-width: 420px;
+        background: #f7f0dd;
+        color: #2e2a22;
+        border-radius: 6px;
+        padding: 2.5rem 2.2rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+        text-align: center;
+    }
+
+    .eyebrow {
+        font-style: italic;
+        color: #3d5a3c;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        font-size: 0.72rem;
+        margin-bottom: 0.6rem;
+    }
+
+    h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.9rem;
+        font-weight: 900;
+        color: #232e26;
+        margin-bottom: 0.5rem;
+    }
+
+    .auth-sub { font-size: 0.9rem; color: #5a5242; margin-bottom: 1.8rem; }
+
+    .auth-form { display: flex; flex-direction: column; text-align: left; }
+
+    .auth-form label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #3d5a3c;
+        margin: 0.9rem 0 0.35rem;
+        font-weight: 600;
+    }
+
+    .auth-form input {
+        padding: 0.75rem 0.9rem;
+        font-size: 1rem;
+        font-family: inherit;
+        border: 1px solid #ddd2bb;
+        border-radius: 4px;
+        background: #fffdf6;
+        color: #2e2a22;
+    }
+
+    .auth-form input:focus { outline: none; border-color: #3d5a3c; }
+
+    .auth-btn {
+        margin-top: 1.5rem;
+        padding: 0.85rem;
+        font-family: 'Playfair Display', serif;
+        font-size: 1rem;
+        background: #3d5a3c;
+        color: #f4ede0;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .auth-btn:hover { background: #4a6b48; }
+
+    .auth-msg {
+        min-height: 1.2rem;
+        margin-top: 0.9rem;
+        font-size: 0.85rem;
+        color: #8b2635;
+        text-align: center;
+    }
+
+    .auth-alt { margin-top: 1.4rem; font-size: 0.88rem; color: #5a5242; }
+    .auth-alt a { color: #3d5a3c; font-weight: 600; }
+
+      .forgot-link {
+    text-align: center;
+    margin-top: 1rem;
+  }
+  .forgot-link a {
+    color: #3d5a3c;
+    text-decoration: none;
+    font-size: 0.85rem;
+  }
+  .forgot-link a:hover {
+    text-decoration: underline;
+  }
+  .password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-wrap input {
+  flex: 1;
+  padding-right: 3rem;
+}
+.pw-toggle {
+  position: absolute;
+  right: 0.6rem;
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  padding: 0.2rem;
+}
+.pw-toggle:hover { opacity: 1; }
+</style>
+
+<script>
+    import { supabase } from '../lib/supabase';
+
+    const form = document.getElementById('loginForm') as HTMLFormElement;
+    const msg = document.getElementById('authMsg')!;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = (document.getElementById('email') as HTMLInputElement).value;
+        const password = (document.getElementById('password') as HTMLInputElement).value;
+        msg.textContent = 'Logging you in...';
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+            msg.textContent = error.message;
+        } else {
+            msg.textContent = 'Welcome back! Redirecting...';
+            setTimeout(() => (window.location.href = '/dashboard'), 1200);
+        }
+    });
+    // Password eye toggle
+const pwInput = document.getElementById('password') as HTMLInputElement;
+const pwToggle = document.getElementById('pwToggle');
+pwToggle?.addEventListener('click', () => {
+  const isPassword = pwInput.type === 'password';
+  pwInput.type = isPassword ? 'text' : 'password';
+  pwToggle.textContent = isPassword ? '🙈' : '👁';
+  pwToggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+});
+</script>
