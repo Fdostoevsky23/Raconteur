@@ -12,7 +12,7 @@ export interface Story {
     readCount?: number;
     on_homepage?: boolean;
     genre: string;
-        kind?: 'story' | 'poem';
+    kind?: 'story' | 'poem';
     collection_id?: string | null;
     is_featured?: boolean;
     excerpt: string;
@@ -26,10 +26,9 @@ export interface Story {
 }
 
 export type StoryBlock =
-       | { type: 'paragraph'; text: string; dropcap?: boolean; ending?: boolean; align?: 'left' | 'center' | 'right' }
-    | { type: 'heading'; text: string }
-    | { type: 'quote'; text: string };
-
+    | { type: 'paragraph'; text: string; dropcap?: boolean; ending?: boolean; align?: 'left' | 'center' | 'right'; chapter?: number }
+    | { type: 'heading'; text: string; chapter?: number }
+    | { type: 'quote'; text: string; chapter?: number };
 export const stories: Story[] = [
     {
         slug: 'the-last-letter-home',

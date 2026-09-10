@@ -76,8 +76,34 @@ function stripHtml(s: string): string {
 function parseHtmlBody(html: string, preserveLines = false): StoryBlock[] {
     const blocks: StoryBlock[] = [];
     let isFirstParagraph = true;
+    let chapterIndex = 0;
+    let chapterHasContent = false;
        const tagRe = /<(p|blockquote|h[1-3])([^>]*)>([\s\S]*?)<\/\1>/gi;
     let m: RegExpExecArray | null;
+
+    // Chapter boundary detection — lets uploaded stories paginate like an ebook.
+    // A SHORT standalone line is treated as a chapter marker when it looks like:
+    //   "Chapter 1", "CHAPTER 2: The Portal", "Ch. 5", "Chapter Twelve",
+    //   "Part One", "Prologue", "Epilogue", "Interlude"
+    // or a scene divider: "---", "***", "* * *", "✦"
+    const chapterTextRe = /^(chapter|chap\.?|ch\.?)\s*(\d+|[ivxlcdm]+\b|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b[\s.:—–-]*/i;
+    const namedChapterRe = /^(prologue|epilogue|interlude|part\s+([a-z]+|\d+))\b/i;
+    const dividerRe = /^([-–—_*]\s*){3,}$|^✦+$/;
+    const isChapterMarker = (plain: string) =>
+        plain.length <= 60 && (chapterTextRe.test(plain) || namedChapterRe.test(plain) || dividerRe.test(plain));
+
+    // A chapter heading belongs to the content that FOLLOWS it. The counter only
+    // advances when the current chapter already has content, so "Chapter 1" at
+    // the very top of a story leads its own group instead of leaving an empty
+    // first page with the heading stranded at the bottom.
+    const pushChapterHeading = (text: string) => {
+        if (chapterHasContent) {
+            chapterIndex++;
+            chapterHasContent = false;
+        }
+        blocks.push({ type: 'heading', text, chapter: chapterIndex });
+    };
+
     while ((m = tagRe.exec(html))) {
                 const tag = m[1].toLowerCase();
         const alignMatch = m[2].match(/text-align\s*:\s*(left|center|right)/i);
@@ -90,18 +116,38 @@ function parseHtmlBody(html: string, preserveLines = false): StoryBlock[] {
             .trim()
             .replace(/__BR__/g, '<br>');
         if (!inner) continue;
+
+        // Visible text without any tags — used for chapter detection only
+        const plainText = inner.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+        // Bold/plain lines like "Chapter 1" or "CHAPTER 2: The Portal" start a new chapter
+        if (tag === 'p' && isChapterMarker(plainText)) {
+            pushChapterHeading(dividerRe.test(plainText) ? '✦' : plainText);
+            continue;
+        }
+
+        // Top-level headings (h1/h2) are treated as chapter boundaries too.
+        // h3 stays an in-chapter subheading so section titles don't over-split.
+        if ((tag === 'h1' || tag === 'h2') && !preserveLines) {
+            pushChapterHeading(inner);
+            continue;
+        }
+
         if (tag === 'blockquote') {
-            blocks.push({ type: 'quote', text: inner });
+            blocks.push({ type: 'quote', text: inner, chapter: chapterIndex });
+            chapterHasContent = true;
         } else if (tag.startsWith('h')) {
-            blocks.push({ type: 'heading', text: inner });
+            blocks.push({ type: 'heading', text: inner, chapter: chapterIndex });
+            chapterHasContent = true;
                 } else {
-             blocks.push({ type: 'paragraph', text: inner, dropcap: isFirstParagraph && !preserveLines, ...(align ? { align } : {}) });
+             blocks.push({ type: 'paragraph', text: inner, dropcap: isFirstParagraph && !preserveLines, ...(align ? { align } : {}), chapter: chapterIndex });
             isFirstParagraph = false;
+            chapterHasContent = true;
         }
     }
     if (blocks.length === 0) {
         const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-        if (text) blocks.push({ type: 'paragraph', text, dropcap: true });
+        if (text) blocks.push({ type: 'paragraph', text, dropcap: true, chapter: 0 });
     }
     return blocks;
 }
@@ -113,35 +159,75 @@ function parseBody(raw: string, preserveLines = false): StoryBlock[] {
     }
     const normalized = needsLineMerge(raw) ? mergeSoftBreaks(raw) : raw;
     const blocks: StoryBlock[] = [];
-    const paragraphs = normalized.split(/\n\s*\n/);
-
+    
+    // Split on blank lines OR chapter markers
+    const chapterPattern = /^(CH\s+\d+[:.]?\s*|Chapter\s+\d+[:.]?\s*|---+|\*\*\*+)$/i;
+    const lines = normalized.split(/\n/);
+    let currentPara = '';
     let isFirstParagraph = true;
+    let chapterIndex = 0;
+    let chapterHasContent = false;
 
-    for (const para of paragraphs) {
-        const trimmed = para.trim();
-        if (!trimmed) continue;
-
-        if (/^-{3,}$/.test(trimmed)) {
-            blocks.push({ type: 'heading', text: '✦' });
+    for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // Check if this line is a chapter marker
+        if (chapterPattern.test(trimmed)) {
+            // Flush any accumulated paragraph
+            if (currentPara.trim()) {
+                blocks.push({
+                    type: 'paragraph',
+                    text: esc(currentPara.trim().replace(/\s+/g, ' ')),
+                    dropcap: isFirstParagraph,
+                    chapter: chapterIndex,
+                });
+                isFirstParagraph = false;
+                currentPara = '';
+                chapterHasContent = true;
+            }
+            // The heading leads the chapter that FOLLOWS it — only advance the
+            // counter when the current chapter already has content
+            if (chapterHasContent) {
+                chapterIndex++;
+                chapterHasContent = false;
+            }
+            // Add chapter heading
+            if (/^---+|\*\*\*+$/.test(trimmed)) {
+                blocks.push({ type: 'heading', text: '✦', chapter: chapterIndex });
+            } else {
+                blocks.push({ type: 'heading', text: trimmed, chapter: chapterIndex });
+            }
             continue;
         }
-
-        if (trimmed.startsWith('# ')) {
-            blocks.push({ type: 'heading', text: trimmed.slice(2).trim() });
+        
+        // Blank line = paragraph break
+        if (!trimmed) {
+            if (currentPara.trim()) {
+                blocks.push({
+                    type: 'paragraph',
+                    text: esc(currentPara.trim().replace(/\s+/g, ' ')),
+                    dropcap: isFirstParagraph,
+                    chapter: chapterIndex,
+                });
+                isFirstParagraph = false;
+                currentPara = '';
+                chapterHasContent = true;
+            }
             continue;
         }
-
-        if (trimmed.startsWith('> ')) {
-            blocks.push({ type: 'quote', text: trimmed.slice(2).trim() });
-            continue;
-        }
-
+        
+        // Accumulate text into current paragraph
+        currentPara = currentPara ? currentPara + ' ' + trimmed : trimmed;
+    }
+    
+    // Flush final paragraph
+    if (currentPara.trim()) {
         blocks.push({
             type: 'paragraph',
-            text: esc(trimmed.replace(/\s+/g, ' ')),
+            text: esc(currentPara.trim().replace(/\s+/g, ' ')),
             dropcap: isFirstParagraph,
+            chapter: chapterIndex,
         });
-        isFirstParagraph = false;
     }
 
     return blocks;

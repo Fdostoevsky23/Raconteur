@@ -186,25 +186,105 @@ function safeCover(c: any): string | null {
             </div>
         </header>
 
-        <div class="story-body">
-            {story.content.map((block) => {
-                if (block.type === 'heading') {
-                    return <h2>{block.text}</h2>;
-                }
-                if (block.type === 'quote') {
-                    return <blockquote set:html={renderText(block.text)} />;
-                }
-                if (isPoem && block.type === 'paragraph' && /^(\s*(✦|\*{3}|-{3})\s*)+$/.test(block.text)) {
-                    return <div class="poem-break">✦ ✦ ✦</div>;
-                }
-                // paragraph
-                const classes = ['para'];
-                if (block.dropcap) classes.push('dropcap');
-                if (block.ending) classes.push('ending');
-                const alignStyle = (block as any).align ? `text-align: ${(block as any).align}` : undefined;
-                return <p class={classes.join(' ')} style={alignStyle} set:html={renderText(block.text)} />;
-            })}
+       <div class="story-body">
+                {/* Chapter-based rendering */}
+        {(() => {
+            const chapters = {} as any;
+          story.content.forEach((block) => {
+            const ch = block.chapter ?? 0;
+            if (!chapters[ch]) chapters[ch] = [];
+            chapters[ch].push(block);
+          });
+          const chapterKeys = Object.keys(chapters).sort((a, b) => Number(a) - Number(b));
+          const chapterCount = chapterKeys.length;
+          
+          return chapterKeys.map((chKey, idx) => {
+            const blocks = chapters[chKey];
+            return (
+              <section 
+                class={`story-chapter ${idx === 0 ? 'active' : ''}`} 
+                data-chapter={chKey}
+                style={idx === 0 ? '' : 'display: none;'}
+              >
+                {blocks.map((block: any) => {
+                  if (block.type === 'heading') {
+                    return <h2 class={`story-heading ${block.text === '✦' ? 'divider' : ''}`}><Fragment set:html={renderText(block.text)} /></h2>;
+                  } else if (block.type === 'quote') {
+                    return <blockquote class="story-quote"><p><Fragment set:html={renderText(block.text)} /></p></blockquote>;
+                  } else {
+                    return (
+                      <p class={`story-paragraph ${block.dropcap ? 'dropcap' : ''} ${block.align ? `align-${block.align}` : ''}`}>
+                        <Fragment set:html={renderText(block.text)} />
+                      </p>
+                    );
+                  }
+                })}
+                
+                {/* Chapter navigation — only when the story actually has chapters */}
+                {chapterCount > 1 && (
+                <div class="chapter-nav">
+                  {idx > 0 && (
+                    <button class="chapter-btn prev-btn" data-target={idx - 1}>
+                      ← Previous Chapter
+                    </button>
+                  )}
+                  {idx < chapterCount - 1 && (
+                    <button class="chapter-btn next-btn" data-target={idx + 1}>
+                      Next Chapter →
+                    </button>
+                  )}
+                  {idx === chapterCount - 1 && chapterCount > 1 && (
+                    <button class="chapter-btn first-btn" data-target={0}>
+                      ↑ First Chapter
+                    </button>
+                  )}
+                </div>
+                )}
+              </section>
+            );
+          });
+        })()}
         </div>
+
+        <script>
+            // === Chapter pager — ebook-style, one chapter per page ===
+            (() => {
+                const chapters = Array.from(document.querySelectorAll('.story-chapter')) as HTMLElement[];
+                if (chapters.length === 0) return;
+                const progressBar = document.getElementById('progressBar');
+                const controls = document.querySelector('.reader-controls') as HTMLElement | null;
+
+                function topOf(el: HTMLElement) {
+                    return el.getBoundingClientRect().top + window.scrollY;
+                }
+
+                function showChapter(target: number) {
+                    const next = chapters[target];
+                    if (!next) return;
+                    chapters.forEach((ch) => {
+                        ch.classList.toggle('active', ch === next);
+                        ch.style.display = ch === next ? '' : 'none';
+                    });
+                    // Jump back to the top of the reading column (below the sticky controls)
+                    const header = document.querySelector('.story-header') as HTMLElement | null;
+                    if (header) {
+                        window.scrollTo({ top: Math.max(0, topOf(header) - (controls?.offsetHeight ?? 0)), behavior: 'auto' });
+                    } else {
+                        window.scrollTo({ top: 0, behavior: 'auto' });
+                    }
+                    if (progressBar) progressBar.style.width = '0%';
+                }
+
+                chapters.forEach((chapter) => {
+                    chapter.querySelectorAll<HTMLButtonElement>('.chapter-btn').forEach((btn) => {
+                        btn.addEventListener('click', () => {
+                            const target = Number(btn.dataset.target);
+                            if (!Number.isNaN(target)) showChapter(target);
+                        });
+                    });
+                });
+            })();
+        </script>
 
                 {/* About the author — hidden per owner request (bio already on author page) */}
 
@@ -968,6 +1048,82 @@ function safeCover(c: any): string | null {
 
     .dot { opacity: 0.4; }
 
+    /* === CHAPTER PAGER — ebook-style, one chapter per page === */
+    .story-chapter.active { display: block; }
+
+    .story-heading {
+        font-family: 'Playfair Display', serif;
+        font-size: clamp(1.5rem, 3.2vw, 2.1rem);
+        font-weight: 700;
+        line-height: 1.25;
+        color: var(--text);
+        text-align: center;
+        letter-spacing: 0.4px;
+        margin: 3.2rem 0 2.4rem;
+        text-wrap: balance;
+    }
+
+    .story-chapter .story-heading:first-child { margin-top: 0; }
+
+    /* Scene-divider headings (✦) — small and quiet, not a loud title */
+    .story-chapter h2.story-heading.divider {
+        color: var(--accent);
+        font-size: 1.15rem;
+        font-weight: 400;
+        letter-spacing: 0.9rem;
+        padding-left: 0.9rem;
+    }
+
+    .chapter-nav {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 3.5rem 0 1rem;
+        padding-top: 2.2rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .chapter-btn {
+        font-family: 'Playfair Display', serif;
+        font-size: 0.92rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        padding: 0.72rem 1.7rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--bg-elevated);
+        color: var(--text);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .chapter-btn:hover {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--bg);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Primary action on each page — the forward step */
+    .chapter-btn.next-btn {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--bg);
+    }
+    .chapter-btn.next-btn:hover {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+        color: var(--bg);
+    }
+
+    @media (max-width: 640px) {
+        .chapter-nav { gap: 0.6rem; }
+        .chapter-btn { padding: 0.65rem 1.2rem; font-size: 0.85rem; }
+    }
+
 
 /* === POEM MODE — its own voice === */
     .story.poem-mode { max-width: 520px; }
@@ -1551,6 +1707,68 @@ function safeCover(c: any): string | null {
         word-break: normal !important;
         overflow-wrap: normal !important;
     }
+        .story-heading {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--text, #f4ede0);
+        text-align: center;
+        margin: 4rem 0 2rem;
+        padding: 2rem 0;
+        border-top: 1px solid rgba(228, 221, 200, 0.2);
+        border-bottom: 1px solid rgba(228, 221, 200, 0.2);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+    
+    .story-heading:first-of-type {
+        margin-top: 2rem;
+        border-top: none;
+    }
+        .story-chapter {
+      animation: fadeIn 0.3s ease-in;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .chapter-nav {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin: 4rem 0 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(228, 221, 200, 0.2);
+    }
+    
+    .chapter-btn {
+      background: transparent;
+      border: 1px solid var(--accent, #a8b89c);
+      color: var(--accent, #a8b89c);
+      padding: 0.6rem 1.2rem;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .chapter-btn:hover {
+      background: var(--accent, #a8b89c);
+      color: var(--bg, #1e2420);
+    }
+    
+    .first-btn {
+      border-color: var(--text, #f4ede0);
+      color: var(--text, #f4ede0);
+    }
+    
+    .first-btn:hover {
+      background: var(--text, #f4ede0);
+      color: var(--bg, #1e2420);
+    }
 </style>
 
 <script is:inline>
@@ -1690,6 +1908,24 @@ function safeCover(c: any): string | null {
     ).join('');
     widget.style.display = 'block';
   })();
+      // === Chapter navigation ===
+    document.querySelectorAll('.chapter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetIdx = parseInt((btn as HTMLElement).dataset.target || '0', 10);
+        const chapters = document.querySelectorAll('.story-chapter');
+        
+        // Hide all chapters
+        chapters.forEach(ch => (ch as HTMLElement).style.display = 'none');
+        
+        // Show target chapter
+        const target = chapters[targetIdx];
+        if (target) {
+          (target as HTMLElement).style.display = 'block';
+          // Scroll to top of reading column
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+    });
 </script>
 <style>
   .recs-widget { max-width: 680px; margin: 3rem auto; padding: 1.5rem; background: rgba(244,237,224,0.04); border: 1px solid rgba(228,221,200,0.1); border-radius: 4px; }
