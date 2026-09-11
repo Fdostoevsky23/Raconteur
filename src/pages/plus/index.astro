@@ -40,23 +40,79 @@ const dayOfYear = Math.floor(
     (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
 );
 const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotation
+
+// --- Chunk 3: kinetic hero ---
+// Rotating accent word (plus-exclusive) — JS cycles .ph-hero-word spans.
+const heroWords = ['want', 'love', 'crave', 'deserve'];
+const two = (n: number) => String(n).padStart(2, '0'); // 01, 02, … zero-padded index
+// Dust motes — hand-tuned deterministic config (no runtime randomness)
+const motes = [
+    { x: 6,  y: 72, d: 14, delay: 0,   size: 3 },
+    { x: 14, y: 85, d: 18, delay: 2.5, size: 2 },
+    { x: 22, y: 66, d: 11, delay: 5,   size: 4 },
+    { x: 31, y: 90, d: 16, delay: 1,   size: 2 },
+    { x: 40, y: 78, d: 12, delay: 3.5, size: 3 },
+    { x: 49, y: 64, d: 17, delay: 6,   size: 2 },
+    { x: 58, y: 88, d: 13, delay: 0.5, size: 3 },
+    { x: 66, y: 70, d: 15, delay: 4,   size: 2 },
+    { x: 74, y: 82, d: 19, delay: 7,   size: 4 },
+    { x: 82, y: 68, d: 12, delay: 2,   size: 3 },
+    { x: 89, y: 86, d: 16, delay: 5.5, size: 2 },
+    { x: 95, y: 74, d: 14, delay: 8,   size: 3 },
+];
 ---
 <PlusLayout title="Raconteur+ — Literature you want to read" description="A second way to read Raconteur — ink-black, brass, and built for night readers.">
     {/* ============================================ */}
-    {/* HERO — skeleton version. Chunk 3 replaces */}
-    {/* this with the full kinetic-type hero.      */}
+    {/* HERO — full cinematic build (Chunk 3)        */}
     {/* ============================================ */}
     <section class="ph-hero" id="top">
+        {/* Layer 0 — daily image backdrop with Ken Burns drift */}
         <div class="ph-hero-bg" aria-hidden="true">
             <img src={`/hero/${heroIndex}.jpg`} alt="" fetchpriority="high" />
         </div>
+
+        {/* Layer 1 — living glow: breathing brass + sage blobs */}
+        <div class="ph-hero-glow" aria-hidden="true">
+            <div class="ph-hero-glow-blob ph-hero-glow-a"></div>
+            <div class="ph-hero-glow-blob ph-hero-glow-b"></div>
+        </div>
+
+        {/* Layer 2 — dust motes drifting upward */}
+        <div class="ph-hero-motes" aria-hidden="true">
+            {motes.map((m) => (
+                <span
+                    class="ph-hero-mote"
+                    style={`left:${m.x}%; top:${m.y}%; width:${m.size}px; height:${m.size}px; --mote-dur:${m.d}s; --mote-delay:${m.delay}s;`}
+                ></span>
+            ))}
+        </div>
+
+        {/* Layer 3 — editorial chrome: corner brackets + mono metadata */}
+        <div class="ph-hero-chrome" aria-hidden="true">
+            <span class="ph-hero-corner ph-hero-corner-tl"></span>
+            <span class="ph-hero-corner ph-hero-corner-tr"></span>
+            <span class="ph-hero-corner ph-hero-corner-bl"></span>
+            <span class="ph-hero-corner ph-hero-corner-br"></span>
+            <span class="ph-hero-meta ph-hero-meta-l">EST. 2026 · KOHIMA · IN</span>
+            <span class="ph-hero-meta ph-hero-meta-r">EDITION Nº {two(dayOfYear)}</span>
+        </div>
+
+        {/* Layer 4 — the kinetic headline */}
         <div class="ph-hero-inner">
             <p class="ph-hero-eyebrow">
                 <span class="ph-star">✦</span> The new Raconteur · rebuilt for readers
             </p>
             <h1 class="ph-hero-title">
-                Literature you<br />
-                <em class="ph-hero-em">want</em> to read<span class="ph-hero-plus">.</span>
+                <span class="ph-hero-line"><span class="ph-hero-line-inner">Literature you</span></span>
+                <span class="ph-hero-line"><span class="ph-hero-line-inner">
+                    <span class="ph-hero-word-stack">
+                        <span class="ph-hero-word-sizer" aria-hidden="true">deserve</span>
+                        {heroWords.map((w, i) => (
+                            <span class={`ph-hero-word ${i === 0 ? 'active' : ''}`}>{w}</span>
+                        ))}
+                    </span>
+                    to read<span class="ph-hero-plus">.</span>
+                </span></span>
             </h1>
             <p class="ph-hero-sub">
                 Ink-black. Brass-trimmed. Every story, every poem, every writer —
@@ -66,7 +122,21 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
                 <a href="/stories" class="ph-btn ph-btn-gold">Browse the shelf</a>
                 <a href="#shelf" class="ph-btn ph-btn-ghost">Featured stories</a>
             </div>
+            <div class="ph-hero-stats">
+                <span class="ph-hero-stat"><strong>{stories.length}</strong> works</span>
+                <span class="ph-hero-sep">/</span>
+                <span class="ph-hero-stat"><strong>{totalWords.toLocaleString()}</strong> words</span>
+                <span class="ph-hero-sep">/</span>
+                <span class="ph-hero-stat"><strong>∞</strong> pages to turn</span>
+            </div>
         </div>
+
+        {/* Layer 5 — scroll cue */}
+        <a href="#shelf" class="ph-hero-scrollcue" aria-label="Scroll to featured stories">
+            <span class="ph-hero-scrollcue-line"></span>
+            <span class="ph-hero-scrollcue-txt">scroll</span>
+        </a>
+
         <div class="ph-hero-frame" aria-hidden="true"></div>
     </section>
 
@@ -110,6 +180,7 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
                     data-reveal
                     style={`--reveal-delay: ${Math.min(i * 0.08, 0.4)}s`}
                 >
+                    <span class="ph-card-index" aria-hidden="true">{two(i + 1)}</span>
                     {story.cover ? (
                         <div class="ph-card-cover">
                             <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />
@@ -187,37 +258,137 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
     )}
 </PlusLayout>
 <style>
-    /* === HERO (skeleton — Chunk 3 upgrades) === */
+    /* Page-scoped: HERO + shelf index. Shared families live in plus.css. */
+
+    /* === HERO — five cinematic layers === */
     .ph-hero {
         position: relative;
-        min-height: 88vh;
+        min-height: 92vh;
         display: flex;
         align-items: center;
         justify-content: center;
         overflow: hidden;
     }
 
-    .ph-hero-bg {
-        position: absolute;
-        inset: 0;
-        z-index: 0;
-    }
+    /* Layer 0 — backdrop: daily image, deep vignette, slow Ken Burns drift */
+    .ph-hero-bg { position: absolute; inset: 0; z-index: 0; }
 
     .ph-hero-bg img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        opacity: 0.28;
-        filter: saturate(0.65) contrast(1.05);
-        transform: scale(1.04);
+        opacity: 0.30;
+        filter: saturate(0.6) contrast(1.08);
+        animation: ph-hero-drift 36s ease-in-out infinite alternate;
     }
 
+    .ph-hero-bg::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(ellipse 120% 90% at 50% 45%, transparent 40%, rgba(11, 11, 14, 0.85) 100%),
+            linear-gradient(180deg, rgba(11, 11, 14, 0.7) 0%, transparent 22%, transparent 62%, rgba(11, 11, 14, 0.96) 100%);
+    }
+
+    @keyframes ph-hero-drift {
+        from { transform: scale(1.06) translateX(-1.2%); }
+        to   { transform: scale(1.12) translateX(1.2%); }
+    }
+
+    /* Layer 1 — living glow: breathing brass + sage blobs */
+    .ph-hero-glow { position: absolute; inset: 0; z-index: 1; overflow: hidden; }
+
+    .ph-hero-glow-blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(90px);
+        opacity: 0.16;
+        animation: ph-hero-breathe 11s ease-in-out infinite alternate;
+    }
+
+    .ph-hero-glow-a {
+        width: 46vw;
+        height: 46vw;
+        background: radial-gradient(circle, #c9a24b, transparent 70%);
+        top: -12%;
+        right: -10%;
+        animation-delay: 0s;
+    }
+
+    .ph-hero-glow-b {
+        width: 40vw;
+        height: 40vw;
+        background: radial-gradient(circle, #3d5a3c, transparent 70%);
+        bottom: -14%;
+        left: -8%;
+        animation-delay: 5s;
+    }
+
+    @keyframes ph-hero-breathe {
+        from { transform: scale(1) translateY(0); opacity: 0.14; }
+        to   { transform: scale(1.18) translateY(-3%); opacity: 0.20; }
+    }
+
+    /* Layer 2 — dust motes drifting upward */
+    .ph-hero-motes { position: absolute; inset: 0; z-index: 2; overflow: hidden; }
+
+    .ph-hero-mote {
+        position: absolute;
+        border-radius: 50%;
+        background: #c9a24b;
+        box-shadow: 0 0 8px rgba(201, 162, 75, 0.65);
+        opacity: 0;
+        animation: ph-mote-rise var(--mote-dur, 14s) linear infinite;
+        animation-delay: var(--mote-delay, 0s);
+    }
+
+    @keyframes ph-mote-rise {
+        0%   { transform: translateY(0) translateX(0); opacity: 0; }
+        8%   { opacity: 0.5; }
+        50%  { transform: translateY(-42vh) translateX(14px); opacity: 0.65; }
+        92%  { opacity: 0.35; }
+        100% { transform: translateY(-85vh) translateX(-10px); opacity: 0; }
+    }
+
+    /* Layer 3 — editorial chrome: corner brackets + mono metadata */
+    .ph-hero-chrome { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+
+    .ph-hero-corner {
+        position: absolute;
+        width: 34px;
+        height: 34px;
+        border: 1px solid rgba(201, 162, 75, 0.45);
+    }
+
+    .ph-hero-corner-tl { top: 1.6rem; left: 1.6rem; border-right: none; border-bottom: none; }
+    .ph-hero-corner-tr { top: 1.6rem; right: 1.6rem; border-left: none; border-bottom: none; }
+    .ph-hero-corner-bl { bottom: 1.6rem; left: 1.6rem; border-right: none; border-top: none; }
+    .ph-hero-corner-br { bottom: 1.6rem; right: 1.6rem; border-left: none; border-top: none; }
+
+    .ph-hero-meta {
+        position: absolute;
+        font-family: var(--ph-font-mono);
+        font-size: 0.62rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: rgba(242, 238, 227, 0.4);
+    }
+
+    .ph-hero-meta-l { top: 2.1rem; left: 6rem; }
+    .ph-hero-meta-r { top: 2.1rem; right: 6rem; }
+
+    @media (max-width: 920px) {
+        .ph-hero-meta-l { left: 4.6rem; }
+        .ph-hero-meta-r { right: 4.6rem; }
+    }
+    /* Layer 4 — kinetic headline */
     .ph-hero-inner {
         position: relative;
-        z-index: 2;
+        z-index: 4;
         text-align: center;
-        max-width: 900px;
-        padding: 6rem 2rem 5rem;
+        max-width: 1000px;
+        padding: 7rem 2rem 6.5rem;
     }
 
     .ph-hero-eyebrow {
@@ -227,22 +398,65 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
         text-transform: uppercase;
         color: var(--ph-brass);
         margin-bottom: 1.6rem;
+        animation: ph-hero-rise 0.9s var(--ph-ease-out) both;
     }
 
     .ph-hero-title {
         font-family: var(--ph-font-display);
         font-size: clamp(3rem, 8.5vw, 6.8rem);
         font-weight: 900;
-        line-height: 1.02;
+        line-height: 1.04;
         color: var(--ph-bone);
         letter-spacing: -0.015em;
         text-shadow: 0 4px 60px rgba(0, 0, 0, 0.8);
     }
 
-    .ph-hero-em {
+    .ph-hero-line { display: block; overflow: hidden; }
+
+    .ph-hero-line-inner {
+        display: inline-block;
+        transform: translateY(110%);
+        animation: ph-hero-rise 1s var(--ph-ease-out) forwards;
+    }
+
+    .ph-hero-line:nth-child(1) .ph-hero-line-inner { animation-delay: 0.15s; }
+    .ph-hero-line:nth-child(2) .ph-hero-line-inner { animation-delay: 0.32s; }
+
+    @keyframes ph-hero-rise {
+        from { transform: translateY(110%); opacity: 0; }
+        to   { transform: translateY(0); opacity: 1; }
+    }
+
+    /* The rotating accent word — stack of words, one .active at a time */
+    .ph-hero-word-stack {
+        position: relative;
+        display: inline-block;
+        vertical-align: bottom;
+    }
+
+    .ph-hero-word-sizer {
+        visibility: hidden;
+        display: inline-block;
+        height: 0;
+        overflow: hidden;
+    }
+
+    .ph-hero-word {
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        transform: translateX(-50%) translateY(30%);
         font-style: italic;
         font-weight: 400;
         color: var(--ph-brass);
+        opacity: 0;
+        transition: opacity 0.6s ease, transform 0.6s var(--ph-ease-out);
+        white-space: nowrap;
+    }
+
+    .ph-hero-word.active {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
     }
 
     .ph-hero-plus { color: var(--ph-brass); }
@@ -255,79 +469,153 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
         max-width: 560px;
         margin: 1.8rem auto 2.6rem;
         line-height: 1.8;
+        animation: ph-hero-rise 1s var(--ph-ease-out) 0.5s both;
     }
 
-    .ph-hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .ph-hero-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        animation: ph-hero-rise 1s var(--ph-ease-out) 0.65s both;
+    }
 
-    .ph-btn {
-        display: inline-block;
-        padding: 0.85rem 2.2rem;
-        border-radius: 999px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        letter-spacing: 0.02em;
+    /* Hero stats strip — mono caption style */
+    .ph-hero-stats {
+        margin-top: 3.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.1rem;
+        font-family: var(--ph-font-mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ph-bone-40);
+        animation: ph-hero-rise 1s var(--ph-ease-out) 0.8s both;
+    }
+
+    .ph-hero-stat strong {
+        color: var(--ph-brass);
+        font-weight: 500;
+        margin-right: 0.35rem;
+    }
+
+    .ph-hero-sep { color: rgba(201, 162, 75, 0.35); }
+    /* Layer 5 — scroll cue */
+    .ph-hero-scrollcue {
+        position: absolute;
+        bottom: 2.4rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 4;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
         text-decoration: none;
-        transition: transform 0.2s, box-shadow 0.25s, background 0.25s, border-color 0.25s;
+        animation: ph-hero-rise 1s var(--ph-ease-out) 1.1s both;
     }
 
-    .ph-btn-gold {
-        background: #c9a24b;
-        color: #0b0b0e;
+    .ph-hero-scrollcue-line {
+        width: 1px;
+        height: 44px;
+        background: linear-gradient(180deg, var(--ph-brass), transparent);
+        animation: ph-scroll-pulse 2.2s ease-in-out infinite;
     }
 
-    .ph-btn-gold:hover {
-        background: #d4af5f;
-        transform: translateY(-2px);
-        box-shadow: 0 10px 36px rgba(201, 162, 75, 0.4);
+    .ph-hero-scrollcue-txt {
+        font-family: var(--ph-font-mono);
+        font-size: 0.62rem;
+        letter-spacing: 0.34em;
+        text-transform: uppercase;
+        color: var(--ph-bone-40);
     }
 
-    .ph-btn-ghost {
-        border: 1px solid rgba(242, 238, 227, 0.35);
-        color: #f2eee3;
+    @keyframes ph-scroll-pulse {
+        0%, 100% { opacity: 0.4; transform: scaleY(0.6); transform-origin: top; }
+        50% { opacity: 1; transform: scaleY(1); }
     }
 
-    .ph-btn-ghost:hover {
-        border-color: #c9a24b;
-        color: #c9a24b;
-        transform: translateY(-2px);
+    /* Shelf card index badge — numbered bento detail */
+    .ph-card-index {
+        position: absolute;
+        top: 0.9rem;
+        left: 0.9rem;
+        z-index: 3;
+        font-family: var(--ph-font-mono);
+        font-size: 0.66rem;
+        letter-spacing: 0.2em;
+        color: var(--ph-bone);
+        background: rgba(11, 11, 14, 0.72);
+        border: 1px solid rgba(201, 162, 75, 0.35);
+        border-radius: 999px;
+        padding: 0.28rem 0.66rem;
+        backdrop-filter: blur(6px);
     }
 
-    /* Thin brass frame inside the hero — museum matting */
+    /* Thin brass frame — museum matting over chrome */
     .ph-hero-frame {
         position: absolute;
         inset: 1.2rem;
-        border: 1px solid rgba(201, 162, 75, 0.28);
+        border: 1px solid rgba(201, 162, 75, 0.22);
         pointer-events: none;
-        z-index: 1;
+        z-index: 3;
     }
 
-    /* Hero mobile rules (shared families' mobile rules live in plus.css) */
-    .ph-btn-ghost {
-        border: 1px solid rgba(242, 238, 227, 0.35);
-        color: #f2eee3;
+    /* === MOTION SAFETY: reduced motion = instant, static, calm === */
+    @media (prefers-reduced-motion: reduce) {
+        .ph-hero-bg img,
+        .ph-hero-glow-blob,
+        .ph-hero-mote,
+        .ph-hero-scrollcue-line { animation: none !important; }
+
+        .ph-hero-mote { display: none; }
+
+        .ph-hero-line-inner,
+        .ph-hero-eyebrow,
+        .ph-hero-sub,
+        .ph-hero-actions,
+        .ph-hero-stats,
+        .ph-hero-scrollcue {
+            animation: none !important;
+            transform: none;
+            opacity: 1;
+        }
     }
 
-    .ph-btn-ghost:hover {
-        border-color: #c9a24b;
-        color: #c9a24b;
-        transform: translateY(-2px);
+    /* === MOBILE === */
+    @media (max-width: 920px) {
+        .ph-hero-inner { padding: 6rem 1.4rem 6rem; }
+        .ph-hero-corner { width: 22px; height: 22px; }
     }
 
-    /* Thin brass frame inside the hero — museum matting */
-    .ph-hero-frame {
-        position: absolute;
-        inset: 1.2rem;
-        border: 1px solid rgba(201, 162, 75, 0.28);
-        pointer-events: none;
-        z-index: 1;
-    }
-
-    /* Hero mobile rules (shared families' mobile rules live in plus.css) */
     @media (max-width: 640px) {
+        .ph-hero { min-height: 94svh; }
         .ph-hero-frame { inset: 0.6rem; }
-        .ph-hero-inner { padding: 4rem 1.2rem 3.5rem; }
+        .ph-hero-inner { padding: 5rem 1.2rem 5.5rem; }
+        .ph-hero-meta-l, .ph-hero-meta-r { display: none; }
+        .ph-hero-stats { gap: 0.8rem; font-size: 0.64rem; }
+        .ph-hero-scrollcue { bottom: 1.6rem; }
+        .ph-hero-scrollcue-line { height: 34px; }
     }
 </style>
+
+<script>
+    // Kinetic hero: rotate the accent word (want → love → crave → deserve)
+    const heroWords = Array.from(document.querySelectorAll('.ph-hero-word'));
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (heroWords.length > 1 && !reducedMotion) {
+        let hw = 0;
+        setInterval(() => {
+            heroWords[hw].classList.remove('active');
+            hw = (hw + 1) % heroWords.length;
+            heroWords[hw].classList.add('active');
+        }, 3000);
+    }
+    // Reduced-motion: first word stays active — nothing else needed
+</script>
+
 
 
 
