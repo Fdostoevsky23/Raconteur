@@ -29,6 +29,7 @@ export type StoryBlock =
     | { type: 'paragraph'; text: string; dropcap?: boolean; ending?: boolean; align?: 'left' | 'center' | 'right'; chapter?: number }
     | { type: 'heading'; text: string; chapter?: number }
     | { type: 'quote'; text: string; chapter?: number };
+    
 export const stories: Story[] = [
     {
         slug: 'the-last-letter-home',
