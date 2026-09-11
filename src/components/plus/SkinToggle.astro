@@ -1,0 +1,96 @@
+---
+// SkinToggle.astro — the "Raconteur" / "Raconteur+" switcher.
+// Self-contained: works on BOTH skins (classic pages and /plus pages).
+// Pure server-rendered anchors — no client JS, no state to hydrate.
+// Query strings are preserved so ?edit=, ?next=, etc. survive the switch.
+import { isPlusPath, toPlusPath, toClassicPath } from '../../lib/skin';
+
+const here = Astro.url.pathname;
+const onPlus = isPlusPath(here);
+const classicHref = toClassicPath(here) + Astro.url.search;
+const plusHref = toPlusPath(here) + Astro.url.search;
+---
+
+<div class="skin-toggle" data-skin={onPlus ? 'plus' : 'classic'} role="group" aria-label="Choose site design">
+    <a
+        href={classicHref}
+        class={`toggle-btn ${!onPlus ? 'active' : ''}`}
+        aria-current={!onPlus ? 'page' : undefined}
+        title="The original Raconteur design"
+    >
+        Raconteur
+    </a>
+    <a
+        href={plusHref}
+        class={`toggle-btn plus ${onPlus ? 'active' : ''}`}
+        aria-current={onPlus ? 'page' : undefined}
+        title="The new Raconteur+ design"
+    >
+        Raconteur<span class="plus-sign">+</span>
+    </a>
+</div>
+
+<style>
+    .skin-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid rgba(228, 221, 200, 0.35);
+        border-radius: 999px;
+        background: rgba(30, 36, 32, 0.35);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
+    .toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0.3rem 0.95rem;
+        border-radius: 999px;
+        font-family: 'Lora', Georgia, serif;
+        font-size: 0.8rem;
+        font-weight: 500;
+        letter-spacing: 0.4px;
+        color: rgba(228, 221, 200, 0.75);
+        text-decoration: none;
+        white-space: nowrap;
+        transition: color 0.25s, background 0.25s, box-shadow 0.25s;
+    }
+
+    .toggle-btn:hover {
+        color: #f4ede0;
+    }
+
+    .toggle-btn.active {
+        background: #f4ede0;
+        color: #1e2420;
+        box-shadow: 0 2px 10px rgba(244, 237, 224, 0.25);
+    }
+
+    /* Plus button carries a brass-gold identity in both skins */
+    .toggle-btn.plus {
+        font-style: normal;
+    }
+
+    .toggle-btn.plus .plus-sign {
+        font-weight: 700;
+        margin-left: 1px;
+        color: #c9a24b;
+        transition: color 0.25s;
+    }
+
+    .toggle-btn.plus.active .plus-sign {
+        color: #7d5f1d; /* dark brass on cream pill */
+    }
+
+    /* The inactive plus button gets a brass glow hint on hover */
+    .toggle-btn.plus:hover:not(.active) {
+        box-shadow: inset 0 0 0 1px rgba(201, 162, 75, 0.5);
+    }
+
+    @media (max-width: 640px) {
+        .toggle-btn { padding: 0.25rem 0.75rem; font-size: 0.75rem; }
+    }
+</style>

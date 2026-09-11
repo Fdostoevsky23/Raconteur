@@ -1,0 +1,550 @@
+---
+// src/pages/plus/index.astro — Raconteur+ homepage (skeleton for Chunk 1).
+// Data layer is a faithful copy of classic index.astro (same queries, same shape).
+// Chunks 3–5 build the full homepage design on this skeleton.
+import PlusLayout from '../../layouts/PlusLayout.astro';
+import { getVisibleStories, getStoryBySlug } from '../../data/stories';
+import authors from '../../data/authors.json';
+import { supabase } from '../../lib/supabase';
+import { buildStoryFromDB } from '../../lib/storyLoader';
+
+// 1. Get static stories
+const staticStories = getVisibleStories();
+
+// 2. Fetch published stories from the database
+// Curated homepage: featured stories (max 5); falls back to newest if none featured
+// Homepage shelf: everything the admin hasn't hidden; featured pinned to the top
+const { data: dbRows } = await supabase
+    .from('stories')
+    .select('*')
+    .eq('status', 'published')
+    .eq('on_homepage', true)
+    .order('is_featured', { ascending: false })
+    .order('created_at', { ascending: false });
+
+// 3. Convert DB rows to our Story shape
+const dbStories = (dbRows || []).map(buildStoryFromDB);
+
+// 4. Merge them! (Database stories appear first/newest)
+const stories = [...dbStories, ...staticStories];
+const totalWords = stories.reduce((sum, s) => sum + s.wordCount, 0);
+const featuredProse = dbStories.filter(s => s.kind !== 'poem' && s.on_homepage !== false).slice(0, 4);
+const featuredPoems = dbStories.filter(s => s.kind === 'poem' && s.on_homepage !== false).slice(0, 4);
+
+// Curated homepage shelf: max 5 prose cards (DB query already puts featured first)
+const proseShelf = featuredProse.slice(0, 5);
+
+const heroImageCount = 13; // public/hero has 13 images (1.jpg-13.jpg)
+
+const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+);
+const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotation
+---
+<PlusLayout title="Raconteur+ — Literature you want to read" description="A second way to read Raconteur — ink-black, brass, and built for night readers.">
+    {/* ============================================ */}
+    {/* HERO — skeleton version. Chunk 3 replaces */}
+    {/* this with the full kinetic-type hero.      */}
+    {/* ============================================ */}
+    <section class="ph-hero" id="top">
+        <div class="ph-hero-bg" aria-hidden="true">
+            <img src={`/hero/${heroIndex}.jpg`} alt="" fetchpriority="high" />
+        </div>
+        <div class="ph-hero-inner">
+            <p class="ph-hero-eyebrow">
+                <span class="ph-star">✦</span> The new Raconteur · rebuilt for readers
+            </p>
+            <h1 class="ph-hero-title">
+                Literature you<br />
+                <em class="ph-hero-em">want</em> to read<span class="ph-hero-plus">.</span>
+            </h1>
+            <p class="ph-hero-sub">
+                Ink-black. Brass-trimmed. Every story, every poem, every writer —
+                reimagined in Raconteur+, the second skin of your favourite bookshop.
+            </p>
+            <div class="ph-hero-actions">
+                <a href="/stories" class="ph-btn ph-btn-gold">Browse the shelf</a>
+                <a href="#shelf" class="ph-btn ph-btn-ghost">Featured stories</a>
+            </div>
+        </div>
+        <div class="ph-hero-frame" aria-hidden="true"></div>
+    </section>
+
+    {/* ============================================ */}
+    {/* MARQUEE — kinetic strip (Obsidian Editorial) */}
+    {/* ============================================ */}
+    <div class="ph-marquee" aria-hidden="true">
+        <div class="ph-marquee-track">
+            {[0, 1].map(() => (
+                <span class="ph-marquee-seg">
+                    <span>Literature you want to read</span>
+                    <span class="ph-marquee-star">✦</span>
+                    <span>Flash fiction to novellas</span>
+                    <span class="ph-marquee-star">✦</span>
+                    <span>Poetry with a pulse</span>
+                    <span class="ph-marquee-star">✦</span>
+                    <span>Worth remembering</span>
+                    <span class="ph-marquee-star">✦</span>
+                </span>
+            ))}
+        </div>
+    </div>
+    {/* ============================================ */}
+    {/* 01 — THE SHELF: featured prose                */}
+    {/* ============================================ */}
+    <section class="ph-section" id="shelf">
+        <header class="ph-section-head">
+            <p class="ph-section-eyebrow">01 — Fresh from the desk</p>
+            <h2 class="ph-section-title">The Featured Shelf</h2>
+            <p class="ph-section-note">
+                {proseShelf.length} {proseShelf.length === 1 ? 'story' : 'stories'} · hand-picked by the editor
+            </p>
+            <a href="/stories" class="ph-section-more">Full archive →</a>
+        </header>
+
+        <div class="ph-shelf-grid">
+            {proseShelf.map((story: any, i: number) => (
+                <a
+                    href={`/story/${story.slug}`}
+                    class={`ph-card ${i === 0 ? 'ph-card-lead' : ''}`}
+                >
+                    {story.cover ? (
+                        <div class="ph-card-cover">
+                            <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />
+                        </div>
+                    ) : (
+                        <div class="ph-card-cover ph-card-cover-empty">
+                            <span class="ph-star">✦</span>
+                        </div>
+                    )}
+                    <div class="ph-card-body">
+                        <span class="ph-card-genre">{story.genre}</span>
+                        <h3 class="ph-card-title">{story.title}</h3>
+                        <p class="ph-card-excerpt">{story.excerpt}</p>
+                        <div class="ph-card-meta">
+                            <span>{story.author}</span>
+                            <span class="ph-card-dot">·</span>
+                            <span>{story.wordCount.toLocaleString()} words</span>
+                            <span class="ph-card-dot">·</span>
+                            <span>{story.readTime}</span>
+                        </div>
+                    </div>
+                </a>
+            ))}
+        </div>
+        {proseShelf.length === 0 && featuredPoems.length === 0 && (
+            <p class="ph-empty">The shelf is being curated — check back soon.</p>
+        )}
+    </section>
+
+    {/* ============================================ */}
+    {/* 02 — VERSE: featured poetry                  */}
+    {/* ============================================ */}
+    {featuredPoems.length > 0 && (
+        <section class="ph-section" id="verse">
+            <header class="ph-section-head">
+                <p class="ph-section-eyebrow">02 — Verse</p>
+                <h2 class="ph-section-title">Featured Poetry</h2>
+                <p class="ph-section-note">
+                    {featuredPoems.length} {featuredPoems.length === 1 ? 'poem' : 'poems'}
+                </p>
+            </header>
+
+            <div class="ph-shelf-grid ph-verse-grid">
+                {featuredPoems.map((story: any) => (
+                    <a href={`/story/${story.slug}`} class="ph-card ph-card-verse">
+                        {story.cover ? (
+                            <div class="ph-card-cover">
+                                <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />
+                            </div>
+                        ) : (
+                            <div class="ph-card-cover ph-card-verse-text">
+                                <p>
+                                    "{(story.content[0]?.text || '').replace(/<[^>]+>/g, ' ').trim().slice(0, 110)}…"
+                                </p>
+                            </div>
+                        )}
+                        <div class="ph-card-body">
+                            <span class="ph-card-genre">Poetry</span>
+                            <h3 class="ph-card-title">{story.title}</h3>
+                            <div class="ph-card-meta">
+                                <span>{story.author}</span>
+                                <span class="ph-card-dot">·</span>
+                                <span>Poem</span>
+                            </div>
+                        </div>
+                    </a>
+                ))}
+            </div>
+        </section>
+    )}
+</PlusLayout>
+<style>
+    /* === HERO (skeleton — Chunk 3 upgrades) === */
+    .ph-hero {
+        position: relative;
+        min-height: 88vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .ph-hero-bg {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+    }
+
+    .ph-hero-bg img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.28;
+        filter: saturate(0.65) contrast(1.05);
+        transform: scale(1.04);
+    }
+
+    .ph-hero-inner {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        max-width: 900px;
+        padding: 6rem 2rem 5rem;
+    }
+
+    .ph-hero-eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: #c9a24b;
+        margin-bottom: 1.6rem;
+    }
+
+    .ph-hero-title {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: clamp(3rem, 8.5vw, 6.8rem);
+        font-weight: 900;
+        line-height: 1.02;
+        color: #f2eee3;
+        letter-spacing: -0.015em;
+        text-shadow: 0 4px 60px rgba(0, 0, 0, 0.8);
+    }
+
+    .ph-hero-em {
+        font-style: italic;
+        font-weight: 400;
+        color: #c9a24b;
+    }
+
+    .ph-hero-plus { color: #c9a24b; }
+
+    .ph-hero-sub {
+        font-family: 'Newsreader', Georgia, serif;
+        font-size: clamp(1.05rem, 2vw, 1.3rem);
+        font-style: italic;
+        color: rgba(242, 238, 227, 0.75);
+        max-width: 560px;
+        margin: 1.8rem auto 2.6rem;
+        line-height: 1.8;
+    }
+
+    .ph-hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+    .ph-btn {
+        display: inline-block;
+        padding: 0.85rem 2.2rem;
+        border-radius: 999px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-decoration: none;
+        transition: transform 0.2s, box-shadow 0.25s, background 0.25s, border-color 0.25s;
+    }
+
+    .ph-btn-gold {
+        background: #c9a24b;
+        color: #0b0b0e;
+    }
+
+    .ph-btn-gold:hover {
+        background: #d4af5f;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 36px rgba(201, 162, 75, 0.4);
+    }
+
+    .ph-btn-ghost {
+        border: 1px solid rgba(242, 238, 227, 0.35);
+        color: #f2eee3;
+    }
+
+    .ph-btn-ghost:hover {
+        border-color: #c9a24b;
+        color: #c9a24b;
+        transform: translateY(-2px);
+    }
+
+    /* Thin brass frame inside the hero — museum matting */
+    .ph-hero-frame {
+        position: absolute;
+        inset: 1.2rem;
+        border: 1px solid rgba(201, 162, 75, 0.28);
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    /* === MARQUEE === */
+    .ph-marquee {
+        overflow: hidden;
+        border-top: 1px solid rgba(201, 162, 75, 0.25);
+        border-bottom: 1px solid rgba(201, 162, 75, 0.25);
+        background: rgba(201, 162, 75, 0.04);
+        padding: 0.85rem 0;
+    }
+
+    .ph-marquee-track {
+        display: flex;
+        width: max-content;
+        animation: ph-marquee-scroll 30s linear infinite;
+    }
+
+    .ph-marquee-seg {
+        display: flex;
+        align-items: center;
+        gap: 2.2rem;
+        padding-right: 2.2rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.8rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(242, 238, 227, 0.65);
+        white-space: nowrap;
+    }
+
+    .ph-marquee-star { color: #c9a24b; font-size: 0.7rem; }
+
+    @keyframes ph-marquee-scroll {
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .ph-marquee-track { animation: none; }
+    }
+    /* === SECTIONS (numbered, editorial) === */
+    .ph-section { max-width: 1320px; margin: 0 auto; padding: 5rem 2rem 2rem; }
+
+    .ph-section-head {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-bottom: 2.6rem;
+        position: relative;
+        padding-bottom: 1.4rem;
+        border-bottom: 1px solid rgba(242, 238, 227, 0.1);
+    }
+
+    .ph-section-eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: #c9a24b;
+    }
+
+    .ph-section-title {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: clamp(1.8rem, 4vw, 3rem);
+        font-weight: 900;
+        color: #f2eee3;
+        letter-spacing: -0.01em;
+        line-height: 1.05;
+    }
+
+    .ph-section-note {
+        font-family: 'Newsreader', Georgia, serif;
+        font-style: italic;
+        font-size: 0.95rem;
+        color: rgba(242, 238, 227, 0.55);
+    }
+
+    .ph-section-more {
+        position: absolute;
+        right: 0;
+        bottom: 1.4rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+        letter-spacing: 0.1em;
+        color: #c9a24b;
+        text-decoration: none;
+        transition: color 0.25s, transform 0.25s;
+    }
+
+    .ph-section-more:hover {
+        color: #d4af5f;
+        transform: translateX(4px);
+    }
+
+    /* === SHELF GRID — bento: lead card spans wide === */
+    .ph-shelf-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 1.4rem;
+    }
+
+    .ph-card {
+        grid-column: span 2;
+        display: flex;
+        flex-direction: column;
+        text-decoration: none;
+        color: inherit;
+        background: rgba(242, 238, 227, 0.03);
+        border: 1px solid rgba(242, 238, 227, 0.09);
+        border-radius: 16px;
+        overflow: hidden;
+        transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s, background 0.3s, box-shadow 0.35s;
+    }
+
+    .ph-card:hover {
+        transform: translateY(-6px);
+        border-color: rgba(201, 162, 75, 0.45);
+        background: rgba(242, 238, 227, 0.05);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    }
+
+    .ph-card-lead { grid-column: span 4; }
+
+    .ph-card-cover { overflow: hidden; position: relative; }
+
+    .ph-card-cover img {
+        width: 100%;
+        height: 240px;
+        object-fit: cover;
+        object-position: top;
+        display: block;
+        transition: transform 0.5s ease;
+    }
+
+    .ph-card-lead .ph-card-cover img { height: 320px; }
+
+    .ph-card:hover .ph-card-cover img { transform: scale(1.05); }
+
+    .ph-card-cover-empty {
+        height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background:
+            radial-gradient(ellipse at 50% 0%, rgba(201, 162, 75, 0.12), transparent 60%),
+            rgba(242, 238, 227, 0.02);
+    }
+
+    .ph-star { color: #c9a24b; font-size: 1.4rem; }
+    .ph-card-body { padding: 1.3rem 1.4rem 1.2rem; display: flex; flex-direction: column; gap: 0.55rem; flex: 1; }
+
+    .ph-card-genre {
+        align-self: flex-start;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.64rem;
+        font-weight: 500;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #c9a24b;
+        border: 1px solid rgba(201, 162, 75, 0.35);
+        border-radius: 999px;
+        padding: 0.22rem 0.7rem;
+    }
+
+    .ph-card-title {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 1.35rem;
+        font-weight: 600;
+        color: #f2eee3;
+        line-height: 1.15;
+    }
+
+    .ph-card-lead .ph-card-title { font-size: 1.8rem; }
+
+    .ph-card-excerpt {
+        font-family: 'Newsreader', Georgia, serif;
+        font-size: 0.98rem;
+        line-height: 1.65;
+        color: rgba(242, 238, 227, 0.68);
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .ph-card-meta {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        letter-spacing: 0.04em;
+        color: rgba(242, 238, 227, 0.5);
+        border-top: 1px solid rgba(242, 238, 227, 0.07);
+        padding-top: 0.9rem;
+    }
+
+    .ph-card-dot { color: rgba(201, 162, 75, 0.6); }
+
+    /* === VERSE CARDS — serif italic poem teasers === */
+    .ph-verse-grid .ph-card { grid-column: span 2; }
+
+    .ph-card-verse-text {
+        height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.6rem;
+        background:
+            radial-gradient(ellipse at 50% 100%, rgba(201, 162, 75, 0.1), transparent 60%),
+            rgba(242, 238, 227, 0.02);
+    }
+
+    .ph-card-verse-text p {
+        font-family: 'Newsreader', Georgia, serif;
+        font-style: italic;
+        font-size: 1rem;
+        line-height: 1.8;
+        color: rgba(242, 238, 227, 0.65);
+        text-align: center;
+    }
+
+    /* === EMPTY === */
+    .ph-empty {
+        text-align: center;
+        font-family: 'Newsreader', Georgia, serif;
+        font-style: italic;
+        color: rgba(242, 238, 227, 0.5);
+        padding: 3rem 1rem;
+    }
+
+    /* === MOBILE === */
+    @media (max-width: 1024px) {
+        .ph-shelf-grid { grid-template-columns: repeat(4, 1fr); }
+        .ph-card, .ph-verse-grid .ph-card { grid-column: span 2; }
+        .ph-card-lead { grid-column: span 4; }
+    }
+
+    @media (max-width: 640px) {
+        .ph-shelf-grid { grid-template-columns: 1fr; gap: 1.1rem; }
+        .ph-card, .ph-card-lead, .ph-verse-grid .ph-card { grid-column: span 1; }
+        .ph-section { padding: 3.5rem 1.3rem 1.5rem; }
+        .ph-card-lead .ph-card-cover img { height: 240px; }
+        .ph-card-cover img { height: 220px; }
+        .ph-section-more { position: static; align-self: flex-start; margin-top: 0.6rem; }
+        .ph-hero-frame { inset: 0.6rem; }
+        .ph-hero-inner { padding: 4rem 1.2rem 3.5rem; }
+    }
+</style>
+
+
+
+
+

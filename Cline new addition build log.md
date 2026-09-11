@@ -50,8 +50,8 @@
 ## 6. Build chunks (the roadmap)
 
 ### Phase 1 — Foundation
-- [ ] **Chunk 1 — Skeleton & Switch Mechanism** — `src/layouts/PlusLayout.astro`, `src/lib/skin.ts`, `src/components/plus/SkinToggle.astro`, the ONE sanctioned BaseLayout edit, plus copy of `/` at `src/pages/plus/index.astro` (full data logic copy, light placeholder hero), dev-server verification.
-- [ ] **Chunk 2 — Design System** — `src/styles/plus.css`: design tokens, font imports, button/card/nav/form/section utilities, film-grain, glass nav, marquee, reveal system, `prefers-reduced-motion`, smoke-test page /plus at every breakpoint.
+- [x] ✅ **Chunk 1 — Skeleton & Switch Mechanism** (done Session 2, 2026-09-11) — `src/lib/skin.ts` (path mapping /↔/plus), `src/components/plus/SkinToggle.astro` (server-rendered pill switch, works both skins, preserves query strings), `src/layouts/PlusLayout.astro` (full shell: glass sticky nav + scroll state, film-grain overlay, search island + live search, auth widget + notification bell clones, footer, noindex + canonical→classic, Obsidian Editorial fonts loaded), ONE sanctioned BaseLayout edit (import + toggle mount + .skin-switch-row CSS — 3 lines), `src/pages/plus/index.astro` (full data-layer copy of classic home + placeholder hero, marquee, numbered 01 Shelf + 02 Verse sections with bento lead card). Verified: dev 200 on / and /plus, prod build clean. Nav/auth/search links → classic pages with TODO(Chunk N) swap registry in PlusLayout.
+- [ ] **Chunk 2 — Design System** — `src/styles/plus.css`: design tokens, font imports, button/card/nav/form/section utilities, film-grain, glass nav, marquee, reveal system, `prefers-reduced-motion`, smoke-test page /plus at every breakpoint. NOTE: PlusLayout + plus/index already carry working styles inline; Chunk 2 extracts shared tokens/utilities (buttons, cards, sections, forms) so later pages don't re-copy CSS.
 
 ### Phase 2 — Homepage (3 chunks)
 - [ ] **Chunk 3 — Home: Hero + Shelf** — hero with rotating imagery + kinetic headline, marquee strip, curated shelf (5 featured prose cards with hover states), section numbering ("01 — Fresh from the desk").
@@ -96,6 +96,7 @@
 | # | Date | Chunks done | Token estimate | Notes |
 |---|------|-------------|----------------|-------|
 | 1 | 2026-09-11 | Blueprint session — full codebase audit, design research (Awwwards etc.), roadmap, this log, direction confirmed | ~25k | Direction: "Obsidian Editorial" (mix). Ready for Chunk 1 next session. |
+| 2 | 2026-09-11 | ✅ Chunk 1 — Skeleton & Switch Mechanism complete + verified (dev 200 both skins, prod build clean) | ~45k | Files: skin.ts, SkinToggle.astro, PlusLayout.astro (822 ln), plus/index.astro (546 ln), BaseLayout sanctioned edit (3 ln). Next: Chunk 2 Design System. |
 
 ## 9. Open questions for the boss (defaults in effect unless overruled)
 1. ~~Design direction~~ → ✅ ANSWERED Session 1: "Mix it up — Cline's call" → Obsidian Editorial (see §5).

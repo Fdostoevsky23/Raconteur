@@ -1,0 +1,829 @@
+---
+// PlusLayout.astro — the Raconteur+ shell ("Obsidian Editorial" skin).
+// Feature-parity clone of BaseLayout's shell (search island, auth widget,
+// notification bell, footer) re-imagined in the plus design language.
+import { getVisibleStories } from '../data/stories';
+import { supabase } from '../lib/supabase';
+import SkinToggle from '../components/plus/SkinToggle.astro';
+
+interface Props {
+    title: string;
+    description?: string;
+    ogImage?: string;
+}
+
+// Same search-index queries as BaseLayout (feature parity — no schema changes)
+const { data: searchDbRows } = await supabase
+    .from('stories')
+    .select('id,title,author_name,genre_tag,kind')
+    .eq('status', 'published');
+const searchStories = [
+    ...getVisibleStories().map((s: any) => ({ slug: s.slug, title: s.title, author: s.author, genre: s.genre })),
+    ...(searchDbRows || []).map((r: any) => ({ slug: r.id, title: r.title, author: r.author_name, genre: r.genre_tag || (r.kind === 'poem' ? 'Poetry' : '') })),
+];
+
+const { title, description = 'Literature you want to read.', ogImage = '' } = Astro.props as any;
+const isHome = Astro.url.pathname === '/plus' || Astro.url.pathname === '/plus/';
+const isStory = Astro.url.pathname.startsWith('/plus/story/');
+
+// Canonical → classic counterpart (SEO: plus is a mirror skin, classic stays the source of truth)
+const canonical = Astro.url.href.replace('/plus', '');
+
+// NAV LINKS — plus pages exist only for the ones we've built (Chunk 1: home).
+// Every chunk that lands a plus page flips its entry here. Until then entries
+// point to classic pages so nothing 404s mid-build.
+// TODO(Chunk 4): stories → /plus/stories
+// TODO(Chunk 18): about → /plus/about
+// TODO(Chunk 12): feed → /plus/feed
+// TODO(Chunk 17): login → /plus/login · signup → /plus/signup
+// TODO(Chunk 11/15): dashboard → /plus/dashboard · digest → /plus/digest
+const navHref = {
+    stories: '/stories',
+    about: '/about',
+    feed: '/feed',
+    login: '/login',
+    signup: '/signup',
+    dashboard: '/dashboard',
+    digest: '/digest',
+};
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0b0b0e" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <title>{title}</title>
+
+    <meta property="og:site_name" content="Raconteur+" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content={Astro.url.href} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,400;1,9..144,900&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body class="plus-skin">
+    {/* Search data island — same queries as classic, lives in layout so search works on every plus page */}
+    <script type="application/json" id="all-stories-data" set:html={JSON.stringify(searchStories).replace(/</g,'\\u003c')} />
+
+    {/* Film-grain overlay — the obsidian signature */}
+    <div class="grain" aria-hidden="true"></div>
+
+    {/* Sticky glass nav */}
+    <header class="plus-header" id="plusHeader" data-scrolled="false">
+        <div class="plus-header-inner">
+            <a href="/plus" class="plus-logo" aria-label="Raconteur+ home">
+                <span class="plus-logo-word">Raconteur<span class="plus-logo-plus">+</span></span>
+                <span class="plus-logo-sub">Literature you want to read</span>
+            </a>
+
+            <nav class="plus-nav" aria-label="Primary">
+                <a href={navHref.stories} class="plus-nav-link">Stories</a>
+                <a href={navHref.about} class="plus-nav-link">About</a>
+            </nav>
+
+            <div class="plus-nav-right">
+                <div class="plus-search" id="plusSearchWrap">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search stories &amp; writers…"
+                        autocomplete="off"
+                        aria-label="Search stories and writers"
+                    />
+                    <span class="plus-search-icon" aria-hidden="true">⌕</span>
+                    <div id="searchDropdown" class="plus-search-dropdown" style="display: none;">
+                        <div id="searchResults" class="plus-search-results"></div>
+                    </div>
+                </div>
+
+                <SkinToggle />
+
+                <div class="plus-auth" id="authArea">
+                    <a href={navHref.login} class="plus-auth-link">Log in</a>
+                    <a href={navHref.signup} class="plus-auth-cta">Sign up</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="plus-main">
+        <slot />
+    </main>
+
+    <footer class="plus-footer">
+        <div class="plus-footer-inner">
+            <div class="plus-footer-brand">
+                <span class="plus-footer-logo">RACONTEUR<span class="plus-footer-plus">+</span></span>
+                <span class="plus-footer-tagline">Literature you want to read</span>
+            </div>
+
+            <nav class="plus-footer-nav" aria-label="Footer">
+                <a href="/plus">Home</a>
+                <a href={navHref.stories}>Stories</a>
+                <a href={navHref.feed}>Feed</a>
+                <a href={navHref.about}>About</a>
+            </nav>
+
+            <div class="plus-footer-legal">
+                <a href="/tos">Terms</a>
+                <span class="dot">·</span>
+                <a href="/privacy">Privacy</a>
+                <span class="dot">·</span>
+                <a href="/">Switch to classic Raconteur</a>
+            </div>
+
+            <p class="plus-footer-fineprint">
+                Made for writers, by a writer · © {new Date().getFullYear()} Raconteur
+            </p>
+        </div>
+    </footer>
+    <script is:inline>
+        // Service worker disabled — same policy as classic (unregister + clear caches)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
+        }
+        if ('caches' in window) {
+            caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+        }
+    </script>
+
+    <script>
+        // Header glass intensifies on scroll (plus signature)
+        const plusHeader = document.getElementById('plusHeader');
+        if (plusHeader) {
+            const onScroll = () => {
+                plusHeader.dataset.scrolled = window.scrollY > 24 ? 'true' : 'false';
+            };
+            onScroll();
+            window.addEventListener('scroll', onScroll, { passive: true });
+        }
+    </script>
+    <script>
+        // Auth widget — feature-parity clone of BaseLayout's auth + notifications
+        import { supabase } from '../lib/supabase';
+        import { esc } from '../lib/escape';
+
+        const authArea = document.getElementById('authArea');
+
+        async function renderAuth(user: { email?: string; id?: string } | null) {
+            if (!authArea) return;
+            if (user) {
+                const fallback = (user.email ?? 'reader').split('@')[0];
+                let name = fallback;
+                if (user.id) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('pen_name')
+                        .eq('user_id', user.id)
+                        .maybeSingle();
+                    if (profile?.pen_name) name = profile.pen_name;
+                }
+                const safeName = esc(name);
+                const profileSlug = esc(name.toLowerCase().replace(/\s+/g, '-'));
+                authArea.innerHTML = `
+                    <a href="/dashboard" class="plus-auth-link">My Shelf</a>
+                    <a href="/feed" class="plus-auth-link">Feed</a>
+                    <a href="/digest" class="plus-auth-link">Digest</a>
+                    <a href="/author/${profileSlug}" class="plus-hello" title="Your public writer page">Hello, ${safeName}</a>
+                    <span class="plus-notif-wrap">
+                        <button id="notifBell" class="plus-notif-bell" type="button" aria-label="Notifications">🔔<span id="notifDot" class="plus-notif-dot" hidden></span></button>
+                        <div id="notifPanel" class="plus-notif-panel" hidden>
+                            <div class="plus-notif-head">Notifications</div>
+                            <div id="notifList" class="plus-notif-list"></div>
+                        </div>
+                    </span>
+                    <a href="#" id="logoutBtn" class="plus-auth-link">Log out</a>`;
+                if (user.id) initNotifications(user.id);
+                document.getElementById('logoutBtn')?.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await supabase.auth.signOut();
+                    window.location.href = '/plus';
+                });
+            } else {
+                authArea.innerHTML = `<a href="/login" class="plus-auth-link">Log in</a><a href="/signup" class="plus-auth-cta">Sign up</a>`;
+            }
+        }
+        async function initNotifications(userId: string) {
+            const bell = document.getElementById('notifBell')!;
+            const dot = document.getElementById('notifDot')!;
+            const panel = document.getElementById('notifPanel')!;
+            const list = document.getElementById('notifList')!;
+
+            const actorLabel = (n: any) => n.actor_id ? (n._actorName || 'Someone') : (n.body_preview || 'A Wandering Reader');
+            const icon = (t: string) => ({ like: '♥', comment: '💬', reply: '↩', follow: '👤', message: '✉' }[t] || '•');
+            const text = (n: any) => {
+                if (n.type === 'like') return `${actorLabel(n)} appreciated your story`;
+                if (n.type === 'follow') return `${actorLabel(n)} started following you`;
+                if (n.type === 'reply') return `${actorLabel(n)} replied: “${(n.body_preview || '').slice(0, 60)}”`;
+                if (n.type === 'message') return `${actorLabel(n)} messaged you: “${(n.body_preview || '').slice(0, 60)}”`;
+                return `${actorLabel(n)} commented: “${(n.body_preview || '').slice(0, 60)}”`;
+            };
+            const href = (n: any) => n.type === 'message' ? '/messages' : (n.story_id ? `/story/${n.story_id}` : '#');
+
+            async function load() {
+                const fourDaysAgo = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString();
+                const { data: rows } = await supabase
+                    .from('notifications')
+                    .select('id, type, body_preview, read, created_at, story_id, actor_id')
+                    .eq('user_id', userId)
+                    .gte('created_at', fourDaysAgo)
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+                const all = rows || [];
+                const actorIds = Array.from(new Set(all.map((n: any) => n.actor_id).filter(Boolean)));
+                let nameMap: Record<string, string> = {};
+                if (actorIds.length) {
+                    const { data: profs } = await supabase.from('profiles').select('user_id, pen_name').in('user_id', actorIds);
+                    (profs || []).forEach((p: any) => { nameMap[p.user_id] = p.pen_name; });
+                }
+                const enriched = all.map((r: any) => ({ ...r, _actorName: r.actor_id ? nameMap[r.actor_id] : null }));
+                const unread = enriched.filter((n: any) => !n.read).length;
+                dot.hidden = unread === 0;
+                list.innerHTML = enriched.length === 0
+                    ? '<p class="plus-notif-empty">No notifications yet.</p>'
+                    : enriched.map((n: any) => `
+                        <a href="${esc(href(n))}" class="plus-notif-item ${n.read ? '' : 'unread'}" data-id="${esc(n.id)}">
+                          <span class="plus-notif-icon">${icon(n.type)}</span>
+                          <span class="plus-notif-text">${esc(text(n))}</span>
+                          <span class="plus-notif-time">${timeAgo(n.created_at)}</span>
+                        </a>`).join('');
+                list.querySelectorAll('.plus-notif-item.unread').forEach(el => el.addEventListener('click', async () => {
+                    const id = (el as HTMLElement).dataset.id;
+                    await supabase.from('notifications').update({ read: true }).eq('id', id);
+                }));
+            }
+
+            function timeAgo(iso: string) {
+                const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+                if (m < 1) return 'now'; if (m < 60) return m + 'm'; const h = Math.floor(m / 60);
+                if (h < 24) return h + 'h'; return Math.floor(h / 24) + 'd';
+            }
+
+            bell.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const open = !panel.hidden;
+                panel.hidden = open;
+                if (!open) {
+                    await load();
+                    await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
+                    dot.hidden = true;
+                }
+            });
+            document.addEventListener('click', (e) => {
+                if (!panel.hidden && !panel.contains(e.target as Node) && e.target !== bell) panel.hidden = true;
+            });
+
+            await load();
+            setInterval(load, 30000);
+        }
+
+        supabase.auth.getSession().then(({ data }) => renderAuth(data.session?.user ?? null));
+        supabase.auth.onAuthStateChange((_e, session) => renderAuth(session?.user ?? null));
+    </script>
+    <script>
+        // Live search — stories AND writers (same queries as classic)
+        import { supabase } from '../lib/supabase';
+        import { esc } from '../lib/escape';
+
+        const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+        const searchDropdown = document.getElementById('searchDropdown');
+        const searchResults = document.getElementById('searchResults');
+
+        document.addEventListener('click', (e) => {
+            if (searchDropdown && searchDropdown.style.display === 'block') {
+                if (!searchDropdown.contains(e.target as Node) && e.target !== searchInput) {
+                    searchDropdown.style.display = 'none';
+                }
+            }
+        });
+
+        searchInput?.addEventListener('focus', () => {
+            if (searchInput.value.trim().length > 0 && searchDropdown) {
+                searchDropdown.style.display = 'block';
+            }
+        });
+
+        let allStories: any[] = [];
+        async function loadAllStories() {
+            if (allStories.length > 0) return;
+            const staticData = JSON.parse(document.getElementById('all-stories-data')?.textContent || '[]');
+            const { data: dbRows } = await supabase.from('stories').select('id, title, author_name, genre').eq('status', 'published');
+            const dbStories = (dbRows || []).map(r => ({ slug: r.id, title: r.title, author: r.author_name, genre: r.genre }));
+            allStories = [...staticData, ...dbStories];
+        }
+
+        searchInput?.addEventListener('input', async (e) => {
+            const query = (e.target as HTMLInputElement).value.toLowerCase().trim();
+            if (!searchResults || !searchDropdown) return;
+            if (!query) {
+                searchDropdown.style.display = 'none';
+                return;
+            }
+            searchDropdown.style.display = 'block';
+            await loadAllStories();
+
+            const writerMap = new Map<string, string>();
+            allStories.forEach(s => {
+                if (s.author) {
+                    const slug = s.author.toLowerCase().replace(/\s+/g, '-');
+                    writerMap.set(slug, s.author);
+                }
+            });
+            const writerMatches = Array.from(writerMap.entries())
+                .filter(([, name]) => name.toLowerCase().includes(query))
+                .slice(0, 3)
+                .map(([slug, name]) => `
+                    <a href="/author/${esc(slug)}" class="search-result-item search-writer-item">
+                      <h4>👤 ${esc(name)}</h4>
+                      <p>View writer page</p>
+                    </a>
+                `);
+
+            const storyMatches = allStories.filter(s =>
+                s.title.toLowerCase().includes(query) ||
+                (s.author && s.author.toLowerCase().includes(query))
+            ).slice(0, 6).map(s => `
+                <a href="/story/${esc(s.slug)}" class="search-result-item">
+                  <h4>${esc(s.title)}</h4>
+                  <p>By ${esc(s.author || 'Anonymous')} · ${esc(s.genre || 'Story')}</p>
+                </a>
+            `);
+
+            const combined = [...writerMatches, ...storyMatches];
+            searchResults.innerHTML = combined.length === 0
+                ? '<p class="search-no-results">No stories or writers found.</p>'
+                : combined.join('');
+        });
+    </script>
+</body>
+</html>
+<style is:global>
+    /* === OBSIDIAN EDITORIAL — GLOBAL BASE === */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body.plus-skin {
+        background-color: #0b0b0e;
+        color: #f2eee3;
+        font-family: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow-x: hidden;
+    }
+
+    main.plus-main { flex: 1; }
+
+    ::selection { background: #c9a24b; color: #0b0b0e; }
+
+    a { color: inherit; }
+
+    /* Film-grain overlay — static SVG noise, sits above everything, pointer-events none */
+    .grain {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483000;
+        pointer-events: none;
+        opacity: 0.05;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        background-size: 300px 300px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            animation-duration: 0.001ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.001ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+
+    /* === STICKY GLASS HEADER === */
+    .plus-header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: rgba(11, 11, 14, 0.55);
+        backdrop-filter: blur(18px) saturate(1.2);
+        -webkit-backdrop-filter: blur(18px) saturate(1.2);
+        border-bottom: 1px solid rgba(242, 238, 227, 0.08);
+        transition: background 0.35s, border-color 0.35s, box-shadow 0.15s;
+    }
+
+    .plus-header[data-scrolled="true"] {
+        background: rgba(11, 11, 14, 0.82);
+        border-bottom-color: rgba(201, 162, 75, 0.22);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    .plus-header-inner {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 0.9rem 2rem;
+    }
+
+    .plus-logo {
+        display: flex;
+        flex-direction: column;
+        text-decoration: none;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    .plus-logo-word {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 1.5rem;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        color: #f2eee3;
+        transition: color 0.25s;
+    }
+
+    .plus-logo-plus {
+        color: #c9a24b;
+        font-weight: 900;
+        transition: text-shadow 0.25s;
+    }
+
+    .plus-logo:hover .plus-logo-word { color: #fff; }
+    .plus-logo:hover .plus-logo-plus { text-shadow: 0 0 18px rgba(201, 162, 75, 0.65); }
+
+    .plus-logo-sub {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.6rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(242, 238, 227, 0.5);
+        margin-top: 0.35rem;
+    }
+
+    .plus-nav { display: flex; gap: 2rem; }
+
+    .plus-nav-link {
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 0.92rem;
+        font-weight: 500;
+        letter-spacing: 0.03em;
+        color: rgba(242, 238, 227, 0.75);
+        text-decoration: none;
+        position: relative;
+        padding: 0.2rem 0;
+        transition: color 0.25s;
+    }
+
+    .plus-nav-link::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: -2px;
+        width: 100%;
+        height: 1px;
+        background: #c9a24b;
+        transform: scaleX(0);
+        transform-origin: right;
+        transition: transform 0.3s ease;
+    }
+
+    .plus-nav-link:hover { color: #f2eee3; }
+    .plus-nav-link:hover::after { transform: scaleX(1); transform-origin: left; }
+    /* === SEARCH === */
+    .plus-search { position: relative; }
+
+    .plus-search input {
+        width: 230px;
+        background: rgba(242, 238, 227, 0.05);
+        border: 1px solid rgba(242, 238, 227, 0.14);
+        border-radius: 999px;
+        color: #f2eee3;
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 0.88rem;
+        padding: 0.5rem 2.2rem 0.5rem 1rem;
+        outline: none;
+        transition: width 0.35s ease, border-color 0.25s, background 0.25s;
+    }
+
+    .plus-search input::placeholder { color: rgba(242, 238, 227, 0.4); }
+
+    .plus-search input:focus {
+        width: 300px;
+        border-color: rgba(201, 162, 75, 0.6);
+        background: rgba(242, 238, 227, 0.08);
+    }
+
+    .plus-search-icon {
+        position: absolute;
+        right: 0.9rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(201, 162, 75, 0.8);
+        font-size: 1rem;
+        pointer-events: none;
+    }
+
+    .plus-search-dropdown {
+        position: absolute;
+        top: calc(100% + 0.6rem);
+        right: 0;
+        width: 360px;
+        background: rgba(15, 15, 19, 0.97);
+        border: 1px solid rgba(201, 162, 75, 0.25);
+        border-radius: 14px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+        z-index: 1001;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 0.4rem;
+        backdrop-filter: blur(20px);
+    }
+
+    .plus-search-results a.search-result-item {
+        display: block;
+        padding: 0.7rem 0.9rem;
+        text-decoration: none;
+        border-radius: 8px;
+        color: inherit;
+        transition: background 0.2s;
+    }
+
+    .plus-search-results a.search-result-item:hover { background: rgba(242, 238, 227, 0.06); }
+
+    .plus-search-results a.search-result-item h4 {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 0.98rem;
+        font-weight: 600;
+        color: #f2eee3;
+        margin: 0 0 0.15rem;
+    }
+
+    .plus-search-results a.search-result-item p {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        letter-spacing: 0.02em;
+        color: rgba(242, 238, 227, 0.55);
+        margin: 0;
+    }
+
+    .plus-search-results a.search-writer-item h4 { color: #c9a24b; }
+    .plus-search-results .search-no-results {
+        padding: 1.2rem;
+        text-align: center;
+        font-style: italic;
+        color: rgba(242, 238, 227, 0.5);
+    }
+
+    /* === AUTH === */
+    .plus-auth {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .plus-auth-link {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: rgba(242, 238, 227, 0.8);
+        text-decoration: none;
+        transition: color 0.25s;
+        white-space: nowrap;
+    }
+
+    .plus-auth-link:hover { color: #f2eee3; }
+
+    .plus-auth-cta {
+        padding: 0.5rem 1.3rem;
+        background: #c9a24b;
+        color: #0b0b0e;
+        font-size: 0.9rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-decoration: none;
+        border-radius: 999px;
+        transition: background 0.25s, box-shadow 0.25s, transform 0.15s;
+        white-space: nowrap;
+    }
+
+    .plus-auth-cta:hover {
+        background: #d4af5f;
+        box-shadow: 0 6px 24px rgba(201, 162, 75, 0.35);
+        transform: translateY(-1px);
+    }
+
+    .plus-hello {
+        font-family: 'Fraunces', Georgia, serif;
+        font-style: italic;
+        color: #c9a24b !important;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    /* === NOTIFICATION BELL (plus skin) === */
+    .plus-notif-wrap { position: relative; display: inline-flex; }
+    .plus-notif-bell {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 1.05rem;
+        color: rgba(242, 238, 227, 0.8);
+        position: relative;
+        padding: 0.2rem;
+        transition: color 0.25s;
+    }
+    .plus-notif-bell:hover { color: #f2eee3; }
+    .plus-notif-dot {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #c9a24b;
+        border: 1px solid #0b0b0e;
+        box-shadow: 0 0 10px rgba(201, 162, 75, 0.8);
+    }
+    .plus-notif-panel {
+        position: absolute;
+        top: calc(100% + 0.7rem);
+        right: 0;
+        width: 330px;
+        max-height: 420px;
+        overflow-y: auto;
+        background: rgba(15, 15, 19, 0.97);
+        border: 1px solid rgba(201, 162, 75, 0.25);
+        border-radius: 14px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+        z-index: 1001;
+        backdrop-filter: blur(20px);
+    }
+    .plus-notif-head {
+        padding: 0.9rem 1.1rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: #c9a24b;
+        border-bottom: 1px solid rgba(242, 238, 227, 0.08);
+    }
+    .plus-notif-item {
+        display: flex;
+        gap: 0.7rem;
+        align-items: flex-start;
+        padding: 0.75rem 1.1rem;
+        text-decoration: none;
+        color: inherit;
+        border-bottom: 1px solid rgba(242, 238, 227, 0.04);
+        transition: background 0.2s;
+    }
+    .plus-notif-item.unread { background: rgba(201, 162, 75, 0.07); }
+    .plus-notif-item:hover { background: rgba(242, 238, 227, 0.05); }
+    .plus-notif-icon { font-size: 0.9rem; margin-top: 0.1rem; }
+    .plus-notif-text { flex: 1; font-size: 0.85rem; color: rgba(242, 238, 227, 0.85); line-height: 1.45; }
+    .plus-notif-time { font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: rgba(242, 238, 227, 0.4); white-space: nowrap; margin-top: 0.15rem; }
+    .plus-notif-empty {
+        padding: 1.6rem 1rem;
+        text-align: center;
+        font-style: italic;
+        color: rgba(242, 238, 227, 0.45);
+        font-size: 0.85rem;
+    }
+
+    /* === FOOTER === */
+    .plus-footer {
+        margin-top: 6rem;
+        border-top: 1px solid rgba(242, 238, 227, 0.08);
+        background: linear-gradient(180deg, rgba(11, 11, 14, 0) 0%, rgba(201, 162, 75, 0.03) 100%);
+    }
+
+    .plus-footer-inner {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 4rem 2rem 2.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.2rem;
+        text-align: center;
+    }
+
+    .plus-footer-brand { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .plus-footer-logo {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: clamp(2.2rem, 5vw, 3.6rem);
+        font-weight: 900;
+        letter-spacing: 0.18em;
+        color: #f2eee3;
+        line-height: 1;
+    }
+
+    .plus-footer-plus { color: #c9a24b; }
+
+    .plus-footer-tagline {
+        font-family: 'Newsreader', Georgia, serif;
+        font-style: italic;
+        font-size: 1rem;
+        color: rgba(242, 238, 227, 0.55);
+        letter-spacing: 0.05em;
+    }
+
+    .plus-footer-nav { display: flex; gap: 2.4rem; }
+
+    .plus-footer-nav a {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: rgba(242, 238, 227, 0.7);
+        text-decoration: none;
+        letter-spacing: 0.02em;
+        transition: color 0.25s, transform 0.25s;
+    }
+
+    .plus-footer-nav a:hover { color: #c9a24b; transform: translateY(-2px); }
+
+    .plus-footer-legal {
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        color: rgba(242, 238, 227, 0.45);
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .plus-footer-legal a {
+        color: rgba(242, 238, 227, 0.6);
+        text-decoration: none;
+        transition: color 0.25s;
+    }
+
+    .plus-footer-legal a:hover { color: #c9a24b; }
+
+    .plus-footer-fineprint {
+        font-family: 'Newsreader', Georgia, serif;
+        font-style: italic;
+        font-size: 0.85rem;
+        color: rgba(242, 238, 227, 0.4);
+        border-top: 1px solid rgba(242, 238, 227, 0.06);
+        padding-top: 1.8rem;
+        margin-top: 1rem;
+        width: 100%;
+    }
+
+    /* === MOBILE === */
+    @media (max-width: 920px) {
+        .plus-header-inner { flex-wrap: wrap; padding: 0.8rem 1.2rem; gap: 0.9rem; }
+        .plus-nav { order: 3; width: 100%; justify-content: center; gap: 1.6rem; }
+        .plus-nav-right { order: 2; margin-left: auto; }
+        .plus-logo { order: 1; }
+        .plus-search input { width: 160px; }
+        .plus-search input:focus { width: 200px; }
+    }
+
+    @media (max-width: 640px) {
+        .plus-nav-right { gap: 0.7rem; }
+        .plus-search { display: none; }
+        .plus-auth { gap: 0.8rem; }
+        .plus-footer-nav { gap: 1.4rem; flex-wrap: wrap; }
+    }
+
+    /* Focus states for keyboard users */
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible {
+        outline: 2px solid #c9a24b;
+        outline-offset: 2px;
+    }
+</style>
+
+
+
+
+
+
+
+

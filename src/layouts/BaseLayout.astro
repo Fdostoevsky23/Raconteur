@@ -3,6 +3,7 @@
 // Centered logo + tagline, nav row with divider, shared footer.
 import { getVisibleStories } from '../data/stories';
 import { supabase } from '../lib/supabase';
+import SkinToggle from '../components/plus/SkinToggle.astro'; // Raconteur+ dual-skin switcher
 interface Props {
     title: string;
     description?: string;
@@ -59,6 +60,10 @@ const _staticSearchData = getVisibleStories().map(s => ({ slug: s.slug, title: s
     {/* Search data island — lives in layout so search works on every page, not just / */}
     <script type="application/json" id="all-stories-data" set:html={JSON.stringify(searchStories).replace(/</g,'\\u003c')} />
       <header class={`site-header ${isStory ? 'on-story' : ''}`}>
+        {/* Raconteur / Raconteur+ skin switcher — mounted at the very top */}
+        <div class="skin-switch-row">
+            <SkinToggle />
+        </div>
         <a href="/" class="logo-block">
             <span class="logo">RACONTEUR</span>
             <span class="tagline">Literature you want to read</span>
@@ -129,6 +134,8 @@ const _staticSearchData = getVisibleStories().map(s => ({ slug: s.slug, title: s
             <style>
         
             .skip-link:focus { top: 0; }
+    /* Skin switcher row (Raconteur / Raconteur+) — top of classic header */
+    .skin-switch-row { display: flex; justify-content: center; padding-bottom: 1rem; width: 100%; }
              .footer-quotes { flex: 1; position: relative; min-height: 300px; overflow: hidden; padding-bottom: 2rem; }
               .tw-rain { position: absolute; inset: 0; pointer-events: none; }
               .tw-drop { position: absolute; top: -30px; font-family: 'Lora', serif; font-style: italic; color: #e4ddc8; font-size: 0.95rem; white-space: nowrap; opacity: 0.9; animation: tw-rain-fall linear forwards; }
