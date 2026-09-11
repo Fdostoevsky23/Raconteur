@@ -33,13 +33,12 @@ const canonical = Astro.url.href.replace('/plus', '');
 // NAV LINKS — plus pages exist only for the ones we've built (Chunk 1: home).
 // Every chunk that lands a plus page flips its entry here. Until then entries
 // point to classic pages so nothing 404s mid-build.
-// TODO(Chunk 4): stories → /plus/stories
 // TODO(Chunk 18): about → /plus/about
 // TODO(Chunk 12): feed → /plus/feed
 // TODO(Chunk 17): login → /plus/login · signup → /plus/signup
 // TODO(Chunk 11/15): dashboard → /plus/dashboard · digest → /plus/digest
 const navHref = {
-    stories: '/stories',
+    stories: '/plus/stories',
     about: '/about',
     feed: '/feed',
     login: '/login',
