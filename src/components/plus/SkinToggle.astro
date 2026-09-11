@@ -3,15 +3,22 @@
 // Self-contained: works on BOTH skins (classic pages and /plus pages).
 // Pure server-rendered anchors — no client JS, no state to hydrate.
 // Query strings are preserved so ?edit=, ?next=, etc. survive the switch.
+// variant="regal" — the brass-and-obsidian crown used in the /plus masthead;
+// default (no prop) keeps the classic cream pill untouched.
 import { isPlusPath, toPlusPath, toClassicPath } from '../../lib/skin';
 
 const here = Astro.url.pathname;
 const onPlus = isPlusPath(here);
 const classicHref = toClassicPath(here) + Astro.url.search;
 const plusHref = toPlusPath(here) + Astro.url.search;
+
+interface Props {
+    variant?: 'classic' | 'regal';
+}
+const { variant = 'classic' } = Astro.props as any;
 ---
 
-<div class="skin-toggle" data-skin={onPlus ? 'plus' : 'classic'} role="group" aria-label="Choose site design">
+<div class={`skin-toggle ${variant === 'regal' ? 'regal' : ''}`} data-skin={onPlus ? 'plus' : 'classic'} role="group" aria-label="Choose site design">
     <a
         href={classicHref}
         class={`toggle-btn ${!onPlus ? 'active' : ''}`}
@@ -90,7 +97,55 @@ const plusHref = toPlusPath(here) + Astro.url.search;
         box-shadow: inset 0 0 0 1px rgba(201, 162, 75, 0.5);
     }
 
+    /* === REGAL VARIANT — the /plus masthead crown ===
+       Brass-and-obsidian: gilded brass border on deep obsidian glass,
+       active pill poured in brass gradient. The classic cream pill
+       above stays untouched — this only styles .skin-toggle.regal. */
+    .skin-toggle.regal {
+        padding: 3px;
+        gap: 3px;
+        border: 1px solid rgba(201, 162, 75, 0.42);
+        background: rgba(11, 11, 14, 0.6);
+        backdrop-filter: blur(12px) saturate(1.15);
+        -webkit-backdrop-filter: blur(12px) saturate(1.15);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(201, 162, 75, 0.08);
+    }
+
+    .skin-toggle.regal .toggle-btn {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        padding: 0.3rem 0.95rem;
+        color: rgba(242, 238, 227, 0.6);
+    }
+
+    .skin-toggle.regal .toggle-btn:hover {
+        color: #f2eee3;
+    }
+
+    .skin-toggle.regal .toggle-btn.active {
+        background: linear-gradient(135deg, #e6cc7d 0%, #c9a24b 55%, #a8842f 100%);
+        color: #17110a;
+        box-shadow:
+            0 2px 12px rgba(201, 162, 75, 0.45),
+            inset 0 1px 0 rgba(255, 244, 214, 0.55);
+    }
+
+    .skin-toggle.regal .toggle-btn.plus .plus-sign {
+        color: #c9a24b;
+    }
+
+    .skin-toggle.regal .toggle-btn.plus.active .plus-sign {
+        color: #5c430f;
+    }
+
+    .skin-toggle.regal .toggle-btn.plus:hover:not(.active) {
+        box-shadow: inset 0 0 0 1px rgba(201, 162, 75, 0.55);
+    }
+
     @media (max-width: 640px) {
         .toggle-btn { padding: 0.25rem 0.75rem; font-size: 0.75rem; }
+        .skin-toggle.regal .toggle-btn { font-size: 0.68rem; padding: 0.26rem 0.8rem; }
     }
 </style>

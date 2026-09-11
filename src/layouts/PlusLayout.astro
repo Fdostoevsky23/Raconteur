@@ -94,10 +94,14 @@ const navHref = {
         <span class="aurora-vignette"></span>
     </div>
 
-    {/* Royal masthead — Row 1: the king (brand crest, no glass, on the aurora).
+    {/* Royal masthead — the king: the skin switch sits enthroned above the
+        crest, wordmark + tagline below, flanked by brass rules (no glass).
         Row 2: slim glass utility bar that condenses to the sticky bar on scroll. */}
     <header class="plus-header" id="plusHeader" data-scrolled="false">
         <div class="plus-masthead">
+            <div class="plus-masthead-toggle">
+                <SkinToggle variant="regal" />
+            </div>
             <a href="/plus" class="plus-masthead-brand" aria-label="Raconteur+ home">
                 <span class="plus-masthead-rule plus-masthead-rule-left" aria-hidden="true"></span>
                 <span class="plus-masthead-stack">
@@ -129,8 +133,6 @@ const navHref = {
                             <div id="searchResults" class="plus-search-results"></div>
                         </div>
                     </div>
-
-                    <SkinToggle />
 
                     <div class="plus-auth" id="authArea">
                         <a href={navHref.login} class="plus-auth-link">Log in</a>
@@ -537,22 +539,25 @@ const navHref = {
     }
 
     /* === ROYAL MASTHEAD — two-row header ===
-       Row 1: the king. Big centered brand crest, sitting directly
-       on the aurora (no glass) — conspicuous, breathable, regal.
-       Row 2: slim glass utility bar (nav · search · toggle · auth)
-       that condenses to the sticky bar when the king condenses. */
+       Row 1: the king. The Raconteur/Raconteur+ switch sits enthroned at the
+       very top; below it the brand crest (wordmark + tagline, brass rules),
+       all sitting directly on the background (no glass) — regal, breathable.
+       Row 2: slim glass utility bar (nav · search · auth) that condenses to
+       the sticky bar when the king condenses. */
     .plus-header {
         position: sticky;
         top: 0;
         z-index: 1000;
     }
 
-    /* Row 1 — the king */
+    /* Row 1 — the king: switch above, crest below, stacked and centered */
     .plus-masthead {
         display: flex;
-        justify-content: center;
-        max-height: 240px;
-        padding: 2.4rem 2rem 1.5rem;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.05rem;
+        max-height: 300px;
+        padding: 1.3rem 2rem 1.5rem;
         opacity: 1;
         overflow: hidden;
         transition:
@@ -568,6 +573,12 @@ const navHref = {
         padding-bottom: 0;
         opacity: 0;
         pointer-events: none;
+    }
+
+    /* Crown row — the skin switch sits enthroned above the crest */
+    .plus-masthead-toggle {
+        display: flex;
+        justify-content: center;
     }
 
     .plus-masthead-brand {
@@ -983,10 +994,10 @@ const navHref = {
     }
 
     @media (max-width: 720px) {
-        .plus-masthead { padding: 1.6rem 1rem 1rem; }
+        .plus-masthead { padding: 1.1rem 1rem 1rem; gap: 0.8rem; }
         .plus-masthead-sub { letter-spacing: 0.28em; font-size: 0.56rem; }
         .plus-masthead-rule { width: 34px; }
-        .plus-masthead { max-height: 160px; }
+        .plus-masthead { max-height: 220px; }
     }
 
     @media (max-width: 920px) {
