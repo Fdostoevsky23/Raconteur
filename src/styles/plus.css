@@ -227,8 +227,9 @@ body.plus-skin {
     line-height: 1.65;
     color: var(--ph-bone-70);
     display: -webkit-box;
-    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3; /* standard property — keeps VSC from warning on the -webkit- prefix */
     overflow: hidden;
     overflow-wrap: anywhere;
 }

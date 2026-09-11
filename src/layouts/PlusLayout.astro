@@ -219,8 +219,6 @@ const navHref = {
                 const profileSlug = esc(name.toLowerCase().replace(/\s+/g, '-'));
                 authArea.innerHTML = `
                     <a href="/dashboard" class="plus-auth-link">My Shelf</a>
-                    <a href="/feed" class="plus-auth-link">Feed</a>
-                    <a href="/digest" class="plus-auth-link">Digest</a>
                     <a href="/author/${profileSlug}" class="plus-hello" title="Your public writer page">Hello, ${safeName}</a>
                     <span class="plus-notif-wrap">
                         <button id="notifBell" class="plus-notif-bell" type="button" aria-label="Notifications">🔔<span id="notifDot" class="plus-notif-dot" hidden></span></button>
@@ -461,7 +459,8 @@ const navHref = {
     .plus-header-inner {
         display: flex;
         align-items: center;
-        gap: 1.5rem;
+        flex-wrap: wrap; /* safety at every width — nothing can ever collide */
+        gap: 0.9rem 1.5rem;
         max-width: 1320px;
         margin: 0 auto;
         padding: 0.9rem 2rem;
@@ -531,6 +530,18 @@ const navHref = {
 
     .plus-nav-link:hover { color: #f2eee3; }
     .plus-nav-link:hover::after { transform: scaleX(1); transform-origin: left; }
+
+    /* Right cluster: pushed to the far edge, wraps gracefully on narrow screens */
+    .plus-nav-right {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap; /* safety net — cluster wraps instead of colliding */
+        justify-content: flex-end;
+        row-gap: 0.6rem;
+        gap: 1.1rem;
+    }
+
     /* === SEARCH === */
     .plus-search { position: relative; }
 
@@ -620,6 +631,9 @@ const navHref = {
     .plus-auth {
         display: flex;
         align-items: center;
+        flex-wrap: wrap; /* final safety net — auth items never overlap */
+        justify-content: flex-end;
+        row-gap: 0.5rem;
         gap: 1rem;
     }
 
@@ -813,12 +827,15 @@ const navHref = {
         width: 100%;
     }
 
-    /* === MOBILE === */
-    @media (max-width: 920px) {
-        .plus-header-inner { flex-wrap: wrap; padding: 0.8rem 1.2rem; gap: 0.9rem; }
+    /* === MOBILE / TABLET === */
+    /* Below 1180px the row runs out of room: nav drops to its own centered row,
+       keeping row 1 = logo + search/toggle/auth. No collisions at any width. */
+    @media (max-width: 1180px) {
+        .plus-header-inner { padding: 0.8rem 1.2rem; }
         .plus-nav { order: 3; width: 100%; justify-content: center; gap: 1.6rem; }
-        .plus-nav-right { order: 2; margin-left: auto; }
-        .plus-logo { order: 1; }
+    }
+
+    @media (max-width: 920px) {
         .plus-search input { width: 160px; }
         .plus-search input:focus { width: 200px; }
     }
