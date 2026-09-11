@@ -60,6 +60,27 @@ const motes = [
     { x: 89, y: 86, d: 16, delay: 5.5, size: 2 },
     { x: 95, y: 74, d: 14, delay: 8,   size: 3 },
 ];
+
+// --- Chunk 5A: moods explorer (plus-exclusive resurrection) ---
+// Each mood deep-links into /plus/stories search via ?q= — feelings become real finds.
+const moods = [
+    { emoji: '🌧', name: 'Melancholy', query: 'rain',  teaser: 'For grey evenings and rain on glass.' },
+    { emoji: '🌙', name: 'Nocturnal',  query: 'night', teaser: 'For when the world goes quiet.' },
+    { emoji: '❤', name: 'Tender',     query: 'love',  teaser: 'For soft hearts and open hands.' },
+    { emoji: '🕯', name: 'Still',      query: 'silence', teaser: 'For the space between words.' },
+    { emoji: '🏠', name: 'Homeward',  query: 'home',  teaser: 'For letters that never got sent.' },
+    { emoji: '✨', name: 'Wonder',     query: 'light', teaser: 'For skies worth staring at.' },
+];
+
+// --- Chunk 5A: the editor's desk note (plus-exclusive resurrection) ---
+const deskNote = {
+    avatarUrl: '/avatars/nzan-kikon.jpg',
+    initials: 'NK',
+    name: 'Nzan Kikon',
+    role: 'Editor · Raconteur',
+    message:
+        'Welcome, reader. Raconteur was built on a simple belief — that a story does not need a printing press or a publisher\u2019s blessing to be worth your evening. Every word on this shelf was written to be remembered, and every writer here is real. So settle in. The lamp is lit, the pages are turned, and there is always room for one more reader at the fire.',
+};
 ---
 <PlusLayout title="Raconteur+ — Literature you want to read" description="A second way to read Raconteur — ink-black, brass, and built for night readers.">
     {/* ============================================ */}
@@ -256,7 +277,93 @@ const motes = [
             </div>
         </section>
     )}
+
+    {/* ============================================ */}
+    {/* 03 — MOODS: what are you feeling tonight?    */}
+    {/* ============================================ */}
+    <section class="ph-section" id="moods">
+        <header class="ph-section-head" data-reveal>
+            <p class="ph-section-eyebrow">03 — Find a feeling</p>
+            <h2 class="ph-section-title">What are you tonight?</h2>
+            <p class="ph-section-note">Pick a mood — the shelf rearranges itself around you.</p>
+        </header>
+
+        <div class="ph-mood-grid">
+            {moods.map((m, i) => {
+                const moodHref = '/plus/stories?q=' + encodeURIComponent(m.query);
+                return (
+                    <a
+                        href={moodHref}
+                        class="ph-mood-tile"
+                        data-reveal
+                        style={`--reveal-delay: ${Math.min(i * 0.06, 0.36)}s`}
+                    >
+                        <span class="ph-mood-emoji" aria-hidden="true">{m.emoji}</span>
+                        <span class="ph-mood-name">{m.name}</span>
+                        <span class="ph-mood-teaser">{m.teaser}</span>
+                    </a>
+                );
+            })}
+        </div>
+    </section>
+
+    {/* ============================================ */}
+    {/* QUOTE INTERLUDE — a moment to breathe        */}
+    {/* ============================================ */}
+    <section class="ph-quote" data-reveal>
+        <span class="ph-quote-mark" aria-hidden="true">"</span>
+        <blockquote class="ph-quote-block">
+            <p class="ph-quote-text" id="rotatingQuote">
+                A reader lives a thousand lives before he dies. The man who never reads lives only one.
+            </p>
+            <cite class="ph-quote-cite" id="rotatingCite">— George R.R. Martin</cite>
+        </blockquote>
+    </section>
+
+    {/* ============================================ */}
+    {/* STATS — the shelf, by the numbers             */}
+    {/* ============================================ */}
+    <section class="ph-section ph-stats-section" data-reveal>
+        <div class="ph-stats">
+            <div class="ph-stat">
+                <span class="ph-stat-number" data-target={stories.length}>0</span>
+                <span class="ph-stat-label">Works on the shelf</span>
+            </div>
+            <span class="ph-stat-rule" aria-hidden="true"></span>
+            <div class="ph-stat">
+                <span class="ph-stat-number" data-target={totalWords}>0</span>
+                <span class="ph-stat-label">Words published</span>
+            </div>
+            <span class="ph-stat-rule" aria-hidden="true"></span>
+            <div class="ph-stat">
+                <span class="ph-stat-number">∞</span>
+                <span class="ph-stat-label">Evenings waiting</span>
+            </div>
+        </div>
+    </section>
+
+    {/* ============================================ */}
+    {/* 04 — FROM THE EDITOR'S DESK                   */}
+    {/* ============================================ */}
+    <section class="ph-section" id="desk">
+        <header class="ph-section-head" data-reveal>
+            <p class="ph-section-eyebrow">04 — From the editor's desk</p>
+            <h2 class="ph-section-title">A Note Before You Read</h2>
+        </header>
+
+        <article class="ph-desk" data-reveal style="--reveal-delay: .1s">
+            <span class="ph-desk-glyph" aria-hidden="true">"</span>
+            <img class="ph-avatar ph-desk-avatar" src={deskNote.avatarUrl} alt={deskNote.name} />
+            <div class="ph-desk-body">
+                <p class="ph-desk-message">{deskNote.message}</p>
+                <p class="ph-desk-signature">
+                    — {deskNote.name} <span class="ph-desk-role">· {deskNote.role}</span>
+                </p>
+            </div>
+        </article>
+    </section>
 </PlusLayout>
+
 <style>
     /* Page-scoped: HERO + shelf index. Shared families live in plus.css. */
 
@@ -584,10 +691,186 @@ const motes = [
         }
     }
 
-    /* === MOBILE === */
+    /* === 5A: MOODS — tiles that feel like little rooms === */
+    .ph-mood-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.2rem;
+    }
+
+    .ph-mood-tile {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.4rem;
+        padding: 1.6rem 1.5rem;
+        text-decoration: none;
+        color: inherit;
+        background: rgba(242, 238, 227, 0.03);
+        border: 1px solid var(--ph-hairline);
+        border-radius: var(--ph-radius-card);
+        transition: var(--ph-ease-cards);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .ph-mood-tile::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at 20% 0%, var(--ph-brass-faint), transparent 55%);
+        opacity: 0;
+        transition: opacity 0.35s;
+    }
+
+    .ph-mood-tile:hover {
+        transform: translateY(-5px);
+        border-color: var(--ph-brass-soft);
+        background: rgba(242, 238, 227, 0.05);
+        box-shadow: var(--ph-shadow-card);
+    }
+
+    .ph-mood-tile:hover::before { opacity: 1; }
+
+    .ph-mood-emoji {
+        font-size: 1.7rem;
+        line-height: 1;
+        transition: transform 0.35s var(--ph-ease-out);
+    }
+
+    .ph-mood-tile:hover .ph-mood-emoji { transform: scale(1.18) rotate(-6deg); }
+
+    .ph-mood-name {
+        font-family: var(--ph-font-display);
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: var(--ph-bone);
+        margin-top: 0.5rem;
+    }
+
+    .ph-mood-teaser {
+        font-family: var(--ph-font-read);
+        font-style: italic;
+        font-size: 0.85rem;
+        color: var(--ph-bone-55);
+        opacity: 0.85;
+    }
+
+    /* === 5A: QUOTE INTERLUDE — the breathing moment === */
+    .ph-quote {
+        position: relative;
+        max-width: 860px;
+        margin: 5rem auto 3rem;
+        padding: 4.5rem 2.5rem;
+        text-align: center;
+    }
+
+    .ph-quote-mark {
+        position: absolute;
+        top: -0.4rem;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: var(--ph-font-display);
+        font-size: 7rem;
+        line-height: 1;
+        color: var(--ph-brass);
+        opacity: 0.18;
+        pointer-events: none;
+    }
+
+    .ph-quote-text {
+        font-family: var(--ph-font-read);
+        font-style: italic;
+        font-size: clamp(1.4rem, 3vw, 2.1rem);
+        line-height: 1.55;
+        color: var(--ph-bone);
+        text-wrap: balance;
+        margin-bottom: 1.4rem;
+        transition: opacity 0.6s ease;
+    }
+
+    .ph-quote-cite {
+        font-family: var(--ph-font-mono);
+        font-style: normal;
+        font-size: 0.74rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--ph-brass);
+        transition: opacity 0.6s ease;
+    }
+
+    /* === 5A: DESK NOTE — the editor's letter === */
+    .ph-desk {
+        position: relative;
+        display: flex;
+        gap: 1.6rem;
+        align-items: flex-start;
+        padding: 2.2rem 2.4rem;
+        background: rgba(242, 238, 227, 0.03);
+        border: 1px solid var(--ph-hairline);
+        border-left: 3px solid var(--ph-brass);
+        border-radius: var(--ph-radius-card);
+    }
+
+    .ph-desk-glyph {
+        position: absolute;
+        top: 0.4rem;
+        right: 1.6rem;
+        font-family: var(--ph-font-display);
+        font-size: 4.5rem;
+        line-height: 1;
+        color: var(--ph-brass);
+        opacity: 0.14;
+        pointer-events: none;
+    }
+
+    .ph-desk-avatar { flex-shrink: 0; }
+
+    .ph-desk-body { flex: 1; min-width: 0; }
+
+    .ph-desk-message {
+        font-family: var(--ph-font-read);
+        font-size: 1.08rem;
+        line-height: 1.85;
+        color: var(--ph-bone-70);
+        margin-bottom: 1.2rem;
+    }
+
+    .ph-desk-signature {
+        font-family: var(--ph-font-display);
+        font-style: italic;
+        font-size: 1.02rem;
+        color: var(--ph-brass);
+    }
+
+    .ph-desk-role {
+        font-family: var(--ph-font-mono);
+        font-style: normal;
+        font-size: 0.68rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ph-bone-40);
+    }
+
+    /* 5A mobile */
+    @media (max-width: 1024px) {
+        .ph-mood-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* === MOBILE (hero) === */
     @media (max-width: 920px) {
         .ph-hero-inner { padding: 6rem 1.4rem 6rem; }
         .ph-hero-corner { width: 22px; height: 22px; }
+    }
+
+    @media (max-width: 640px) {
+        .ph-mood-grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+        .ph-mood-tile { padding: 1.2rem 1rem; }
+        .ph-mood-emoji { font-size: 1.4rem; }
+        .ph-mood-name { font-size: 1rem; }
+        .ph-quote { padding: 3.5rem 1.3rem 2rem; margin: 3.5rem auto 1.5rem; }
+        .ph-desk { flex-direction: column; padding: 1.8rem 1.4rem; }
+        .ph-desk-glyph { font-size: 3.2rem; }
     }
 
     @media (max-width: 640px) {
@@ -615,6 +898,64 @@ const motes = [
     }
     // Reduced-motion: first word stays active — nothing else needed
 </script>
+
+<script>
+    // === 5A: quote interlude — rotating literary whispers ===
+    const QUOTES = [
+        { text: 'A reader lives a thousand lives before he dies. The man who never reads lives only one.', cite: '— George R.R. Martin' },
+        { text: 'There is no greater agony than bearing an untold story inside you.', cite: '— Maya Angelou' },
+        { text: 'Stories are light. Light is precious in a world so dark.', cite: '— Kate DiCamillo' },
+        { text: 'We tell ourselves stories in order to live.', cite: '— Joan Didion' },
+        { text: 'The only way out of the labyrinth of suffering is to forgive.', cite: '— John Green' },
+        { text: 'Everything you can imagine is real.', cite: '— Pablo Picasso' },
+        { text: 'Words are, of course, the most inexhaustible source of magic we have.', cite: '— J.K. Rowling' },
+    ];
+    const quoteEl = document.getElementById('rotatingQuote');
+    const citeEl = document.getElementById('rotatingCite');
+    if (quoteEl && citeEl && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        let qi = 0;
+        setInterval(() => {
+            quoteEl.style.opacity = '0';
+            citeEl.style.opacity = '0';
+            setTimeout(() => {
+                qi = (qi + 1) % QUOTES.length;
+                quoteEl.textContent = QUOTES[qi].text;
+                citeEl.textContent = QUOTES[qi].cite;
+                quoteEl.style.opacity = '1';
+                citeEl.style.opacity = '1';
+            }, 600);
+        }, 8000);
+    }
+
+    // === 5A: stats — count-up when they scroll into view ===
+    const statNums = document.querySelectorAll<HTMLElement>('.ph-stat-number[data-target]');
+    const animateStat = (el: HTMLElement) => {
+        const target = Number(el.dataset.target || '0');
+        const dur = 1600;
+        const start = performance.now();
+        const step = (now: number) => {
+            const p = Math.min((now - start) / dur, 1);
+            const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic
+            el.textContent = Math.round(target * eased).toLocaleString();
+            if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    };
+    if (statNums.length && 'IntersectionObserver' in window) {
+        const statIO = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    animateStat(entry.target as HTMLElement);
+                    statIO.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.4 });
+        statNums.forEach((el) => statIO.observe(el));
+    } else if (statNums.length) {
+        statNums.forEach((el) => { el.textContent = Number(el.dataset.target || '0').toLocaleString(); });
+    }
+</script>
+
 
 
 

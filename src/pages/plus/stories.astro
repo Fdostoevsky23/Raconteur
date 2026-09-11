@@ -441,6 +441,13 @@ const trending = (Object.entries(weekCounts)
 
     searchInput.addEventListener('input', applyFilters);
 
+    // Deep-link support: /plus/stories?q=rain pre-fills the search (moods feature)
+    const initialQuery = new URLSearchParams(window.location.search).get('q');
+    if (initialQuery) {
+        searchInput.value = initialQuery;
+        applyFilters();
+    }
+
     bandChips.forEach((chip) => {
         chip.addEventListener('click', () => {
             bandChips.forEach((c) => c.classList.remove('active'));
