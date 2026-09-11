@@ -85,13 +85,15 @@ const navHref = {
     {/* Film-grain overlay — the obsidian signature */}
     <div class="grain" aria-hidden="true"></div>
 
-    {/* Obsidian & Gold — living silk mesh (the anti-black-hole layer).
-        Charcoal silk with golden light veins; the whole color field
-        loops on a seamless 10-second cycle. */}
+    {/* Obsidian & Gold — living silk with a 10-second colour cycle.
+        Four hand-poured mixtures take the stage one at a time —
+        gilded dusk · moonlit indigo · ember study · sage & brass —
+        a different mixture every 10s on a seamless 40s master loop. */}
     <div class="silk" aria-hidden="true">
-        <span class="silk-mesh silk-mesh-gold"></span>
-        <span class="silk-mesh silk-mesh-wine"></span>
-        <span class="silk-veins"></span>
+        <span class="silk-scene silk-scene-1"></span>
+        <span class="silk-scene silk-scene-2"></span>
+        <span class="silk-scene silk-scene-3"></span>
+        <span class="silk-scene silk-scene-4"></span>
         <span class="silk-vignette"></span>
     </div>
 
@@ -434,13 +436,15 @@ const navHref = {
 
     main.plus-main { flex: 1; }
 
-    /* === OBSIDIAN & GOLD — living silk mesh ===
-       Replaces the old blob aurora. Two mesh fields (gold-forward,
-       wine-forward) drift in opposite directions while crossfading,
-       and a disc of blurred golden conic veins turns overhead —
-       every animation here is a seamless 10-second loop (0% = 100%),
-       so the color cycle never visibly "restarts". The film-grain
-       overlay above supplies the "noise" half of the noise-gradient. */
+    /* === OBSIDIAN & GOLD — living silk, 10-second colour cycle ===
+       Four hand-poured mesh mixtures take the stage one at a time:
+       every 10s the current mixture crossfades into the next —
+       gilded dusk → moonlit indigo → ember study → sage & brass →
+       back to gilded dusk. One master 40s loop (4 × 10s); all
+       keyframes are seamless (0% = 100%) so it never visibly
+       restarts. No rotation — a barely-there scale breathe keeps
+       it alive between hand-offs; film-grain supplies the noise,
+       the vignette keeps the edges editorial-dark. */
     .silk {
         position: fixed;
         inset: 0;
@@ -450,58 +454,64 @@ const navHref = {
         background: #0b0b0e;
     }
 
-    .silk-mesh {
+    .silk-scene {
         position: absolute;
         inset: -22%;
+        filter: blur(52px) saturate(1.18);
+        animation: silk-breathe 20s ease-in-out infinite alternate;
         will-change: transform, opacity;
     }
 
-    /* Gold-forward field — golden light pooling in charcoal silk */
-    .silk-mesh-gold {
+    /* Scene 1 — GILDED DUSK: brass light pooling over wine + indigo */
+    .silk-scene-1 {
         background:
-            radial-gradient(ellipse 55% 48% at 22% 26%, rgba(201, 162, 75, 0.34) 0%, rgba(201, 162, 75, 0) 62%),
-            radial-gradient(ellipse 48% 44% at 78% 18%, rgba(230, 204, 125, 0.20) 0%, rgba(230, 204, 125, 0) 60%),
-            radial-gradient(ellipse 55% 50% at 74% 78%, rgba(122, 46, 92, 0.30) 0%, rgba(122, 46, 92, 0) 64%),
-            radial-gradient(ellipse 50% 46% at 28% 80%, rgba(66, 66, 128, 0.28) 0%, rgba(66, 66, 128, 0) 62%),
-            radial-gradient(ellipse 90% 80% at 50% 50%, rgba(32, 30, 36, 0.65) 0%, rgba(11, 11, 14, 0) 100%);
-        filter: blur(52px) saturate(1.15);
+            radial-gradient(ellipse 55% 48% at 22% 24%, rgba(201, 162, 75, 0.40) 0%, rgba(201, 162, 75, 0) 62%),
+            radial-gradient(ellipse 48% 44% at 78% 16%, rgba(230, 204, 125, 0.24) 0%, rgba(230, 204, 125, 0) 60%),
+            radial-gradient(ellipse 55% 50% at 74% 78%, rgba(122, 46, 92, 0.34) 0%, rgba(122, 46, 92, 0) 64%),
+            radial-gradient(ellipse 50% 46% at 26% 80%, rgba(66, 66, 128, 0.30) 0%, rgba(66, 66, 128, 0) 62%),
+            radial-gradient(ellipse 90% 80% at 50% 50%, rgba(32, 30, 36, 0.6) 0%, rgba(11, 11, 14, 0) 100%);
         animation:
-            silk-drift-a 10s ease-in-out infinite,
-            silk-gold-breathe 10s ease-in-out infinite;
+            silk-cycle-1 40s linear infinite,
+            silk-breathe 20s ease-in-out infinite alternate;
     }
 
-    /* Wine-forward field — the counter-melody, crossfading under the gold */
-    .silk-mesh-wine {
+    /* Scene 2 — MOONLIT INDIGO: the cool night, one gold ember */
+    .silk-scene-2 {
         background:
-            radial-gradient(ellipse 55% 48% at 76% 24%, rgba(122, 46, 92, 0.32) 0%, rgba(122, 46, 92, 0) 62%),
-            radial-gradient(ellipse 48% 44% at 24% 20%, rgba(66, 66, 128, 0.30) 0%, rgba(66, 66, 128, 0) 60%),
-            radial-gradient(ellipse 55% 50% at 30% 76%, rgba(201, 162, 75, 0.26) 0%, rgba(201, 162, 75, 0) 62%),
-            radial-gradient(ellipse 50% 46% at 74% 78%, rgba(122, 80, 46, 0.26) 0%, rgba(122, 80, 46, 0) 62%),
-            radial-gradient(ellipse 90% 80% at 50% 50%, rgba(32, 30, 36, 0.65) 0%, rgba(11, 11, 14, 0) 100%);
-        filter: blur(52px) saturate(1.15);
+            radial-gradient(ellipse 55% 48% at 70% 22%, rgba(66, 66, 128, 0.46) 0%, rgba(66, 66, 128, 0) 62%),
+            radial-gradient(ellipse 48% 44% at 24% 18%, rgba(96, 112, 150, 0.26) 0%, rgba(96, 112, 150, 0) 60%),
+            radial-gradient(ellipse 55% 50% at 28% 78%, rgba(201, 162, 75, 0.16) 0%, rgba(201, 162, 75, 0) 62%),
+            radial-gradient(ellipse 50% 46% at 76% 80%, rgba(122, 46, 92, 0.24) 0%, rgba(122, 46, 92, 0) 62%),
+            radial-gradient(ellipse 90% 80% at 50% 50%, rgba(30, 30, 38, 0.6) 0%, rgba(11, 11, 14, 0) 100%);
         animation:
-            silk-drift-b 10s ease-in-out infinite,
-            silk-wine-breathe 10s ease-in-out infinite;
+            silk-cycle-2 40s linear infinite,
+            silk-breathe 20s ease-in-out infinite alternate;
     }
 
-    /* Golden light veins — blurred conic streaks turning overhead.
-       One full 360° revolution per loop = perfectly seamless. */
-    .silk-veins {
-        position: absolute;
-        inset: -30%;
-        background: conic-gradient(from 0deg at 50% 50%,
-            transparent 0deg,
-            rgba(230, 204, 125, 0.10) 10deg, transparent 22deg,
-            transparent 96deg,
-            rgba(201, 162, 75, 0.08) 108deg, transparent 122deg,
-            transparent 188deg,
-            rgba(230, 204, 125, 0.09) 200deg, transparent 214deg,
-            transparent 284deg,
-            rgba(201, 162, 75, 0.07) 296deg, transparent 310deg,
-            transparent 360deg);
-        filter: blur(26px);
-        animation: silk-veins-turn 10s linear infinite;
-        will-change: transform;
+    /* Scene 3 — EMBER STUDY: copper fire in the brass reading lamp */
+    .silk-scene-3 {
+        background:
+            radial-gradient(ellipse 55% 48% at 24% 26%, rgba(166, 86, 40, 0.38) 0%, rgba(166, 86, 40, 0) 62%),
+            radial-gradient(ellipse 48% 44% at 76% 20%, rgba(201, 162, 75, 0.30) 0%, rgba(201, 162, 75, 0) 62%),
+            radial-gradient(ellipse 55% 50% at 72% 80%, rgba(122, 46, 92, 0.30) 0%, rgba(122, 46, 92, 0) 64%),
+            radial-gradient(ellipse 50% 46% at 24% 78%, rgba(230, 204, 125, 0.14) 0%, rgba(230, 204, 125, 0) 60%),
+            radial-gradient(ellipse 90% 80% at 50% 50%, rgba(34, 28, 26, 0.6) 0%, rgba(11, 11, 14, 0) 100%);
+        animation:
+            silk-cycle-3 40s linear infinite,
+            silk-breathe 20s ease-in-out infinite alternate;
+    }
+
+    /* Scene 4 — SAGE & BRASS: the library garden at closing time */
+    .silk-scene-4 {
+        background:
+            radial-gradient(ellipse 55% 48% at 26% 22%, rgba(61, 90, 80, 0.38) 0%, rgba(61, 90, 80, 0) 62%),
+            radial-gradient(ellipse 48% 44% at 74% 24%, rgba(201, 162, 75, 0.28) 0%, rgba(201, 162, 75, 0) 62%),
+            radial-gradient(ellipse 55% 50% at 70% 80%, rgba(66, 66, 128, 0.28) 0%, rgba(66, 66, 128, 0) 62%),
+            radial-gradient(ellipse 50% 46% at 28% 78%, rgba(122, 46, 92, 0.22) 0%, rgba(122, 46, 92, 0) 62%),
+            radial-gradient(ellipse 90% 80% at 50% 50%, rgba(28, 32, 30, 0.6) 0%, rgba(11, 11, 14, 0) 100%);
+        animation:
+            silk-cycle-4 40s linear infinite,
+            silk-breathe 20s ease-in-out infinite alternate;
     }
 
     .silk-vignette {
@@ -510,40 +520,47 @@ const navHref = {
         background: radial-gradient(ellipse at 50% 40%, transparent 52%, rgba(11, 11, 14, 0.82) 100%);
     }
 
-    @keyframes silk-drift-a {
-        0%, 100% { transform: translate3d(0, 0, 0) scale(1.02); }
-        50%      { transform: translate3d(4%, 3%, 0) scale(1.10); }
+    /* The 10s hand-offs (40s master loop, 10s = 25%). Each scene:
+       hidden until its window, ~2s crossfade in, ~8s on stage,
+       ~2s crossfade out. 0% = 100% on every track → seamless. */
+    @keyframes silk-cycle-1 {
+        0%, 20%  { opacity: 1; }
+        30%, 95% { opacity: 0; }
+        100%     { opacity: 1; }
     }
 
-    @keyframes silk-drift-b {
-        0%, 100% { transform: translate3d(0, 0, 0) scale(1.10); }
-        50%      { transform: translate3d(-4%, -3%, 0) scale(1.02); }
+    @keyframes silk-cycle-2 {
+        0%, 20%  { opacity: 0; }
+        30%, 45% { opacity: 1; }
+        55%, 100% { opacity: 0; }
     }
 
-    /* The color loop itself: gold swells as wine retreats, then the
-       reverse. 0% and 100% match — a true 10s cycle with no jump. */
-    @keyframes silk-gold-breathe {
-        0%, 100% { opacity: 1; }
-        50%      { opacity: 0.45; }
+    @keyframes silk-cycle-3 {
+        0%, 45%  { opacity: 0; }
+        55%, 70% { opacity: 1; }
+        80%, 100% { opacity: 0; }
     }
 
-    @keyframes silk-wine-breathe {
-        0%, 100% { opacity: 0.45; }
-        50%      { opacity: 1; }
+    @keyframes silk-cycle-4 {
+        0%, 70%  { opacity: 0; }
+        80%, 95% { opacity: 1; }
+        100%     { opacity: 0; }
     }
 
-    @keyframes silk-veins-turn {
-        from { transform: rotate(0deg); }
-        to   { transform: rotate(360deg); }
+    /* Barely-there swell so the silk never fully sleeps (alternate
+       mode = returns the way it came, so no jump either). */
+    @keyframes silk-breathe {
+        from { transform: scale(1); }
+        to   { transform: scale(1.05); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .silk-mesh, .silk-veins { animation: none; }
+        .silk-scene { animation: none; }
+        .silk-scene-2, .silk-scene-3, .silk-scene-4 { display: none; } /* keep one static mixture */
     }
 
     @media (max-width: 640px) {
-        .silk-mesh { filter: blur(38px); } /* lighter blur — easier on phone GPUs */
-        .silk-veins { filter: blur(18px); }
+        .silk-scene { filter: blur(38px); } /* lighter blur — easier on phone GPUs */
     }
 
     ::selection { background: #c9a24b; color: #0b0b0e; }
