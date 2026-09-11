@@ -10,7 +10,10 @@ import { isPlusPath, toPlusPath, toClassicPath } from '../../lib/skin';
 const here = Astro.url.pathname;
 const onPlus = isPlusPath(here);
 const classicHref = toClassicPath(here) + Astro.url.search;
-const plusHref = toPlusPath(here) + Astro.url.search;
+// Switching INTO the plus skin carries ?welcome=1 — the royal entrance
+// splash on the other side. In-skin navigation (plus → plus) stays clean.
+const basePlusHref = toPlusPath(here) + Astro.url.search;
+const plusHref = onPlus ? basePlusHref : basePlusHref + (Astro.url.search ? '&' : '?') + 'welcome=1';
 
 interface Props {
     variant?: 'classic' | 'regal';

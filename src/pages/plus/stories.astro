@@ -137,7 +137,7 @@ const trending = (Object.entries(weekCounts)
                     data-date={story.publishedDate}
                 >
                     {story.cover ? (
-                        <div class="ph-card-cover">
+                        <div class="ph-card-cover" style={`background-image:url('${story.cover}');`}>
                             <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />
                         </div>
                     ) : (

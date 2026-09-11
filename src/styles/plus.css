@@ -169,11 +169,27 @@ body.plus-skin {
 
 .ph-card-cover { overflow: hidden; position: relative; }
 
+/* Ambient fill: the card carries its own cover art inline (set per-card
+   in the markup) — a blurred, darkened copy sits behind the letterboxed
+   image so portrait covers in landscape slots glow instead of smear.
+   ::before inherits that background-image. */
+.ph-card-cover::before {
+    content: '';
+    position: absolute;
+    inset: -24px;
+    background: inherit;
+    background-size: cover;
+    background-position: center top;
+    filter: blur(22px) saturate(1.15) brightness(0.5);
+    transform: scale(1.08);
+}
+
 .ph-card-cover img {
+    position: relative;
     width: 100%;
     height: 240px;
-    object-fit: cover;
-    object-position: top;
+    object-fit: contain; /* the cover art as it was meant to be — never stretched */
+    object-position: center;
     display: block;
     transition: transform 0.5s ease;
 }

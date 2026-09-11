@@ -5,6 +5,7 @@
 import { getVisibleStories } from '../data/stories';
 import { supabase } from '../lib/supabase';
 import SkinToggle from '../components/plus/SkinToggle.astro';
+import SkinSplash from '../components/plus/SkinSplash.astro';
 import '../styles/plus.css'; // Raconteur+ design system (tokens + shared components)
 
 interface Props {
@@ -84,6 +85,9 @@ const navHref = {
 
     {/* Film-grain overlay — the obsidian signature */}
     <div class="grain" aria-hidden="true"></div>
+
+    {/* Royal entrance — letter-by-letter interstitial, only on skin switches (?welcome=1) */}
+    <SkinSplash variant="plus" />
 
     {/* Obsidian & Gold — living silk with a 10-second colour cycle.
         Four hand-poured mixtures take the stage one at a time —

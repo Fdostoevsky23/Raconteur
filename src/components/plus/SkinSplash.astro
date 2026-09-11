@@ -1,0 +1,207 @@
+---
+// SkinSplash.astro — the royal entrance interstitial.
+// When a visitor switches skins (Raconteur → Raconteur+), the SkinToggle
+// appends ?welcome=1 to the destination link. This component detects that
+// param, covers the screen, spells the brand letter-by-letter, holds for
+// a beat when the "+" lands, then lifts to reveal the page beneath.
+//
+// The MECHANIC (letter-by-letter reveal → hold → lift) is shared by every
+// skin; the LOOK is per-variant. variant="plus" uses the boss's Mesher
+// settings (csshero.org/mesher): bg hsla(263,100%,50%,1) with palette
+// blobs hsla(28,100%,74%,1) + hsla(189,100%,56%,1), grain 0.
+// variant="pro" / "max" are reserved — they will get their own landing
+// looks (NOT this gradient) when those skins are built.
+//
+// No splash without the param (direct visits, refreshes, in-skin nav) and
+// the param is scrubbed from the URL the instant it's read. Click skips.
+interface Props {
+    variant?: 'plus' | 'pro' | 'max';
+}
+const { variant = 'plus' } = Astro.props as any;
+
+// Letter-by-letter timing: first letter at 0.20s, +0.13s per glyph,
+// each letter's entrance takes 0.7s → the "+" is fully landed at
+// ~2.07s; hold 1s → begin the lift at ~3.1s; lift takes 0.7s.
+const glyphs = 'Raconteur+'.split('');
+const stagger = 0.13;
+const first = 0.20;
+const letterDur = 0.7;
+const hold = 1.0;
+const lastArrives = first + (glyphs.length - 1) * stagger + letterDur;
+const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begins
+---
+
+<div
+    class:list={['skin-splash', `skin-splash-${variant}`]}
+    id="skinSplash"
+    data-variant={variant}
+    data-duration={String(duration)}
+    aria-hidden="true"
+>
+    <div class="ss-bg" aria-hidden="true"></div>
+    <div class="ss-core">
+        <div class="ss-word" aria-label="Raconteur+">
+            {glyphs.map((ch: string, i: number) => (
+                <span
+                    class:list={['ss-letter', { 'ss-plus': ch === '+' }]}
+                    style={`animation-delay:${(first + i * stagger).toFixed(2)}s`}
+                    aria-hidden="true"
+                >
+                    {ch}
+                </span>
+            ))}
+        </div>
+        <p class="ss-tagline" style={`animation-delay:${(lastArrives - 0.55).toFixed(2)}s`}>
+            Literature you want to read
+        </p>
+    </div>
+</div>
+
+<style>
+    /* === The cover === */
+    .skin-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647; /* above everything, film-grain included */
+        display: none; /* stays out of the way until summoned */
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .skin-splash[data-active='true'] {
+        display: flex;
+    }
+
+    .skin-splash[data-leaving='true'] {
+        opacity: 0;
+        transform: scale(1.06);
+        pointer-events: none;
+        transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    /* === VARIANT: plus — the Mesher gradient, exactly as exported ===
+       bg hsla(263,100%,50%,1) · palette hsla(28,100%,74%,1) + hsla(189,100%,56%,1) · grain 0 */
+    .skin-splash-plus .ss-bg {
+        position: absolute;
+        inset: 0;
+        background-color: hsla(263, 100%, 50%, 1);
+        background-image:
+            radial-gradient(at 10% 15%, hsla(28, 100%, 74%, 1) 0px, transparent 55%),
+            radial-gradient(at 38% 28%, hsla(28, 100%, 74%, 1) 0px, transparent 45%),
+            radial-gradient(at 2% 55%, hsla(28, 100%, 70%, 1) 0px, transparent 40%),
+            radial-gradient(at 78% 8%, hsla(189, 100%, 56%, 1) 0px, transparent 50%),
+            radial-gradient(at 100% 38%, hsla(189, 100%, 56%, 1) 0px, transparent 45%),
+            radial-gradient(at 65% 100%, hsla(263, 100%, 45%, 1) 0px, transparent 50%);
+        animation: ss-bg-swell 9s ease-in-out infinite alternate;
+    }
+
+    @keyframes ss-bg-swell {
+        from { transform: scale(1); }
+        to   { transform: scale(1.06); }
+    }
+
+    /* === The word — giant Fraunces, letters materialise one by one === */
+    .ss-core {
+        position: relative;
+        text-align: center;
+        padding: 0 1.5rem;
+    }
+
+    .ss-word {
+        display: flex;
+        justify-content: center;
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 900;
+        font-size: clamp(3.2rem, 13vw, 8.5rem);
+        line-height: 1;
+        letter-spacing: 0.01em;
+        color: #fdfbf6;
+    }
+
+    .ss-letter {
+        display: inline-block;
+        opacity: 0;
+        animation: ss-letter-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        text-shadow: 0 6px 44px rgba(20, 0, 50, 0.45);
+    }
+
+    /* The "+" lands in Mesher peach — the payoff moment */
+    .ss-letter.ss-plus {
+        color: hsla(28, 100%, 74%, 1);
+        text-shadow: 0 0 70px rgba(255, 255, 255, 0.4);
+    }
+
+    @keyframes ss-letter-in {
+        from {
+            opacity: 0;
+            transform: translateY(0.45em) scale(0.9);
+            filter: blur(14px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+            filter: blur(0);
+        }
+    }
+
+    .ss-tagline {
+        margin: 1.6rem 0 0;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        letter-spacing: 0.38em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.88);
+        opacity: 0;
+        animation: ss-letter-in 0.8s ease both;
+    }
+
+    /* === Manners === */
+    @media (prefers-reduced-motion: reduce) {
+        .ss-letter, .ss-tagline { animation-duration: 0.01s; }
+        .skin-splash-plus .ss-bg { animation: none; }
+        .skin-splash[data-leaving='true'] { transition-duration: 0.3s; }
+    }
+</style>
+
+<script is:inline>
+    (function () {
+        var splash = document.getElementById('skinSplash');
+        if (!splash) return;
+
+        // Only ever summoned by a skin switch (?welcome=1 on the landing URL).
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('welcome') !== '1') {
+            splash.remove();
+            return;
+        }
+
+        // Scrub the flag from the address bar immediately — refreshes and
+        // re-shares of this URL are just the page, never a replay.
+        params.delete('welcome');
+        var rest = params.toString();
+        var clean = window.location.pathname + (rest ? '?' + rest : '') + window.location.hash;
+        window.history.replaceState({}, '', clean);
+
+        // Lock scroll while the curtain is up.
+        document.documentElement.classList.add('ss-lock');
+        splash.dataset.active = 'true';
+
+        var total = Number(splash.dataset.duration) || 3100;
+        var done = false;
+        var finish = function () {
+            if (done) return;
+            done = true;
+            splash.dataset.leaving = 'true';
+            window.setTimeout(function () {
+                splash.remove();
+                document.documentElement.classList.remove('ss-lock');
+            }, 720);
+        };
+
+        window.setTimeout(finish, total);
+        splash.addEventListener('click', finish); // the impatient exit
+    })();
+</script>
+
