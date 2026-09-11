@@ -93,7 +93,7 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
     {/* 01 — THE SHELF: featured prose                */}
     {/* ============================================ */}
     <section class="ph-section" id="shelf">
-        <header class="ph-section-head">
+        <header class="ph-section-head" data-reveal>
             <p class="ph-section-eyebrow">01 — Fresh from the desk</p>
             <h2 class="ph-section-title">The Featured Shelf</h2>
             <p class="ph-section-note">
@@ -102,11 +102,13 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
             <a href="/stories" class="ph-section-more">Full archive →</a>
         </header>
 
-        <div class="ph-shelf-grid">
+        <div class="ph-grid">
             {proseShelf.map((story: any, i: number) => (
                 <a
                     href={`/story/${story.slug}`}
                     class={`ph-card ${i === 0 ? 'ph-card-lead' : ''}`}
+                    data-reveal
+                    style={`--reveal-delay: ${Math.min(i * 0.08, 0.4)}s`}
                 >
                     {story.cover ? (
                         <div class="ph-card-cover">
@@ -142,7 +144,7 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
     {/* ============================================ */}
     {featuredPoems.length > 0 && (
         <section class="ph-section" id="verse">
-            <header class="ph-section-head">
+            <header class="ph-section-head" data-reveal>
                 <p class="ph-section-eyebrow">02 — Verse</p>
                 <h2 class="ph-section-title">Featured Poetry</h2>
                 <p class="ph-section-note">
@@ -150,9 +152,14 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
                 </p>
             </header>
 
-            <div class="ph-shelf-grid ph-verse-grid">
-                {featuredPoems.map((story: any) => (
-                    <a href={`/story/${story.slug}`} class="ph-card ph-card-verse">
+            <div class="ph-grid">
+                {featuredPoems.map((story: any, i: number) => (
+                    <a
+                        href={`/story/${story.slug}`}
+                        class="ph-card ph-card-verse"
+                        data-reveal
+                        style={`--reveal-delay: ${Math.min(i * 0.08, 0.4)}s`}
+                    >
                         {story.cover ? (
                             <div class="ph-card-cover">
                                 <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />
@@ -214,20 +221,20 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
     }
 
     .ph-hero-eyebrow {
-        font-family: 'JetBrains Mono', monospace;
+        font-family: var(--ph-font-mono);
         font-size: 0.78rem;
         letter-spacing: 0.28em;
         text-transform: uppercase;
-        color: #c9a24b;
+        color: var(--ph-brass);
         margin-bottom: 1.6rem;
     }
 
     .ph-hero-title {
-        font-family: 'Fraunces', Georgia, serif;
+        font-family: var(--ph-font-display);
         font-size: clamp(3rem, 8.5vw, 6.8rem);
         font-weight: 900;
         line-height: 1.02;
-        color: #f2eee3;
+        color: var(--ph-bone);
         letter-spacing: -0.015em;
         text-shadow: 0 4px 60px rgba(0, 0, 0, 0.8);
     }
@@ -235,16 +242,16 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
     .ph-hero-em {
         font-style: italic;
         font-weight: 400;
-        color: #c9a24b;
+        color: var(--ph-brass);
     }
 
-    .ph-hero-plus { color: #c9a24b; }
+    .ph-hero-plus { color: var(--ph-brass); }
 
     .ph-hero-sub {
-        font-family: 'Newsreader', Georgia, serif;
+        font-family: var(--ph-font-read);
         font-size: clamp(1.05rem, 2vw, 1.3rem);
         font-style: italic;
-        color: rgba(242, 238, 227, 0.75);
+        color: var(--ph-bone-70);
         max-width: 560px;
         margin: 1.8rem auto 2.6rem;
         line-height: 1.8;
@@ -294,255 +301,34 @@ const heroIndex = (dayOfYear % heroImageCount) + 1; // deterministic daily rotat
         z-index: 1;
     }
 
-    /* === MARQUEE === */
-    .ph-marquee {
-        overflow: hidden;
-        border-top: 1px solid rgba(201, 162, 75, 0.25);
-        border-bottom: 1px solid rgba(201, 162, 75, 0.25);
-        background: rgba(201, 162, 75, 0.04);
-        padding: 0.85rem 0;
-    }
-
-    .ph-marquee-track {
-        display: flex;
-        width: max-content;
-        animation: ph-marquee-scroll 30s linear infinite;
-    }
-
-    .ph-marquee-seg {
-        display: flex;
-        align-items: center;
-        gap: 2.2rem;
-        padding-right: 2.2rem;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.8rem;
-        letter-spacing: 0.22em;
-        text-transform: uppercase;
-        color: rgba(242, 238, 227, 0.65);
-        white-space: nowrap;
-    }
-
-    .ph-marquee-star { color: #c9a24b; font-size: 0.7rem; }
-
-    @keyframes ph-marquee-scroll {
-        from { transform: translateX(0); }
-        to { transform: translateX(-50%); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .ph-marquee-track { animation: none; }
-    }
-    /* === SECTIONS (numbered, editorial) === */
-    .ph-section { max-width: 1320px; margin: 0 auto; padding: 5rem 2rem 2rem; }
-
-    .ph-section-head {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-        margin-bottom: 2.6rem;
-        position: relative;
-        padding-bottom: 1.4rem;
-        border-bottom: 1px solid rgba(242, 238, 227, 0.1);
-    }
-
-    .ph-section-eyebrow {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.72rem;
-        letter-spacing: 0.3em;
-        text-transform: uppercase;
-        color: #c9a24b;
-    }
-
-    .ph-section-title {
-        font-family: 'Fraunces', Georgia, serif;
-        font-size: clamp(1.8rem, 4vw, 3rem);
-        font-weight: 900;
+    /* Hero mobile rules (shared families' mobile rules live in plus.css) */
+    .ph-btn-ghost {
+        border: 1px solid rgba(242, 238, 227, 0.35);
         color: #f2eee3;
-        letter-spacing: -0.01em;
-        line-height: 1.05;
     }
 
-    .ph-section-note {
-        font-family: 'Newsreader', Georgia, serif;
-        font-style: italic;
-        font-size: 0.95rem;
-        color: rgba(242, 238, 227, 0.55);
+    .ph-btn-ghost:hover {
+        border-color: #c9a24b;
+        color: #c9a24b;
+        transform: translateY(-2px);
     }
 
-    .ph-section-more {
+    /* Thin brass frame inside the hero — museum matting */
+    .ph-hero-frame {
         position: absolute;
-        right: 0;
-        bottom: 1.4rem;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.78rem;
-        letter-spacing: 0.1em;
-        color: #c9a24b;
-        text-decoration: none;
-        transition: color 0.25s, transform 0.25s;
+        inset: 1.2rem;
+        border: 1px solid rgba(201, 162, 75, 0.28);
+        pointer-events: none;
+        z-index: 1;
     }
 
-    .ph-section-more:hover {
-        color: #d4af5f;
-        transform: translateX(4px);
-    }
-
-    /* === SHELF GRID — bento: lead card spans wide === */
-    .ph-shelf-grid {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 1.4rem;
-    }
-
-    .ph-card {
-        grid-column: span 2;
-        display: flex;
-        flex-direction: column;
-        text-decoration: none;
-        color: inherit;
-        background: rgba(242, 238, 227, 0.03);
-        border: 1px solid rgba(242, 238, 227, 0.09);
-        border-radius: 16px;
-        overflow: hidden;
-        transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s, background 0.3s, box-shadow 0.35s;
-    }
-
-    .ph-card:hover {
-        transform: translateY(-6px);
-        border-color: rgba(201, 162, 75, 0.45);
-        background: rgba(242, 238, 227, 0.05);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-    }
-
-    .ph-card-lead { grid-column: span 4; }
-
-    .ph-card-cover { overflow: hidden; position: relative; }
-
-    .ph-card-cover img {
-        width: 100%;
-        height: 240px;
-        object-fit: cover;
-        object-position: top;
-        display: block;
-        transition: transform 0.5s ease;
-    }
-
-    .ph-card-lead .ph-card-cover img { height: 320px; }
-
-    .ph-card:hover .ph-card-cover img { transform: scale(1.05); }
-
-    .ph-card-cover-empty {
-        height: 200px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background:
-            radial-gradient(ellipse at 50% 0%, rgba(201, 162, 75, 0.12), transparent 60%),
-            rgba(242, 238, 227, 0.02);
-    }
-
-    .ph-star { color: #c9a24b; font-size: 1.4rem; }
-    .ph-card-body { padding: 1.3rem 1.4rem 1.2rem; display: flex; flex-direction: column; gap: 0.55rem; flex: 1; }
-
-    .ph-card-genre {
-        align-self: flex-start;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.64rem;
-        font-weight: 500;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        color: #c9a24b;
-        border: 1px solid rgba(201, 162, 75, 0.35);
-        border-radius: 999px;
-        padding: 0.22rem 0.7rem;
-    }
-
-    .ph-card-title {
-        font-family: 'Fraunces', Georgia, serif;
-        font-size: 1.35rem;
-        font-weight: 600;
-        color: #f2eee3;
-        line-height: 1.15;
-    }
-
-    .ph-card-lead .ph-card-title { font-size: 1.8rem; }
-
-    .ph-card-excerpt {
-        font-family: 'Newsreader', Georgia, serif;
-        font-size: 0.98rem;
-        line-height: 1.65;
-        color: rgba(242, 238, 227, 0.68);
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .ph-card-meta {
-        margin-top: auto;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.7rem;
-        letter-spacing: 0.04em;
-        color: rgba(242, 238, 227, 0.5);
-        border-top: 1px solid rgba(242, 238, 227, 0.07);
-        padding-top: 0.9rem;
-    }
-
-    .ph-card-dot { color: rgba(201, 162, 75, 0.6); }
-
-    /* === VERSE CARDS — serif italic poem teasers === */
-    .ph-verse-grid .ph-card { grid-column: span 2; }
-
-    .ph-card-verse-text {
-        height: 200px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1.6rem;
-        background:
-            radial-gradient(ellipse at 50% 100%, rgba(201, 162, 75, 0.1), transparent 60%),
-            rgba(242, 238, 227, 0.02);
-    }
-
-    .ph-card-verse-text p {
-        font-family: 'Newsreader', Georgia, serif;
-        font-style: italic;
-        font-size: 1rem;
-        line-height: 1.8;
-        color: rgba(242, 238, 227, 0.65);
-        text-align: center;
-    }
-
-    /* === EMPTY === */
-    .ph-empty {
-        text-align: center;
-        font-family: 'Newsreader', Georgia, serif;
-        font-style: italic;
-        color: rgba(242, 238, 227, 0.5);
-        padding: 3rem 1rem;
-    }
-
-    /* === MOBILE === */
-    @media (max-width: 1024px) {
-        .ph-shelf-grid { grid-template-columns: repeat(4, 1fr); }
-        .ph-card, .ph-verse-grid .ph-card { grid-column: span 2; }
-        .ph-card-lead { grid-column: span 4; }
-    }
-
+    /* Hero mobile rules (shared families' mobile rules live in plus.css) */
     @media (max-width: 640px) {
-        .ph-shelf-grid { grid-template-columns: 1fr; gap: 1.1rem; }
-        .ph-card, .ph-card-lead, .ph-verse-grid .ph-card { grid-column: span 1; }
-        .ph-section { padding: 3.5rem 1.3rem 1.5rem; }
-        .ph-card-lead .ph-card-cover img { height: 240px; }
-        .ph-card-cover img { height: 220px; }
-        .ph-section-more { position: static; align-self: flex-start; margin-top: 0.6rem; }
         .ph-hero-frame { inset: 0.6rem; }
         .ph-hero-inner { padding: 4rem 1.2rem 3.5rem; }
     }
 </style>
+
 
 
 

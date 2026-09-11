@@ -1,0 +1,721 @@
+/* ============================================================
+   plus.css — Raconteur+ Design System ("Obsidian Editorial")
+   Shared across every /plus page. Page-specific styles stay
+   scoped inside their .astro files; this file is the single
+   source of truth for tokens + reusable component families.
+   Prefix: .ph-* (plus home). Loaded by PlusLayout.astro only.
+   ============================================================ */
+
+/* === 1. DESIGN TOKENS === */
+body.plus-skin {
+    /* palette */
+    --ph-ink: #0b0b0e;                 /* canvas */
+    --ph-ink-raised: #101014;          /* cards, panels */
+    --ph-ink-overlay: rgba(15, 15, 19, 0.97); /* dropdowns, popovers */
+    --ph-bone: #f2eee3;                /* primary text */
+    --ph-bone-70: rgba(242, 238, 227, 0.7);
+    --ph-bone-55: rgba(242, 238, 227, 0.55);
+    --ph-bone-40: rgba(242, 238, 227, 0.4);
+    --ph-brass: #c9a24b;               /* accent */
+    --ph-brass-bright: #d4af5f;        /* accent hover */
+    --ph-brass-soft: rgba(201, 162, 75, 0.35);
+    --ph-brass-faint: rgba(201, 162, 75, 0.12);
+    --ph-sage: #3d5a3c;                /* lineage nod to classic */
+    --ph-danger: #c96a4b;              /* destructive */
+    --ph-hairline: rgba(242, 238, 227, 0.09);
+    --ph-hairline-strong: rgba(242, 238, 227, 0.16);
+
+    /* type */
+    --ph-font-display: 'Fraunces', Georgia, serif;
+    --ph-font-body: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+    --ph-font-read: 'Newsreader', Georgia, serif;
+    --ph-font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+    /* radii + shadows + motion */
+    --ph-radius-card: 16px;
+    --ph-radius-pill: 999px;
+    --ph-shadow-card: 0 24px 60px rgba(0, 0, 0, 0.45);
+    --ph-shadow-pop: 0 24px 60px rgba(0, 0, 0, 0.6);
+    --ph-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ph-ease-cards: transform 0.35s var(--ph-ease-out), border-color 0.3s, background 0.3s, box-shadow 0.35s;
+}
+
+/* === 2. TYPE HELPERS === */
+.ph-display {
+    font-family: var(--ph-font-display);
+    font-weight: 900;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+    color: var(--ph-bone);
+}
+
+.ph-eyebrow {
+    font-family: var(--ph-font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ph-brass);
+}
+
+.ph-caption {
+    font-family: var(--ph-font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    color: var(--ph-bone-40);
+}
+
+/* === 3. REVEAL SYSTEM (scroll-triggered) ==================
+   Usage: add data-reveal to any element. Optional stagger:
+   style="--reveal-delay: .12s"
+   Engine: IntersectionObserver in PlusLayout adds .ph-revealed. */
+[data-reveal] {
+    opacity: 0;
+    transform: translateY(26px);
+    transition:
+        opacity 0.7s ease var(--reveal-delay, 0s),
+        transform 0.7s var(--ph-ease-out) var(--reveal-delay, 0s);
+    will-change: opacity, transform;
+}
+
+[data-reveal].ph-revealed {
+    opacity: 1;
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-reveal] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+}
+
+/* === 4. HAIRLINE DIVIDER — editorial section rule === */
+.ph-divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--ph-hairline-strong) 18%, var(--ph-hairline-strong) 82%, transparent);
+    margin: 4rem auto;
+    max-width: 1320px;
+}
+
+.ph-divider-tight { margin: 2rem auto; }
+
+/* === 5. SECTION SHELL + HEADER (numbered editorial) === */
+.ph-section { max-width: 1320px; margin: 0 auto; padding: 5rem 2rem 2rem; }
+
+.ph-section-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 2.6rem;
+    position: relative;
+    padding-bottom: 1.4rem;
+    border-bottom: 1px solid var(--ph-hairline);
+}
+
+.ph-section-title {
+    font-family: var(--ph-font-display);
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 900;
+    color: var(--ph-bone);
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+}
+
+.ph-section-note {
+    font-family: var(--ph-font-read);
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--ph-bone-55);
+}
+
+.ph-section-more {
+    position: absolute;
+    right: 0;
+    bottom: 1.4rem;
+    font-family: var(--ph-font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    color: var(--ph-brass);
+    text-decoration: none;
+    transition: color 0.25s, transform 0.25s;
+}
+
+.ph-section-more:hover {
+    color: var(--ph-brass-bright);
+    transform: translateX(4px);
+}
+
+/* === 6. CARDS — the bento family === */
+.ph-card {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    background: rgba(242, 238, 227, 0.03);
+    border: 1px solid var(--ph-hairline);
+    border-radius: var(--ph-radius-card);
+    overflow: hidden;
+    transition: var(--ph-ease-cards);
+}
+
+.ph-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--ph-brass-soft);
+    background: rgba(242, 238, 227, 0.05);
+    box-shadow: var(--ph-shadow-card);
+}
+
+.ph-card-cover { overflow: hidden; position: relative; }
+
+.ph-card-cover img {
+    width: 100%;
+    height: 240px;
+    object-fit: cover;
+    object-position: top;
+    display: block;
+    transition: transform 0.5s ease;
+}
+
+.ph-card:hover .ph-card-cover img { transform: scale(1.05); }
+
+.ph-card-cover-empty {
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(ellipse at 50% 0%, var(--ph-brass-faint), transparent 60%),
+        rgba(242, 238, 227, 0.02);
+}
+
+.ph-star { color: var(--ph-brass); font-size: 1.4rem; }
+
+.ph-card-body {
+    padding: 1.3rem 1.4rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    flex: 1;
+}
+
+.ph-card-genre {
+    align-self: flex-start;
+    font-family: var(--ph-font-mono);
+    font-size: 0.64rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ph-brass);
+    border: 1px solid var(--ph-brass-soft);
+    border-radius: var(--ph-radius-pill);
+    padding: 0.22rem 0.7rem;
+}
+
+.ph-card-title {
+    font-family: var(--ph-font-display);
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--ph-bone);
+    line-height: 1.15;
+}
+
+.ph-card-excerpt {
+    font-family: var(--ph-font-read);
+    font-size: 0.98rem;
+    line-height: 1.65;
+    color: var(--ph-bone-70);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.ph-card-meta {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-family: var(--ph-font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--ph-bone-40);
+    border-top: 1px solid var(--ph-hairline);
+    padding-top: 0.9rem;
+}
+
+.ph-card-dot { color: var(--ph-brass-soft); }
+
+/* Bento grid — 6-col base; lead card spans 4 */
+.ph-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1.4rem;
+}
+
+.ph-grid .ph-card { grid-column: span 2; }
+.ph-grid .ph-card-lead { grid-column: span 4; }
+.ph-grid .ph-card-lead .ph-card-cover img { height: 320px; }
+.ph-grid .ph-card-lead .ph-card-title { font-size: 1.8rem; }
+
+/* Verse variant — serif italic poem teaser cover */
+.ph-card-verse-text {
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.6rem;
+    background:
+        radial-gradient(ellipse at 50% 100%, var(--ph-brass-faint), transparent 60%),
+        rgba(242, 238, 227, 0.02);
+}
+
+.ph-card-verse-text p {
+    font-family: var(--ph-font-read);
+    font-style: italic;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: var(--ph-bone-70);
+    text-align: center;
+}
+
+
+/* Generic tile — light-weight card for lists/grids (feed, saved, admin) */
+.ph-tile {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    background: rgba(242, 238, 227, 0.03);
+    border: 1px solid var(--ph-hairline);
+    border-radius: var(--ph-radius-card);
+    overflow: hidden;
+    transition: var(--ph-ease-cards);
+}
+
+.ph-tile:hover {
+    transform: translateY(-4px);
+    border-color: var(--ph-brass-soft);
+    box-shadow: var(--ph-shadow-card);
+}
+
+/* === 7. BUTTONS === */
+.ph-btn {
+    display: inline-block;
+    padding: 0.85rem 2.2rem;
+    border-radius: var(--ph-radius-pill);
+    font-family: var(--ph-font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.25s, background 0.25s, border-color 0.25s, color 0.25s;
+}
+
+.ph-btn-gold { background: var(--ph-brass); color: var(--ph-ink); }
+.ph-btn-gold:hover {
+    background: var(--ph-brass-bright);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 36px rgba(201, 162, 75, 0.4);
+}
+
+.ph-btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(242, 238, 227, 0.35);
+    color: var(--ph-bone);
+}
+.ph-btn-ghost:hover {
+    border-color: var(--ph-brass);
+    color: var(--ph-brass);
+    transform: translateY(-2px);
+}
+
+/* Small quiet buttons (form actions, editor controls) */
+.ph-btn-sm {
+    display: inline-block;
+    padding: 0.45rem 1.1rem;
+    border-radius: var(--ph-radius-pill);
+    font-family: var(--ph-font-body);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    background: rgba(242, 238, 227, 0.06);
+    border: 1px solid var(--ph-hairline-strong);
+    color: var(--ph-bone-70);
+    transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
+}
+
+.ph-btn-sm:hover {
+    background: rgba(242, 238, 227, 0.1);
+    border-color: var(--ph-brass-soft);
+    color: var(--ph-bone);
+    transform: translateY(-1px);
+}
+
+/* === 8. CHIPS + BADGES === */
+.ph-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.42rem 1rem;
+    border-radius: var(--ph-radius-pill);
+    border: 1px solid var(--ph-hairline-strong);
+    background: transparent;
+    color: var(--ph-bone-70);
+    font-family: var(--ph-font-body);
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.ph-chip:hover { border-color: var(--ph-brass-soft); color: var(--ph-bone); }
+
+.ph-chip.active {
+    background: var(--ph-brass);
+    border-color: var(--ph-brass);
+    color: var(--ph-ink);
+}
+
+.ph-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-family: var(--ph-font-mono);
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ph-brass);
+    border: 1px solid var(--ph-brass-soft);
+    border-radius: var(--ph-radius-pill);
+    padding: 0.22rem 0.7rem;
+    white-space: nowrap;
+}
+
+.ph-badge-sage {
+    color: #a8b89c;
+    border-color: rgba(168, 184, 156, 0.35);
+}
+
+.ph-badge-danger { color: var(--ph-danger); border-color: rgba(201, 106, 75, 0.4); }
+
+/* === 9. FORMS === */
+.ph-input,
+.ph-select,
+.ph-textarea {
+    width: 100%;
+    background: rgba(242, 238, 227, 0.04);
+    border: 1px solid var(--ph-hairline-strong);
+    border-radius: 10px;
+    color: var(--ph-bone);
+    font-family: var(--ph-font-body);
+    font-size: 0.95rem;
+    padding: 0.75rem 1rem;
+    outline: none;
+    transition: border-color 0.25s, background 0.25s;
+}
+
+.ph-input::placeholder,
+.ph-textarea::placeholder { color: var(--ph-bone-40); }
+
+.ph-input:focus,
+.ph-select:focus,
+.ph-textarea:focus {
+    border-color: var(--ph-brass-soft);
+    background: rgba(242, 238, 227, 0.06);
+}
+
+.ph-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2.4rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23c9a24b' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    cursor: pointer;
+}
+
+.ph-select option { background: var(--ph-ink-raised); color: var(--ph-bone); }
+
+.ph-label {
+    display: block;
+    font-family: var(--ph-font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ph-bone-55);
+    margin-bottom: 0.5rem;
+}
+
+/* === 10. TABLES (admin, dashboard lists) === */
+.ph-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.ph-table th {
+    font-family: var(--ph-font-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ph-brass);
+    text-align: left;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--ph-hairline-strong);
+}
+
+.ph-table td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--ph-hairline);
+    color: var(--ph-bone-70);
+    vertical-align: middle;
+}
+
+.ph-table tr:hover td { background: rgba(242, 238, 227, 0.03); }
+
+/* === 11. READER PROSE — the quiet reading room === */
+/* Golden rule: loud chrome, calm reading. Story body lives here. */
+.ph-prose {
+    font-family: var(--ph-font-read);
+    font-size: 1.18rem;
+    line-height: 1.9;
+    color: var(--ph-bone-70);
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.ph-prose p { margin-bottom: 1.5em; }
+
+.ph-prose .dropcap::first-letter {
+    font-family: var(--ph-font-display);
+    font-size: 3.6em;
+    font-weight: 900;
+    float: left;
+    line-height: 0.78;
+    padding: 0.08em 0.12em 0 0;
+    color: var(--ph-brass);
+}
+
+.ph-pullquote {
+    font-family: var(--ph-font-read);
+    font-style: italic;
+    font-size: 1.45rem;
+    line-height: 1.65;
+    color: var(--ph-bone);
+    border-left: 2px solid var(--ph-brass);
+    padding: 0.4rem 0 0.4rem 1.8rem;
+    margin: 2.6rem 0;
+    max-width: 560px;
+}
+
+.ph-prose .ph-divider-flourish {
+    text-align: center;
+    color: var(--ph-brass);
+    font-size: 1.1rem;
+    letter-spacing: 0.6em;
+    margin: 2.8rem 0;
+}
+
+/* === 12. STATS ROW (big mono numbers) === */
+.ph-stats {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    flex-wrap: wrap;
+}
+
+.ph-stat { display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+.ph-stat-number {
+    font-family: var(--ph-font-display);
+    font-size: clamp(2.4rem, 5vw, 3.4rem);
+    font-weight: 900;
+    color: var(--ph-bone);
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.ph-stat-label {
+    font-family: var(--ph-font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ph-brass);
+    margin-top: 0.7rem;
+}
+
+.ph-stat-rule {
+    width: 1px;
+    height: 50px;
+    background: var(--ph-hairline-strong);
+}
+
+/* === 13. AVATARS === */
+.ph-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--ph-brass-soft);
+    display: block;
+}
+
+.ph-avatar-initials {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--ph-font-display);
+    font-weight: 900;
+    font-size: 1.1rem;
+    letter-spacing: 0.04em;
+    color: var(--ph-bone);
+    background: linear-gradient(135deg, var(--ph-sage), #5a7052);
+}
+
+.ph-avatar-sm { width: 36px; height: 36px; }
+.ph-avatar-sm.ph-avatar-initials { font-size: 0.8rem; }
+
+.ph-avatar-lg { width: 96px; height: 96px; }
+.ph-avatar-lg.ph-avatar-initials { font-size: 1.6rem; }
+
+/* === 14. EMPTY STATE === */
+.ph-empty {
+    text-align: center;
+    font-family: var(--ph-font-read);
+    font-style: italic;
+    color: var(--ph-bone-55);
+    padding: 3rem 1rem;
+}
+
+.ph-empty a { color: var(--ph-brass); text-decoration: none; }
+.ph-empty a:hover { color: var(--ph-brass-bright); }
+
+/* === 15. ALERTS (inline notices) === */
+.ph-alert {
+    border: 1px solid var(--ph-hairline-strong);
+    border-left: 3px solid var(--ph-brass);
+    background: rgba(242, 238, 227, 0.03);
+    border-radius: 10px;
+    padding: 1rem 1.3rem;
+    font-size: 0.92rem;
+    color: var(--ph-bone-70);
+}
+
+.ph-alert-danger { border-left-color: var(--ph-danger); }
+
+/* === 16. PAGE SHELL — narrow content wrapper for forms/auth/legal === */
+.ph-narrow {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem;
+}
+
+/* Wide page wrapper (archive, dashboards) */
+.ph-wide {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+}
+
+/* === 16.5 MARQUEE — kinetic brass ticker === */
+.ph-marquee {
+    overflow: hidden;
+    border-top: 1px solid rgba(201, 162, 75, 0.25);
+    border-bottom: 1px solid rgba(201, 162, 75, 0.25);
+    background: rgba(201, 162, 75, 0.04);
+    padding: 0.85rem 0;
+}
+
+.ph-marquee-track {
+    display: flex;
+    width: max-content;
+    animation: ph-marquee-scroll 30s linear infinite;
+}
+
+.ph-marquee-seg {
+    display: flex;
+    align-items: center;
+    gap: 2.2rem;
+    padding-right: 2.2rem;
+    font-family: var(--ph-font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ph-bone-70);
+    white-space: nowrap;
+}
+
+.ph-marquee-star { color: var(--ph-brass); font-size: 0.7rem; }
+
+@keyframes ph-marquee-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ph-marquee-track { animation: none; }
+}
+
+/* === 17. RESPONSIVE — shared bento/section behavior === */
+@media (max-width: 1024px) {
+    .ph-grid { grid-template-columns: repeat(4, 1fr); }
+    .ph-grid .ph-card { grid-column: span 2; }
+    .ph-grid .ph-card-lead { grid-column: span 4; }
+}
+
+@media (max-width: 640px) {
+    .ph-grid { grid-template-columns: 1fr; gap: 1.1rem; }
+    .ph-grid .ph-card, .ph-grid .ph-card-lead { grid-column: span 1; }
+    .ph-grid .ph-card-lead .ph-card-cover img { height: 240px; }
+    .ph-section { padding: 3.5rem 1.3rem 1.5rem; }
+    .ph-section-more { position: static; align-self: flex-start; margin-top: 0.6rem; }
+    .ph-wide { padding: 2.5rem 1.3rem; }
+    .ph-stats { gap: 2rem; }
+}
+
+/* === 18. SHARED ANIMATIONS === */
+@keyframes ph-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}
+
+.ph-loading {
+    font-family: var(--ph-font-read);
+    font-style: italic;
+    color: var(--ph-bone-55);
+    text-align: center;
+    padding: 2rem;
+    animation: ph-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ph-loading { animation: none; }
+}
+
+/* Focus states — brass ring for keyboard users */
+body.plus-skin a:focus-visible,
+body.plus-skin button:focus-visible,
+body.plus-skin input:focus-visible,
+body.plus-skin select:focus-visible,
+body.plus-skin textarea:focus-visible {
+    outline: 2px solid var(--ph-brass);
+    outline-offset: 2px;
+}
+
+

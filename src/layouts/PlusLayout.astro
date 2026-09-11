@@ -5,6 +5,7 @@
 import { getVisibleStories } from '../data/stories';
 import { supabase } from '../lib/supabase';
 import SkinToggle from '../components/plus/SkinToggle.astro';
+import '../styles/plus.css'; // Raconteur+ design system (tokens + shared components)
 
 interface Props {
     title: string;
@@ -173,6 +174,25 @@ const navHref = {
             };
             onScroll();
             window.addEventListener('scroll', onScroll, { passive: true });
+        }
+    </script>
+
+    <script>
+        // Reveal engine — IntersectionObserver adds .ph-revealed to [data-reveal].
+        // CSS lives in plus.css; reduced-motion users see content instantly.
+        const revealEls = document.querySelectorAll('[data-reveal]');
+        if ('IntersectionObserver' in window && revealEls.length) {
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('ph-revealed');
+                        io.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+            revealEls.forEach((el) => io.observe(el));
+        } else {
+            revealEls.forEach((el) => el.classList.add('ph-revealed'));
         }
     </script>
     <script>
