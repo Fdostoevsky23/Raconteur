@@ -106,9 +106,13 @@ const navHref = {
         Row 2: slim glass utility bar that condenses to the sticky bar on scroll. */}
     <header class="plus-header" id="plusHeader" data-scrolled="false">
         <div class="plus-masthead">
-            <div class="plus-masthead-toggle">
-                <SkinToggle variant="regal" />
-            </div>
+            {/* Skin switch — plus HOME ONLY (Session 16); the wrapper is
+                gated so the masthead spacing collapses on inner pages */}
+            {Astro.url.pathname === '/plus' && (
+                <div class="plus-masthead-toggle">
+                    <SkinToggle variant="regal" />
+                </div>
+            )}
             <a href="/plus" class="plus-masthead-brand" aria-label="Raconteur+ home">
                 <span class="plus-masthead-rule plus-masthead-rule-left" aria-hidden="true"></span>
                 <span class="plus-masthead-stack">

@@ -6,6 +6,13 @@ export function isPlusPath(pathname: string): boolean {
     return pathname === '/plus' || pathname.startsWith('/plus/');
 }
 
+/** Home pages of both skins — the ONLY pages where the skin switch lives
+ *  (per boss, Session 16: the toggle must not appear on inner pages).
+ *  '/' is the classic home, '/plus' is the plus home. */
+export function isHomePath(pathname: string): boolean {
+    return pathname === '/' || pathname === '' || pathname === '/plus' || pathname === '/plus/';
+}
+
 /** Map any classic path to its plus counterpart: '/' → '/plus', '/story/x' → '/plus/story/x' */
 export function toPlusPath(pathname: string): string {
     if (isPlusPath(pathname)) return pathname; // already plus

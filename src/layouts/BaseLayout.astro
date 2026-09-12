@@ -60,10 +60,13 @@ const _staticSearchData = getVisibleStories().map(s => ({ slug: s.slug, title: s
     {/* Search data island — lives in layout so search works on every page, not just / */}
     <script type="application/json" id="all-stories-data" set:html={JSON.stringify(searchStories).replace(/</g,'\\u003c')} />
       <header class={`site-header ${isStory ? 'on-story' : ''}`}>
-        {/* Raconteur / Raconteur+ skin switcher — mounted at the very top */}
-        <div class="skin-switch-row">
-            <SkinToggle />
-        </div>
+        {/* Raconteur / Raconteur+ skin switcher — HOME PAGES ONLY (the
+            wrapper is gated too so no empty gap pads inner pages) */}
+        {Astro.url.pathname === '/' && (
+            <div class="skin-switch-row">
+                <SkinToggle />
+            </div>
+        )}
         <a href="/" class="logo-block">
             <span class="logo">RACONTEUR</span>
             <span class="tagline">Literature you want to read</span>

@@ -5,10 +5,11 @@
 // Query strings are preserved so ?edit=, ?next=, etc. survive the switch.
 // variant="regal" — the brass-and-obsidian crown used in the /plus masthead;
 // default (no prop) keeps the classic cream pill untouched.
-import { isPlusPath, toPlusPath, toClassicPath } from '../../lib/skin';
+import { isPlusPath, isHomePath, toPlusPath, toClassicPath } from '../../lib/skin';
 
 const here = Astro.url.pathname;
 const onPlus = isPlusPath(here);
+const onHome = isHomePath(here); // the switch only lives on the two home pages
 const classicHref = toClassicPath(here) + Astro.url.search;
 // Switching INTO the plus skin carries ?welcome=1 — the royal entrance
 // splash on the other side. In-skin navigation (plus → plus) stays clean.
@@ -19,6 +20,12 @@ interface Props {
     variant?: 'classic' | 'regal';
 }
 const { variant = 'classic' } = Astro.props as any;
+
+// Boss mandate (Session 16): the Raconteur / Raconteur+ switch appears on
+// the home pages ONLY — inner pages of both skins carry no toggle. The
+// layouts also gate their wrapper divs, but the component self-guards so
+// it can never leak onto an inner page regardless of where it's mounted.
+if (!onHome) return;
 ---
 
 <div class={`skin-toggle ${variant === 'regal' ? 'regal' : ''}`} data-skin={onPlus ? 'plus' : 'classic'} role="group" aria-label="Choose site design">
