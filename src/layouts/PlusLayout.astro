@@ -86,8 +86,11 @@ const navHref = {
     {/* Film-grain overlay — the obsidian signature */}
     <div class="grain" aria-hidden="true"></div>
 
-    {/* Royal entrance — letter-by-letter interstitial, only on skin switches (?welcome=1) */}
-    <SkinSplash variant="plus" />
+    {/* Royal entrance — letter-by-letter interstitial, only on skin switches (?welcome=1).
+        eager: when arriving from the classic skin the splash is rendered ALREADY
+        ACTIVE server-side, so the page is born covered — seamless handoff from the
+        departure veil (identical Mesher background on both sides of the swap). */}
+    <SkinSplash variant="plus" eager={Astro.url.searchParams.get('welcome') === '1'} />
 
     {/* Obsidian & Gold — living silk with a 10-second colour cycle.
         Four hand-poured mixtures take the stage one at a time —

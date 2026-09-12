@@ -10,11 +10,15 @@ import { isPlusPath, isHomePath, toPlusPath, toClassicPath } from '../../lib/ski
 const here = Astro.url.pathname;
 const onPlus = isPlusPath(here);
 const onHome = isHomePath(here); // the switch only lives on the two home pages
-const classicHref = toClassicPath(here) + Astro.url.search;
 // Switching INTO the plus skin carries ?welcome=1 — the royal entrance
 // splash on the other side. In-skin navigation (plus → plus) stays clean.
 const basePlusHref = toPlusPath(here) + Astro.url.search;
 const plusHref = onPlus ? basePlusHref : basePlusHref + (Astro.url.search ? '&' : '?') + 'welcome=1';
+// Switching BACK to classic carries ?return=1 — the homecoming veil on the
+// classic side (the cream cover with the RACONTEUR wordmark that lifts to
+// reveal the classic home). In-classic navigation stays clean.
+const baseClassicHref = toClassicPath(here) + Astro.url.search;
+const classicHref = onPlus ? baseClassicHref + (Astro.url.search ? '&' : '?') + 'return=1' : baseClassicHref;
 
 interface Props {
     variant?: 'classic' | 'regal';
@@ -28,9 +32,27 @@ const { variant = 'classic' } = Astro.props as any;
 if (!onHome) return;
 ---
 
+{/* === HOMECOMING VEIL (plus → classic) =====================================
+    Rendered server-side ONLY when the visitor arrives home with ?return=1
+    (SkinToggle appends it when leaving the plus skin). The classic page is
+    born covered in its own cream — same gradient as the departure veil,
+    so the navigation handoff is invisible — with the RACONTEUR wordmark
+    rising in; then the curtain lifts to reveal the classic home. The
+    inline script below runs before the rest of the page paints. */}
+{!onPlus && Astro.url.searchParams.get('return') === '1' && (
+    <div class="skin-return-veil" id="skinReturnVeil" aria-hidden="true">
+        <div class="skin-return-veil-core">
+            <span class="skin-return-veil-word">RACONTEUR</span>
+            <span class="skin-return-veil-sub">Literature you want to read</span>
+        </div>
+    </div>
+)}
+
 <div class={`skin-toggle ${variant === 'regal' ? 'regal' : ''}`} data-skin={onPlus ? 'plus' : 'classic'} role="group" aria-label="Choose site design">
     <a
         href={classicHref}
+        data-dest="classic"
+        data-cross={onPlus ? '1' : undefined}
         class={`toggle-btn ${!onPlus ? 'active' : ''}`}
         aria-current={!onPlus ? 'page' : undefined}
         title="The original Raconteur design"
@@ -39,6 +61,8 @@ if (!onHome) return;
     </a>
     <a
         href={plusHref}
+        data-dest="plus"
+        data-cross={!onPlus ? '1' : undefined}
         class={`toggle-btn plus ${onPlus ? 'active' : ''}`}
         aria-current={onPlus ? 'page' : undefined}
         title="The new Raconteur+ design"
@@ -157,5 +181,216 @@ if (!onHome) return;
     @media (max-width: 640px) {
         .toggle-btn { padding: 0.25rem 0.75rem; font-size: 0.75rem; }
         .skin-toggle.regal .toggle-btn { font-size: 0.68rem; padding: 0.26rem 0.8rem; }
+    }
+</style>
+
+<script is:inline>
+    // === HOMECOMING VEIL LIFTER ==============================================
+    // Runs inline at the top of the page (SkinToggle mounts first in the
+    // header), i.e. before the rest of the page paints. If the veil is in
+    // the DOM (?return=1 arrival), scrub the flag, lock scroll, and
+    // schedule the curtain lift. Click anywhere to skip.
+    (function () {
+        var veil = document.getElementById('skinReturnVeil');
+        if (!veil) return;
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('return') !== '1') return;
+        params.delete('return');
+        var rest = params.toString();
+        try {
+            window.history.replaceState({}, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
+        } catch (e) { /* private modes — the veil still lifts, URL keeps the flag */ }
+        document.documentElement.classList.add('ss-lock');
+        var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var total = reduced ? 1100 : 2700; // wordmark rises → beat → lift
+        var done = false;
+        var finish = function () {
+            if (done) return;
+            done = true;
+            veil.dataset.leaving = 'true';
+            window.setTimeout(function () {
+                veil.remove();
+                document.documentElement.classList.remove('ss-lock');
+            }, reduced ? 300 : 1050);
+        };
+        window.setTimeout(finish, total);
+        veil.addEventListener('click', finish); // the impatient exit
+        // bfcache: never trap a restored page under the curtain.
+        window.addEventListener('pageshow', function (e) {
+            if (e.persisted) {
+                veil.remove();
+                document.documentElement.classList.remove('ss-lock');
+            }
+        });
+    })();
+</script>
+
+<script is:inline>
+    // === DEPARTURE VEIL ======================================================
+    // A skin switch should never be a hard cut: when a visitor clicks the
+    // OTHER skin's button, a full-screen veil fades up over the current
+    // page FIRST — wearing the destination's exact cover — and only then
+    // do we navigate. Color never leaves the screen between click and
+    // reveal. Runs only on the two home pages, where the toggle lives.
+    (function () {
+        // Reduced motion → plain navigation; arrivals still self-clean and
+        // the no-JS failsafes still fire.
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        var sealed = false; // one-shot guard
+
+        function veilThenGo(href) {
+            if (sealed) return;
+            sealed = true;
+            var v = document.createElement('div');
+            v.className = 'skin-veil';
+            v.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(v);
+            document.documentElement.classList.add('ss-lock');
+
+            // The veil wears the DESTINATION's exact cover so the handoff
+            // at navigation time is pixel-identical:
+            // → plus: the Mesher gradient (same stops as .skin-splash-plus .ss-bg)
+            // → classic: the homecoming cream (same as .skin-return-veil)
+            var bg;
+            if (/\bwelcome=1\b/.test(href)) {
+                bg = 'radial-gradient(at 10% 15%, hsla(28, 100%, 74%, 1) 0px, transparent 55%),'
+                   + 'radial-gradient(at 38% 28%, hsla(28, 100%, 74%, 1) 0px, transparent 45%),'
+                   + 'radial-gradient(at 2% 55%, hsla(28, 100%, 70%, 1) 0px, transparent 40%),'
+                   + 'radial-gradient(at 78% 8%, hsla(189, 100%, 56%, 1) 0px, transparent 50%),'
+                   + 'radial-gradient(at 100% 38%, hsla(189, 100%, 56%, 1) 0px, transparent 45%),'
+                   + 'radial-gradient(at 65% 100%, hsla(263, 100%, 45%, 1) 0px, transparent 50%),'
+                   + 'hsla(263, 100%, 50%, 1)';
+            } else {
+                bg = 'radial-gradient(120% 100% at 50% 30%, #fffdf5 0%, #f7f0dd 61%, #efe5cc 100%)';
+            }
+            v.style.background = bg;
+            v.style.opacity = '0';
+            requestAnimationFrame(function () {
+                v.style.transition = 'opacity 0.5s cubic-bezier(0.4, 0, 0.23, 1)';
+                v.style.opacity = '1';
+            });
+
+            // Fade completes at 0.5s; hold fully covered a beat so the
+            // navigation lands on a saturated screen, then go.
+            window.setTimeout(function () { window.location.assign(href); }, 850);
+
+            // Failsafe: if we're somehow still here 5s later (navigation
+            // died), quietly undo the veil and unlock.
+            window.setTimeout(function () {
+                v.style.opacity = '0';
+                v.style.pointerEvents = 'none';
+                window.setTimeout(function () { v.remove(); }, 500);
+                document.documentElement.classList.remove('ss-lock');
+                sealed = false;
+            }, 5000);
+        }
+
+        // Capture-phase listener — one handler covers every toggle instance
+        // (cream pill on classic home, regal crown on plus home). Modifier
+        // clicks (new tab etc.) are left to the browser.
+        document.addEventListener('click', function (ev) {
+            if (sealed) return;
+            var a = ev.target && ev.target.closest ? ev.target.closest('a[data-cross="1"]') : null;
+            if (!a) return;
+            if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            veilThenGo(a.href);
+        }, true);
+
+        // bfcache: if the visitor returns to the departing page mid-veil
+        // (back button), lift the veil instantly — never trap them.
+        window.addEventListener('pageshow', function (e) {
+            if (e.persisted && sealed) {
+                var v = document.querySelector('.skin-veil');
+                if (v) v.remove();
+                document.documentElement.classList.remove('ss-lock');
+                sealed = false;
+            }
+        });
+    })();
+</script>
+
+<style is:global>
+    /* Scroll lock while any curtain is up (shared rule — ships with the
+       toggle, so it exists on classic pages too, where SkinSplash styles
+       never load). */
+    html.ss-lock { overflow: hidden; }
+
+    /* === DEPARTURE VEIL — full-screen cover, above the page, one step
+       below the arrival curtains so handoffs always render correctly. */
+    .skin-veil {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483646; /* one below the splash (…647) — arrival wins */
+        opacity: 0;
+    }
+
+    /* === HOMECOMING VEIL — the classic side's born-covered curtain =====
+       Same cream gradient as the departure veil toward classic: the swap
+       is invisible. The wordmark rises in (classic's own Playfair + Lora),
+       then the curtain itself lifts upward to reveal the home. */
+    .skin-return-veil {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483645;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(120% 100% at 50% 30%, #fffdf5 0%, #f7f0dd 62%, #efe5cc 100%);
+        cursor: pointer; /* click anywhere to skip the homecoming */
+        animation: skin-return-autohide 0.8s ease 5s forwards; /* no-JS failsafe */
+    }
+
+    .skin-return-veil[data-leaving='true'] {
+        transform: translateY(-102%);
+        transition: transform 0.95s cubic-bezier(0.65, 0, 0.2, 1);
+    }
+
+    .skin-return-veil-core {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.9rem;
+        padding: 0 1.5rem;
+        text-align: center;
+    }
+
+    .skin-return-veil-word {
+        font-family: 'Playfair Display', Georgia, serif;
+        font-weight: 900;
+        font-size: clamp(2.6rem, 10vw, 6rem);
+        letter-spacing: 0.18em;
+        line-height: 1;
+        color: #2e2a22; /* classic ink */
+        opacity: 0;
+        animation: skin-return-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+    }
+
+    .skin-return-veil-sub {
+        font-family: 'Lora', Georgia, serif;
+        font-style: italic;
+        font-size: 0.95rem;
+        letter-spacing: 0.04em;
+        color: #8a7f6a;
+        opacity: 0;
+        animation: skin-return-in 0.9s ease 0.55s forwards;
+    }
+
+    @keyframes skin-return-in {
+        from { opacity: 0; transform: translateY(18px); filter: blur(8px); }
+        to   { opacity: 1; transform: none; filter: blur(0); }
+    }
+
+    @keyframes skin-return-autohide {
+        to { opacity: 0; visibility: hidden; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .skin-return-veil { animation-duration: 0.01s; animation-delay: 1.4s; }
+        .skin-return-veil[data-leaving='true'] { transition-duration: 0.3s; }
+        .skin-return-veil-word { animation-duration: 0.01s; animation-delay: 0.05s; }
+        .skin-return-veil-sub { animation-duration: 0.01s; animation-delay: 0.1s; }
     }
 </style>

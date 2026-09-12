@@ -16,19 +16,23 @@
 // the param is scrubbed from the URL the instant it's read. Click skips.
 interface Props {
     variant?: 'plus' | 'pro' | 'max';
+    /** Server-side activation (?welcome=1): the page is BORN covered — no
+     *  flash of content before the curtain and no dependence on JS timing.
+     *  The departure veil on the old page hands off to this seamlessly
+     *  because both wear the identical Mesher background. */
+    eager?: boolean;
 }
-const { variant = 'plus' } = Astro.props as any;
+const { variant = 'plus', eager = false } = Astro.props as any;
 
-// Letter-by-letter timing — Session 15: slowed to a proper royal pace
-// (boss found the first cut rushed). First letter at 0.35s, +0.22s per
-// glyph, each entrance takes 1s → the "+" is fully landed at ~3.33s;
-// hold 1.6s so the peach "+" can breathe → lift begins at ~4.93s,
-// curtain takes 0.9s.
+// Letter-by-letter timing — Session 17: the full ceremony re-tempoed for
+// a professional, unhurried reveal. First letter at 0.50s, +0.25s per
+// glyph, each entrance takes 1.05s (expo-out) → the "+" fully landed at
+// ~3.80s; hold 1.5s → lift begins at ~5.30s; curtain takes 1.1s.
 const glyphs = 'Raconteur+'.split('');
-const stagger = 0.22;
-const first = 0.35;
-const letterDur = 1.0;
-const hold = 1.6;
+const stagger = 0.25;
+const first = 0.50;
+const letterDur = 1.05;
+const hold = 1.5;
 const lastArrives = first + (glyphs.length - 1) * stagger + letterDur;
 const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begins
 ---
@@ -38,6 +42,7 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
     id="skinSplash"
     data-variant={variant}
     data-duration={String(duration)}
+    data-active={eager ? 'true' : 'false'}
     aria-hidden="true"
 >
     <div class="ss-bg" aria-hidden="true"></div>
@@ -53,11 +58,17 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
                 </span>
             ))}
         </div>
-        <p class="ss-tagline" style={`animation-delay:${(lastArrives - 0.55).toFixed(2)}s`}>
+        <p class="ss-tagline" style={`animation-delay:${(lastArrives - 0.6).toFixed(2)}s`}>
             Literature you want to read
         </p>
     </div>
 </div>
+
+{/* No-JS safety: an eagerly-rendered curtain must never trap a visitor
+    who has scripting disabled — hide it entirely and show the page. */}
+<noscript>
+    <style>.skin-splash { display: none !important; }</style>
+</noscript>
 
 <style>
     /* === The cover === */
@@ -78,9 +89,9 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
 
     .skin-splash[data-leaving='true'] {
         opacity: 0;
-        transform: scale(1.06);
+        transform: scale(1.04);
         pointer-events: none;
-        transition: opacity 0.9s ease, transform 0.9s ease;
+        transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1), transform 1.1s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     /* === VARIANT: plus — the Mesher gradient, exactly as exported ===
@@ -125,7 +136,7 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
     .ss-letter {
         display: inline-block;
         opacity: 0;
-        animation: ss-letter-in 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        animation: ss-letter-in 1.05s cubic-bezier(0.16, 1, 0.3, 1) both;
         text-shadow: 0 6px 44px rgba(20, 0, 50, 0.45);
     }
 
@@ -138,8 +149,8 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
     @keyframes ss-letter-in {
         from {
             opacity: 0;
-            transform: translateY(0.45em) scale(0.9);
-            filter: blur(14px);
+            transform: translateY(0.5em) scale(0.92);
+            filter: blur(18px);
         }
         to {
             opacity: 1;
@@ -193,11 +204,16 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         var clean = window.location.pathname + (rest ? '?' + rest : '') + window.location.hash;
         window.history.replaceState({}, '', clean);
 
-        // Lock scroll while the curtain is up.
+        // Lock scroll while the curtain is up. (When the page arrived via
+        // the toggle, the splash is already active from the server — eager
+        // mode — so this is a no-op and there is no flash of the page.)
         document.documentElement.classList.add('ss-lock');
         splash.dataset.active = 'true';
 
-        var total = Number(splash.dataset.duration) || 4900;
+        // Reduced motion: the word shows statically for a beat, then a
+        // quick fade — no long held curtain for visitors who opted out.
+        var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var total = reduced ? 1400 : (Number(splash.dataset.duration) || 5300);
         var done = false;
         var finish = function () {
             if (done) return;
@@ -206,11 +222,17 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
             window.setTimeout(function () {
                 splash.remove();
                 document.documentElement.classList.remove('ss-lock');
-            }, 950);
+            }, reduced ? 350 : 1200);
         };
 
         window.setTimeout(finish, total);
         splash.addEventListener('click', finish); // the impatient exit
+
+        // bfcache: if the page is restored mid-ceremony (back button),
+        // end it instantly rather than trapping the visitor.
+        window.addEventListener('pageshow', function (e) {
+            if (e.persisted) finish();
+        });
     })();
 </script>
 
