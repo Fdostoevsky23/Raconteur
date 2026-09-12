@@ -19,14 +19,16 @@ interface Props {
 }
 const { variant = 'plus' } = Astro.props as any;
 
-// Letter-by-letter timing: first letter at 0.20s, +0.13s per glyph,
-// each letter's entrance takes 0.7s → the "+" is fully landed at
-// ~2.07s; hold 1s → begin the lift at ~3.1s; lift takes 0.7s.
+// Letter-by-letter timing — Session 15: slowed to a proper royal pace
+// (boss found the first cut rushed). First letter at 0.35s, +0.22s per
+// glyph, each entrance takes 1s → the "+" is fully landed at ~3.33s;
+// hold 1.6s so the peach "+" can breathe → lift begins at ~4.93s,
+// curtain takes 0.9s.
 const glyphs = 'Raconteur+'.split('');
-const stagger = 0.13;
-const first = 0.20;
-const letterDur = 0.7;
-const hold = 1.0;
+const stagger = 0.22;
+const first = 0.35;
+const letterDur = 1.0;
+const hold = 1.6;
 const lastArrives = first + (glyphs.length - 1) * stagger + letterDur;
 const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begins
 ---
@@ -78,7 +80,7 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         opacity: 0;
         transform: scale(1.06);
         pointer-events: none;
-        transition: opacity 0.7s ease, transform 0.7s ease;
+        transition: opacity 0.9s ease, transform 0.9s ease;
     }
 
     /* === VARIANT: plus — the Mesher gradient, exactly as exported ===
@@ -123,7 +125,7 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
     .ss-letter {
         display: inline-block;
         opacity: 0;
-        animation: ss-letter-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        animation: ss-letter-in 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
         text-shadow: 0 6px 44px rgba(20, 0, 50, 0.45);
     }
 
@@ -154,7 +156,7 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         text-transform: uppercase;
         color: rgba(255, 255, 255, 0.88);
         opacity: 0;
-        animation: ss-letter-in 0.8s ease both;
+        animation: ss-letter-in 1s ease both;
     }
 
     /* === Manners === */
@@ -162,6 +164,13 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         .ss-letter, .ss-tagline { animation-duration: 0.01s; }
         .skin-splash-plus .ss-bg { animation: none; }
         .skin-splash[data-leaving='true'] { transition-duration: 0.3s; }
+    }
+
+    /* Scroll lock while the curtain is up — the script below adds .ss-lock
+       to <html>; this rule (found missing at the Session 14 handoff) keeps
+       the page beneath from scrolling behind the splash. */
+    :global(html.ss-lock) {
+        overflow: hidden;
     }
 </style>
 
@@ -188,7 +197,7 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         document.documentElement.classList.add('ss-lock');
         splash.dataset.active = 'true';
 
-        var total = Number(splash.dataset.duration) || 3100;
+        var total = Number(splash.dataset.duration) || 4900;
         var done = false;
         var finish = function () {
             if (done) return;
@@ -197,7 +206,7 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
             window.setTimeout(function () {
                 splash.remove();
                 document.documentElement.classList.remove('ss-lock');
-            }, 720);
+            }, 950);
         };
 
         window.setTimeout(finish, total);

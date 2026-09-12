@@ -169,27 +169,15 @@ body.plus-skin {
 
 .ph-card-cover { overflow: hidden; position: relative; }
 
-/* Ambient fill: the card carries its own cover art inline (set per-card
-   in the markup) — a blurred, darkened copy sits behind the letterboxed
-   image so portrait covers in landscape slots glow instead of smear.
-   ::before inherits that background-image. */
-.ph-card-cover::before {
-    content: '';
-    position: absolute;
-    inset: -24px;
-    background: inherit;
-    background-size: cover;
-    background-position: center top;
-    filter: blur(22px) saturate(1.15) brightness(0.5);
-    transform: scale(1.08);
-}
-
+/* Classic cover-fill — every tile (shelf, poetry, archive) renders its
+   cover cropped-to-fill anchored at the top, exactly as the skin
+   originally shipped. The letterbox treatment is scoped to the lead
+   card ONLY (see .ph-card-cover-letterbox in the grid section). */
 .ph-card-cover img {
-    position: relative;
     width: 100%;
     height: 240px;
-    object-fit: contain; /* the cover art as it was meant to be — never stretched */
-    object-position: center;
+    object-fit: cover;
+    object-position: top;
     display: block;
     transition: transform 0.5s ease;
 }
@@ -277,6 +265,29 @@ body.plus-skin {
 .ph-grid .ph-card-lead { grid-column: span 4; }
 .ph-grid .ph-card-lead .ph-card-cover img { height: 320px; }
 .ph-grid .ph-card-lead .ph-card-title { font-size: 1.8rem; }
+
+/* Lead-card letterbox — the featured-art treatment (the big first tile,
+   e.g. "Eating Hope"): that ONE tile carries its cover inline (set in
+   the homepage markup) and a blurred, darkened copy of itself glows
+   behind the contain-fit image, so portrait art shows in full instead of
+   cropping into a smeared band. The class is only ever added to the
+   first shelf card — every other tile keeps the classic fill above. */
+.ph-grid .ph-card-lead .ph-card-cover-letterbox::before {
+    content: '';
+    position: absolute;
+    inset: -24px;
+    background: inherit;
+    background-size: cover;
+    background-position: center top;
+    filter: blur(22px) saturate(1.15) brightness(0.5);
+    transform: scale(1.08);
+}
+
+.ph-grid .ph-card-lead .ph-card-cover-letterbox img {
+    position: relative;
+    object-fit: contain;
+    object-position: center;
+}
 
 /* Verse variant — serif italic poem teaser cover */
 .ph-card-verse-text {

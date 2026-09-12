@@ -203,7 +203,10 @@ const deskNote = {
                 >
                     <span class="ph-card-index" aria-hidden="true">{two(i + 1)}</span>
                     {story.cover ? (
-                        <div class="ph-card-cover" style={`background-image:url('${story.cover}');`}>
+                        <div
+                            class={`ph-card-cover${i === 0 ? ' ph-card-cover-letterbox' : ''}`}
+                            style={i === 0 ? `background-image:url('${story.cover}');` : undefined}
+                        >
                             <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />
                         </div>
                     ) : (
