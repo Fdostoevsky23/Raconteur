@@ -38,7 +38,7 @@ const canonical = Astro.url.href.replace('/max', '');
 // NAV LINKS — max pages exist only for the ones built; everything else
 // points at classic pages so nothing 404s mid-build.
 const navHref = {
-    stories: '/stories',
+    stories: '/max/stories',
     about: '/about',
     feed: '/feed',
     login: '/login',
@@ -171,7 +171,7 @@ const navHref = {
         <p class="mx-footer-brand">Raconteur <em>Max</em> — The Editorial Split</p>
         <nav class="mx-footer-links" aria-label="Footer">
             <a href="/max">Home</a>
-            <a href={navHref.stories}>Library</a>
+            <a href="/max/stories">Library</a>
             <a href={navHref.feed}>Feed</a>
             <a href="/about">About</a>
             <a href="/tos">Terms</a>

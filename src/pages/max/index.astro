@@ -74,7 +74,7 @@ const moods = [
                 to breathe — publishing for people who still believe in the sentence.
             </p>
             <div class="mx-hero-actions">
-                <a href="/stories" class="mx-btn mx-btn-ink">Enter the library</a>
+                <a href="/max/stories" class="mx-btn mx-btn-ink">Enter the library</a>
                 <a href="/submit" class="mx-btn mx-btn-ghost">Publish a story</a>
             </div>
             <p class="mx-hero-meta">
@@ -122,7 +122,7 @@ const moods = [
                     </li>
                 ))}
             </ul>
-            <a href="/stories" class="mx-ulink mx-shelf-more">Browse the full archive</a>
+            <a href="/max/stories" class="mx-ulink mx-shelf-more">Browse the full archive</a>
         </div>
         <div class="mx-split-side mx-shelf-plate">
             <div class="mx-shelf-frame" data-mx-parallax="10">
@@ -205,7 +205,7 @@ const moods = [
         <p class="mx-eyebrow">04 — The Mood Index</p>
         <div class="mx-moods-row">
             {moods.map(m => (
-                <a href={`/stories?q=${m.query}`} class="mx-mood">
+                <a href={`/max/stories?q=${m.query}`} class="mx-mood">
                     <span class="mx-mood-emoji">{m.emoji}</span>
                     <span class="mx-mood-name">{m.name}</span>
                 </a>
