@@ -1,0 +1,694 @@
+---
+// src/pages/pro/index.astro — Raconteur Pro homepage ("The Reader's Desk").
+// Dark bento-grid glassmorphism. Layout grammar inspired by the
+// dark-fintech-dashboard genre; every card, label, chart and composition
+// is original Raconteur expression built on the shared data layer.
+import ProLayout from '../../layouts/ProLayout.astro';
+import { getVisibleStories } from '../../data/stories';
+import { supabase } from '../../lib/supabase';
+import { buildStoryFromDB } from '../../lib/storyLoader';
+
+// 1. Static stories
+const staticStories = getVisibleStories();
+
+// 2. Published DB stories (same query as classic home)
+const { data: dbRows } = await supabase
+    .from('stories')
+    .select('*')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false });
+const dbStories = (dbRows || []).map(buildStoryFromDB);
+
+// 3. Merge — DB first (newest first)
+const stories = [...dbStories, ...staticStories];
+const totalWords = stories.reduce((sum, s) => sum + s.wordCount, 0);
+const poems = stories.filter(s => (s as any).kind === 'poem' || s.genre === 'Poetry');
+const prose = stories.filter(s => !((s as any).kind === 'poem' || s.genre === 'Poetry'));
+const latest = [...stories]
+    .sort((a: any, b: any) => new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime())
+    .slice(0, 5);
+
+// Shelves by genre — bar-chart data (top 5 shelves)
+const shelfMap = new Map<string, number>();
+stories.forEach(s => {
+    const g = s.genre || 'Unshelved';
+    shelfMap.set(g, (shelfMap.get(g) || 0) + 1);
+});
+const shelves = [...shelfMap.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([genre, count]) => ({ genre, count }));
+const shelfMax = shelves.length ? shelves[0].count : 1;
+
+// Library growth — cumulative story count over the last 12 months (area chart)
+const now = new Date();
+const months: { key: string; label: string; count: number }[] = [];
+for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    months.push({ key, label: d.toLocaleString('en-US', { month: 'short' }), count: 0 });
+}
+stories.forEach(s => {
+    const d = new Date(s.publishedDate);
+    if (Number.isNaN(d.getTime())) return;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const m = months.find(x => x.key === key);
+    if (m) m.count++;
+});
+let cum = 0;
+const growth = months.map(m => ({ ...m, cum: (cum += m.count) }));
+const growthMax = Math.max(...growth.map(g => g.cum), 1);
+const thisMonth = months[11]?.count || 0;
+const lastMonth = months[10]?.count || 0;
+const growthPct = lastMonth > 0 ? Math.round(((thisMonth - lastMonth) / lastMonth) * 100) : (thisMonth > 0 ? 100 : 0);
+
+// SVG area chart geometry (no external deps)
+const W = 100, H = 40, PAD = 2;
+const pts = growth.map((g, i) => {
+    const x = PAD + (i / (growth.length - 1)) * (W - PAD * 2);
+    const y = H - PAD - (g.cum / growthMax) * (H - PAD * 2);
+    return { x: +x.toFixed(2), y: +y.toFixed(2) };
+});
+const line = pts.map(p => `${p.x},${p.y}`).join(' ');
+const area = `M${PAD},${H - PAD} L` + line.split(' ').join(' L') + ` L${W - PAD},${H - PAD} Z`;
+
+// Reading-year progress
+const dayOfYear = Math.floor((Date.now() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
+const yearLen = ((now.getFullYear() % 4 === 0) && (now.getFullYear() % 100 !== 0 || now.getFullYear() % 400 === 0)) ? 366 : 365;
+const yearPct = Math.min(100, Math.round((dayOfYear / yearLen) * 100));
+
+// Greeting by hour
+const hour = now.getHours();
+const greeting = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+
+// Moods — deep-link into archive search
+const moods = [
+    { emoji: '🌧', name: 'Melancholy', query: 'rain' },
+    { emoji: '🌙', name: 'Nocturnal', query: 'night' },
+    { emoji: '❤', name: 'Tender', query: 'love' },
+    { emoji: '🕯', name: 'Still', query: 'silence' },
+    { emoji: '🏠', name: 'Homeward', query: 'home' },
+    { emoji: '✨', name: 'Wonder', query: 'light' },
+];
+---
+
+<ProLayout title="Raconteur Pro — The Reader's Desk" description="Literature you want to read — the Raconteur Pro desk.">
+    <div class="pro-home">
+        <div class="pro-bento">
+            {/* ===== DESK OVERVIEW — hero card (span 8) ===== */}
+            <section class="pro-card span-8 pro-desk-card" data-pro-reveal>
+                <div class="pro-card-head">
+                    <div>
+                        <p class="pro-desk-kicker">THE READER'S DESK</p>
+                        <h1 class="pro-desk-title">Good {greeting}, reader.</h1>
+                    </div>
+                    <div class="pro-desk-filters" role="group" aria-label="Chart window">
+                        <button class="pro-filter active" data-window="year">1 year</button>
+                        <button class="pro-filter" data-window="half">6 months</button>
+                        <button class="pro-filter" data-window="quarter">3 months</button>
+                        <button class="pro-filter" data-window="month">1 month</button>
+                    </div>
+                </div>
+                <div class="pro-desk-body">
+                    <div class="pro-desk-left">
+                        <p class="pro-desk-label">Works on the shelves</p>
+                        <div class="pro-row">
+                            <span class="pro-desk-number pro-num">{stories.length}</span>
+                            <span class={`pro-badge-up ${growthPct < 0 ? 'down' : ''}`}>
+                                {growthPct >= 0 ? '▲' : '▼'} {Math.abs(growthPct)}% <span class="pro-badge-sub">this month</span>
+                            </span>
+                        </div>
+                        <p class="pro-desk-sub">
+                            {totalWords.toLocaleString()} words · {poems.length} poems · {prose.length} prose
+                        </p>
+                        <div class="pro-desk-actions">
+                            <a href="/stories" class="pro-btn pro-btn-amber">Browse the library</a>
+                            <a href="/submit" class="pro-btn pro-btn-ghost">Publish a story</a>
+                        </div>
+                    </div>
+                    <div class="pro-desk-chart" aria-hidden="true">
+                        <svg viewBox="0 0 100 40" preserveAspectRatio="none" class="pro-growth-svg">
+                            <path d={area} class="pro-growth-area" />
+                            <polyline points={line} class="pro-growth-line" />
+                        </svg>
+                        <div class="pro-chart-months">
+                            {growth.map(g => <span>{g.label}</span>)}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ===== READER'S CARD — the membership card (span 4) ===== */}
+            <section class="pro-card span-4 pro-readers-card" data-pro-reveal style="--pro-reveal-delay: 0.08s">
+                <div class="pro-card-head">
+                    <span class="pro-card-label">Reader's card</span>
+                    <span class="pro-readers-chip">MEMBER</span>
+                </div>
+                <div class="pro-readers-body">
+                    <div class="pro-readers-art" aria-hidden="true">
+                        <span class="pro-readers-mark">R</span>
+                        <span class="pro-readers-waves"></span>
+                    </div>
+                    <p class="pro-readers-line"><span>Holder</span><strong>Every reader here</strong></p>
+                    <p class="pro-readers-line"><span>Since</span><strong>2026</strong></p>
+                    <p class="pro-readers-line"><span>Standing</span><strong class="pro-mint-text">In good standing</strong></p>
+                </div>
+            </section>
+
+            {/* ===== READING YEAR — progress (span 4) ===== */}
+            <section class="pro-card span-4 pro-year-card" data-pro-reveal style="--pro-reveal-delay: 0.12s">
+                <div class="pro-card-head">
+                    <span class="pro-card-label">Reading year</span>
+                    <span class="pro-year-pct pro-num">{yearPct}%</span>
+                </div>
+                <div class="pro-year-body">
+                    <div class="pro-progress" role="progressbar" aria-valuenow={yearPct} aria-valuemin="0" aria-valuemax="100" aria-label="Year elapsed">
+                        <span class="pro-progress-fill" style={`width:${yearPct}%`}></span>
+                    </div>
+                    <p class="pro-year-sub">Day {dayOfYear} of {yearLen} — {365 - dayOfYear > 0 ? `${365 - dayOfYear} evenings` : 'the final page'} of the year remain.</p>
+                </div>
+            </section>
+
+            {/* ===== FRESH FROM THE DESK — recent works list (span 5) ===== */}
+            <section class="pro-card span-5 pro-latest-card" data-pro-reveal>
+                <div class="pro-card-head">
+                    <span class="pro-card-label">Fresh from the desk</span>
+                    <a href="/stories" class="pro-card-link">View all →</a>
+                </div>
+                <ul class="pro-latest-list">
+                    {latest.map((s: any) => (
+                        <li>
+                            <a href={`/story/${s.slug}`} class="pro-latest-item">
+                                <span class={`pro-latest-icon ${s.genre === 'Poetry' ? 'poem' : ''}`}>{s.genre === 'Poetry' ? '✦' : '❋'}</span>
+                                <span class="pro-latest-main">
+                                    <span class="pro-latest-title">{s.title}</span>
+                                    <span class="pro-latest-meta">{s.author} · {s.genre}</span>
+                                </span>
+                                <span class="pro-latest-count pro-num">{s.wordCount.toLocaleString()}w</span>
+                            </a>
+                        </li>
+                    ))}
+                </ul>
+            </section>
+
+            {/* ===== MOODS — feeling-first search deep-links (span 7) ===== */}
+            <section class="pro-card span-7 pro-moods-card" data-pro-reveal style="--pro-reveal-delay: 0.08s">
+                <div class="pro-card-head">
+                    <span class="pro-card-label">What are you in the mood for?</span>
+                </div>
+                <div class="pro-moods-grid">
+                    {moods.map(m => (
+                        <a href={`/stories?q=${m.query}`} class="pro-mood">
+                            <span class="pro-mood-emoji">{m.emoji}</span>
+                            <span class="pro-mood-name">{m.name}</span>
+                        </a>
+                    ))}
+                </div>
+            </section>
+
+            {/* ===== SHELVES BY GENRE — bar chart (span 4) ===== */}
+            <section class="pro-card span-4 pro-shelves-card" data-pro-reveal>
+                <div class="pro-card-head">
+                    <span class="pro-card-label">Shelves by genre</span>
+                </div>
+                <div class="pro-shelves">
+                    {shelves.map((s, i) => (
+                        <div class="pro-shelf-row">
+                            <span class="pro-shelf-name">{s.genre}</span>
+                            <div class="pro-shelf-track">
+                                <span class="pro-shelf-bar" style={`width:${Math.max(6, Math.round((s.count / shelfMax) * 100))}%`} class:hot={i === 0}></span>
+                            </div>
+                            <span class="pro-shelf-count pro-num">{s.count}</span>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* ===== OPEN CALL — submission window (span 4) ===== */}
+            <section class="pro-card span-4 pro-call-card" data-pro-reveal style="--pro-reveal-delay: 0.08s">
+                <div class="pro-card-head">
+                    <span class="pro-card-label">Submission window</span>
+                    <span class="pro-open-dot" aria-hidden="true"></span>
+                </div>
+                <div class="pro-call-body">
+                    <p class="pro-call-title">Open call — always</p>
+                    <p class="pro-call-sub">Raconteur reads every submission. No slush pile, no agents, no gatekeepers — your story goes from desk to shelf the moment it's ready.</p>
+                    <a href="/submit" class="pro-btn pro-btn-amber pro-call-btn">Submit a story</a>
+                </div>
+            </section>
+
+            {/* ===== FEATURED WORK — promo banner (span 8) ===== */}
+            {latest[0] && (
+                <section class="pro-card span-8 pro-feature-card" data-pro-reveal>
+                    <a href={`/story/${latest[0].slug}`} class="pro-feature">
+                        <div class="pro-feature-text">
+                            <span class="pro-feature-kicker">Editor's pick · newest on the desk</span>
+                            <span class="pro-feature-title">{latest[0].title}</span>
+                            <span class="pro-feature-meta">by {latest[0].author} · {latest[0].readTime} · {latest[0].genre}</span>
+                            <span class="pro-feature-read">Read it →</span>
+                        </div>
+                        <div class="pro-feature-art" aria-hidden="true">✦</div>
+                    </a>
+                </section>
+            )}
+
+            {/* ===== MARGIN NOTE — quiet quote (span 4) ===== */}
+            <section class="pro-card span-4 pro-quote-card" data-pro-reveal style="--pro-reveal-delay: 0.08s">
+                <p class="pro-quote-text">“A reader lives a thousand lives before he dies.”</p>
+                <p class="pro-quote-cite">— George R.R. Martin</p>
+            </section>
+
+            {/* ===== STAT STRIP (span 12) ===== */}
+            <section class="pro-card span-12 pro-stats-card" data-pro-reveal>
+                <div class="pro-stats">
+                    <div class="pro-stat">
+                        <span class="pro-stat-num pro-num">{stories.length}</span>
+                        <span class="pro-stat-label">works published</span>
+                    </div>
+                    <div class="pro-stat">
+                        <span class="pro-stat-num pro-num">{totalWords.toLocaleString()}</span>
+                        <span class="pro-stat-label">words written</span>
+                    </div>
+                    <div class="pro-stat">
+                        <span class="pro-stat-num pro-num">∞</span>
+                        <span class="pro-stat-label">stories yet to come</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</ProLayout>
+
+<style>
+    /* === PAGE SHELL === */
+    .pro-home {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 1.6rem 1.6rem 2rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* === DESK OVERVIEW CARD === */
+    .pro-desk-card { grid-column: span 8; }
+    .pro-desk-kicker {
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        color: var(--pro-amber);
+        margin: 0 0 0.35rem;
+    }
+    .pro-desk-title {
+        font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--pro-text);
+        margin: 0;
+        line-height: 1.15;
+    }
+    .pro-desk-filters {
+        display: flex;
+        gap: 0.2rem;
+        padding: 0.24rem;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+    .pro-filter {
+        padding: 0.32rem 0.7rem;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--pro-text-3);
+        font-family: var(--pro-font);
+        font-size: 0.74rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: color 0.2s, background 0.2s;
+    }
+    .pro-filter:hover { color: var(--pro-text); }
+    .pro-filter.active { background: rgba(255, 255, 255, 0.09); color: var(--pro-text); }
+    .pro-desk-body {
+        display: flex;
+        gap: 2rem;
+        padding: 1.2rem 1.4rem 1.4rem;
+        align-items: stretch;
+    }
+    .pro-desk-left { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; min-width: 230px; }
+    .pro-desk-label { font-size: 0.8rem; color: var(--pro-text-2); margin: 0 0 0.3rem; }
+    .pro-desk-number {
+        font-size: clamp(2.6rem, 5vw, 3.6rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--pro-text);
+        line-height: 1;
+    }
+    .pro-badge-sub { color: var(--pro-text-2); font-weight: 400; margin-left: 0.25rem; }
+    .pro-badge-up.down { background: rgba(255, 90, 90, 0.12); color: #ff7a7a; }
+    .pro-desk-sub { font-size: 0.82rem; color: var(--pro-text-3); margin: 0.55rem 0 1.1rem; }
+    .pro-desk-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .pro-desk-chart { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; min-width: 0; }
+    .pro-growth-svg { width: 100%; height: 190px; display: block; }
+    .pro-growth-area { fill: url(#proGrowthFill); stroke: none; }
+    .pro-growth-line { fill: none; stroke: var(--pro-mint); stroke-width: 0.6; vector-effect: non-scaling-stroke; }
+    .pro-chart-months { display: flex; justify-content: space-between; padding: 0.4rem 0 0; }
+    .pro-chart-months span { font-size: 0.62rem; color: var(--pro-text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* === READER'S CARD === */
+    .pro-readers-card { grid-column: span 4; display: flex; flex-direction: column; }
+    .pro-readers-chip {
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        color: var(--pro-mint);
+        border: 1px solid rgba(46, 230, 168, 0.35);
+        border-radius: 999px;
+        padding: 0.16rem 0.55rem;
+    }
+    .pro-readers-body { padding: 1rem 1.4rem 1.4rem; display: flex; flex-direction: column; gap: 0.55rem; flex: 1; }
+    .pro-readers-art {
+        position: relative;
+        height: 110px;
+        border-radius: var(--pro-r-md);
+        background:
+            radial-gradient(80% 120% at 80% 0%, rgba(255, 106, 0, 0.30), transparent 60%),
+            radial-gradient(90% 120% at 10% 100%, rgba(46, 230, 168, 0.22), transparent 60%),
+            linear-gradient(135deg, rgba(24, 30, 34, 0.9), rgba(10, 13, 16, 0.95));
+        border: 1px solid var(--pro-line);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.6rem;
+    }
+    .pro-readers-mark {
+        font-family: var(--pro-font);
+        font-size: 3.4rem;
+        font-weight: 700;
+        color: rgba(244, 246, 247, 0.92);
+        text-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+        line-height: 1;
+    }
+    .pro-readers-waves {
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 34px;
+        background:
+            radial-gradient(50% 100% at 20% 100%, rgba(255, 255, 255, 0.10), transparent 70%),
+            radial-gradient(50% 100% at 70% 100%, rgba(255, 255, 255, 0.07), transparent 70%);
+    }
+    .pro-readers-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 0.82rem;
+        margin: 0;
+        border-bottom: 1px dashed var(--pro-line);
+        padding-bottom: 0.45rem;
+    }
+    .pro-readers-line span { color: var(--pro-text-3); }
+    .pro-readers-line strong { color: var(--pro-text); font-weight: 500; }
+    .pro-mint-text { color: var(--pro-mint) !important; }
+
+    /* === READING YEAR === */
+    .pro-year-card { grid-column: span 4; display: flex; flex-direction: column; }
+    .pro-year-pct { font-size: 1.05rem; color: var(--pro-honey); font-weight: 600; }
+    .pro-year-body { padding: 1.2rem 1.4rem 1.4rem; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0.8rem; }
+    .pro-progress {
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+        border: 1px solid var(--pro-line);
+    }
+    .pro-progress-fill {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--pro-amber), var(--pro-honey));
+        box-shadow: 0 0 16px rgba(255, 106, 0, 0.35);
+    }
+    .pro-year-sub { font-size: 0.8rem; color: var(--pro-text-2); margin: 0; line-height: 1.55; }
+
+    /* === FRESH FROM THE DESK === */
+    .pro-latest-card { grid-column: span 5; }
+    .pro-card-link { font-size: 0.78rem; color: var(--pro-amber); text-decoration: none; font-weight: 500; }
+    .pro-card-link:hover { text-decoration: underline; }
+    .pro-latest-list { list-style: none; margin: 0; padding: 0.6rem 0.4rem 0.8rem; }
+    .pro-latest-item {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        padding: 0.62rem 0.7rem;
+        border-radius: var(--pro-r-sm);
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+    .pro-latest-item:hover { background: rgba(255, 255, 255, 0.05); }
+    .pro-latest-icon {
+        flex: 0 0 auto;
+        width: 34px; height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        background: var(--pro-amber-soft);
+        color: var(--pro-amber);
+        font-size: 0.9rem;
+    }
+    .pro-latest-icon.poem { background: var(--pro-mint-soft); color: var(--pro-mint); }
+    .pro-latest-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.12rem; }
+    .pro-latest-title {
+        font-size: 0.92rem;
+        font-weight: 500;
+        color: var(--pro-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .pro-latest-meta { font-size: 0.74rem; color: var(--pro-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pro-latest-count { font-size: 0.74rem; color: var(--pro-text-3); }
+
+    /* === MOODS === */
+    .pro-moods-card { grid-column: span 7; }
+    .pro-moods-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.6rem;
+        padding: 0.8rem 1.2rem 1.2rem;
+    }
+    .pro-mood {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.8rem 0.9rem;
+        border-radius: var(--pro-r-md);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        text-decoration: none;
+        transition: border-color 0.2s, background 0.2s, transform 0.2s;
+    }
+    .pro-mood:hover {
+        border-color: var(--pro-line-hi);
+        background: rgba(255, 255, 255, 0.07);
+        transform: translateY(-2px);
+    }
+    .pro-mood-emoji { font-size: 1.25rem; line-height: 1; }
+    .pro-mood-name { font-size: 0.88rem; font-weight: 500; color: var(--pro-text); }
+
+    /* === SHELVES === */
+    .pro-shelves-card { grid-column: span 4; }
+    .pro-shelves { padding: 0.9rem 1.3rem 1.3rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .pro-shelf-row { display: flex; align-items: center; gap: 0.7rem; }
+    .pro-shelf-name {
+        flex: 0 0 42%;
+        font-size: 0.78rem;
+        color: var(--pro-text-2);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .pro-shelf-track { flex: 1; height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); overflow: hidden; }
+    .pro-shelf-bar {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(46, 230, 168, 0.5), var(--pro-mint));
+        transition: width 1s cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+    .pro-shelf-bar.hot { background: linear-gradient(90deg, var(--pro-amber), #ff8c3a); box-shadow: 0 0 12px rgba(255, 106, 0, 0.4); }
+    .pro-shelf-count { font-size: 0.78rem; color: var(--pro-text); width: 1.6rem; text-align: right; }
+
+    /* === OPEN CALL === */
+    .pro-call-card { grid-column: span 4; }
+    .pro-open-dot {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: var(--pro-mint);
+        box-shadow: 0 0 10px rgba(46, 230, 168, 0.8);
+        animation: pro-pulse 2s ease-in-out infinite;
+    }
+    .pro-call-body { padding: 1.1rem 1.4rem 1.4rem; display: flex; flex-direction: column; gap: 0.7rem; flex: 1; justify-content: center; }
+    .pro-call-title { font-size: 1.25rem; font-weight: 600; color: var(--pro-text); margin: 0; }
+    .pro-call-sub { font-size: 0.82rem; color: var(--pro-text-2); margin: 0 0 0.4rem; line-height: 1.6; }
+    .pro-call-btn { align-self: flex-start; }
+
+    @keyframes pro-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.45; }
+    }
+
+    /* === FEATURED WORK BANNER === */
+    .pro-feature-card { grid-column: span 8; padding: 0; }
+    .pro-feature {
+        display: flex;
+        align-items: stretch;
+        text-decoration: none;
+        height: 100%;
+    }
+    .pro-feature-text {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 1.6rem 1.6rem;
+        min-width: 0;
+    }
+    .pro-feature-kicker { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pro-honey); }
+    .pro-feature-title {
+        font-size: clamp(1.4rem, 2.6vw, 2rem);
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--pro-text);
+        line-height: 1.2;
+    }
+    .pro-feature-meta { font-size: 0.82rem; color: var(--pro-text-2); }
+    .pro-feature-read { font-size: 0.88rem; font-weight: 600; color: var(--pro-amber); margin-top: 0.5rem; }
+    .pro-feature-art {
+        flex: 0 0 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        color: var(--pro-amber);
+        background:
+            radial-gradient(80% 100% at 70% 30%, rgba(255, 106, 0, 0.25), transparent 65%),
+            rgba(255, 255, 255, 0.02);
+        border-left: 1px solid var(--pro-line);
+        text-shadow: 0 10px 40px rgba(255, 106, 0, 0.4);
+    }
+
+    /* === QUOTE === */
+    .pro-quote-card { grid-column: span 4; }
+    .pro-quote-card p { margin: 0; }
+    .pro-quote-text {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        font-size: 1.15rem;
+        line-height: 1.6;
+        color: var(--pro-text-2);
+        padding: 1.2rem 1.4rem 0.3rem;
+    }
+    .pro-quote-cite { font-size: 0.74rem; color: var(--pro-text-3); padding: 0 1.4rem 1.2rem; letter-spacing: 0.05em; }
+
+    /* === STATS STRIP === */
+    .pro-stats-card { grid-column: span 12; }
+    .pro-stats {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: 1.4rem 1rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .pro-stat { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; }
+    .pro-stat-num { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; color: var(--pro-text); }
+    .pro-stat-label { font-size: 0.74rem; color: var(--pro-text-3); letter-spacing: 0.04em; }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 1024px) {
+        .pro-desk-body { flex-direction: column; gap: 1.2rem; }
+        .pro-desk-left { min-width: 0; }
+        .pro-feature-art { flex-basis: 140px; font-size: 3rem; }
+    }
+
+    @media (max-width: 640px) {
+        .pro-home { padding: 1rem 0.9rem 1.4rem; }
+        .pro-desk-filters { display: none; }
+        .pro-growth-svg { height: 140px; }
+        .pro-feature-art { display: none; }
+        .pro-stats { flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .pro-open-dot { animation: none; }
+        .pro-shelf-bar { transition: none; }
+    }
+</style>
+
+{/* Chart area gradient — defined once, referenced by the growth chart */}
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <defs>
+        <linearGradient id="proGrowthFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="rgba(46, 230, 168, 0.32)" />
+            <stop offset="100%" stop-color="rgba(46, 230, 168, 0)" />
+        </linearGradient>
+    </defs>
+</svg>
+
+<script>
+    // Chart window filters — re-slice the 12-month series client-side.
+    const deskCard = document.querySelector('.pro-desk-card');
+    const filterBtns = document.querySelectorAll('.pro-filter');
+    const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (deskCard && filterBtns.length) {
+        const svg = deskCard.querySelector('.pro-growth-svg');
+        const areaEl = svg?.querySelector('.pro-growth-area');
+        const lineEl = svg?.querySelector('.pro-growth-line');
+        const monthsEl = deskCard.querySelector('.pro-chart-months');
+
+        const labels = Array.from(monthsEl?.children || []).map(s => s.textContent?.trim() || '');
+        const parsePoints = (attr: string) => (attr || '').split(/\s+/).filter(Boolean).map(p => p.split(',').map(Number));
+
+        const render = (windowCount: number) => {
+            if (!lineEl || !areaEl) return;
+            const pts = parsePoints(lineEl.getAttribute('points') || '');
+            if (!pts.length) return;
+            const slice = pts.slice(-windowCount);
+            const W = 100, H = 40, PAD = 2;
+            const line = slice.map(p => `${p[0]},${p[1]}`).join(' ');
+            const area = `M${slice[0][0]},${H - PAD} L` + line.split(' ').join(' L') + ` L${slice[slice.length - 1][0]},${H - PAD} Z`;
+            lineEl.setAttribute('points', line);
+            areaEl.setAttribute('d', area);
+            if (monthsEl) {
+                const lab = labels.slice(-windowCount);
+                monthsEl.innerHTML = lab.map(l => `<span>${l}</span>`).join('');
+            }
+        };
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const w = btn.getAttribute('data-window');
+                const n = w === 'month' ? 2 : w === 'quarter' ? 3 : w === 'half' ? 6 : 12;
+                render(n);
+            });
+        });
+
+        // Chart line draw-in on first reveal (skipped for reduced motion)
+        if (!REDUCED && lineEl) {
+            const len = (lineEl as SVGPolylineElement).getTotalLength();
+            lineEl.style.strokeDasharray = `${len}`;
+            lineEl.style.strokeDashoffset = `${len}`;
+            requestAnimationFrame(() => {
+                lineEl.style.transition = 'stroke-dashoffset 1.4s cubic-bezier(0.2, 0.7, 0.2, 1)';
+                lineEl.style.strokeDashoffset = '0';
+            });
+        }
+    }
+</script>
+</style>

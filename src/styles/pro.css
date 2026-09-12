@@ -1,0 +1,269 @@
+/* ============================================================
+   pro.css — Raconteur PRO design system
+   "The Reader's Desk" — dark bento-grid glassmorphism.
+   Layout grammar inspired by the dark-fintech-dashboard genre
+   (bento cards, glass surfaces, ambient glows on near-black);
+   ALL content, compositions, and color values are original
+   Raconteur work. No financial marks or imagery, ever.
+   ============================================================ */
+
+/* === 1. TOKENS === */
+:root {
+    /* Canvas & surfaces */
+    --pro-void: #06080a;        /* near-black canvas */
+    --pro-card: rgba(24, 30, 34, 0.55);   /* dark translucent card */
+    --pro-card-hi: rgba(32, 40, 45, 0.62); /* hover card */
+    --pro-line: rgba(255, 255, 255, 0.08); /* hairline */
+    --pro-line-hi: rgba(255, 255, 255, 0.14);
+
+    /* Text */
+    --pro-text: #f4f6f7;
+    --pro-text-2: #a8b4bc;
+    --pro-text-3: #6d7a84;
+
+    /* Accents — original values, warm caramel + cool mint + honey */
+    --pro-amber: #ff6a00;       /* primary CTA */
+    --pro-amber-soft: rgba(255, 106, 0, 0.16);
+    --pro-mint: #2ee6a8;        /* positive / charts */
+    --pro-mint-soft: rgba(46, 230, 168, 0.14);
+    --pro-honey: #ffc648;       /* secondary accent */
+    --pro-honey-soft: rgba(255, 198, 72, 0.14);
+
+    /* Type */
+    --pro-font: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+    --pro-font-read: 'Newsreader', Georgia, serif;
+
+    /* Radii & shadows */
+    --pro-r-lg: 20px;           /* signature card radius */
+    --pro-r-md: 14px;
+    --pro-r-sm: 10px;
+    --pro-glow-orange: 0 0 42px rgba(255, 106, 0, 0.20);
+    --pro-glow-mint: 0 0 42px rgba(27, 222, 162, 0.16);
+    --pro-shadow-card: 0 18px 50px rgba(0, 0, 0, 0.42);
+    --pro-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* === 2. BASE === */
+body.pro-skin {
+    background-color: var(--pro-void);
+    color: var(--pro-text);
+    font-family: var(--pro-font);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow-x: hidden;
+}
+
+main.pro-main { flex: 1; }
+
+/* Ambient glow fields — fixed, non-interactive */
+.pro-ambient {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.pro-ambient::before,
+.pro-ambient::after {
+    content: '';
+    position: absolute;
+    width: 62vmax;
+    height: 62vmax;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.55;
+}
+
+.pro-ambient::before {
+    background: radial-gradient(circle, rgba(255, 106, 0, 0.13), transparent 65%);
+    top: -22vmax;
+    right: -14vmax;
+}
+
+.pro-ambient::after {
+    background: radial-gradient(circle, rgba(46, 230, 168, 0.10), transparent 65%);
+    bottom: -26vmax;
+    left: -16vmax;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pro-ambient::before, .pro-ambient::after { opacity: 0.4; }
+}
+
+/* === 3. GLASS CARD — the core surface === */
+.pro-card {
+    position: relative;
+    background: var(--pro-card);
+    border: 1px solid var(--pro-line);
+    border-radius: var(--pro-r-lg);
+    box-shadow: var(--pro-shadow-card), var(--pro-inner-glow);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    overflow: hidden;
+    transition: border-color 0.3s, background 0.3s, transform 0.3s;
+}
+
+.pro-card:hover {
+    border-color: var(--pro-line-hi);
+    background: var(--pro-card-hi);
+}
+
+/* Card head — label + optional action */
+.pro-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.1rem 1.4rem 0;
+}
+
+.pro-card-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--pro-text-2);
+}
+
+/* === 4. BENTO GRID === */
+.pro-bento {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 18px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Column spans — used per-card */
+.pro-bento > .span-12 { grid-column: span 12; }
+.pro-bento > .span-8 { grid-column: span 8; }
+.pro-bento > .span-7 { grid-column: span 7; }
+.pro-bento > .span-6 { grid-column: span 6; }
+.pro-bento > .span-5 { grid-column: span 5; }
+.pro-bento > .span-4 { grid-column: span 4; }
+.pro-bento > .span-3 { grid-column: span 3; }
+
+@media (max-width: 1024px) {
+    .pro-bento > .span-8, .pro-bento > .span-7 { grid-column: span 12; }
+    .pro-bento > .span-6, .pro-bento > .span-5 { grid-column: span 12; }
+    .pro-bento > .span-4, .pro-bento > .span-3 { grid-column: span 6; }
+}
+
+@media (max-width: 640px) {
+    .pro-bento > * { grid-column: span 12 !important; }
+    .pro-bento { gap: 12px; }
+}
+
+/* === 5. BUTTONS & PILLS === */
+.pro-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.72rem 1.5rem;
+    border: none;
+    border-radius: 999px;
+    font-family: var(--pro-font);
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.25s, background 0.25s, filter 0.25s;
+}
+
+.pro-btn-amber {
+    background: linear-gradient(135deg, #ff8125, #ff6a00);
+    color: #1a0d00;
+    box-shadow: 0 6px 24px rgba(255, 106, 0, 0.30);
+}
+
+.pro-btn-amber:hover { filter: brightness(1.08); transform: translateY(-2px); }
+
+.pro-btn-ghost {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--pro-line);
+    color: var(--pro-text);
+}
+
+.pro-btn-ghost:hover { border-color: var(--pro-line-hi); background: rgba(255, 255, 255, 0.09); }
+
+.pro-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.34rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--pro-line);
+    font-size: 0.8rem;
+    color: var(--pro-text-2);
+    text-decoration: none;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.pro-chip:hover, .pro-chip.active {
+    color: var(--pro-text);
+    border-color: var(--pro-mint);
+    background: var(--pro-mint-soft);
+}
+
+/* === 6. STATS & NUMBERS === */
+.pro-num { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.pro-badge-up {
+    display: inline-flex;
+    align-items: center;
+    gap:  0.25rem;
+    padding: 0.18rem 0.6rem;
+    background: var(--pro-mint-soft);
+    color: var(--pro-mint);
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 999px;
+}
+
+/* === 7. SCROLL REVEAL === */
+[data-pro-reveal] {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+    transition-delay: var(--pro-reveal-delay, 0s);
+}
+
+[data-pro-reveal].pro-revealed {
+    opacity: 1;
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-pro-reveal] { opacity: 1; transform: none; transition: none; }
+}
+
+/* === 8. FOOTER === */
+.pro-footer {
+    position: relative;
+    z-index: 1;
+    margin-top: 3rem;
+    padding: 2.2rem 2rem 2.6rem;
+    border-top: 1px solid var(--pro-line);
+    text-align: center;
+}
+
+.pro-footer-brand { font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em; }
+.pro-footer-brand em { font-style: normal; color: var(--pro-amber); }
+.pro-footer-links { margin-top: 0.7rem; display: flex; gap: 1.1rem; justify-content: center; flex-wrap: wrap; }
+.pro-footer-links a { color: var(--pro-text-2); font-size: 0.85rem; text-decoration: none; }
+.pro-footer-links a:hover { color: var(--pro-text); }
+.pro-fineprint { margin-top: 1rem; color: var(--pro-text-3); font-size: 0.75rem; }
+
+/* === 9. UTILITIES === */
+.pro-row { display: flex; align-items: center; gap: 0.6rem; }
+.pro-grow { flex: 1; }
+.pro-mono-num { font-variant-numeric: tabular-nums; }

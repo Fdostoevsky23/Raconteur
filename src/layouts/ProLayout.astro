@@ -1,0 +1,605 @@
+---
+// ProLayout.astro — the Raconteur Pro shell ("The Reader's Desk").
+// Dark bento-grid glassmorphism skin. Feature parity with BaseLayout's
+// shell (search island, auth widget, notifications) in Pro's language.
+// Layout grammar inspired by the dark-fintech-dashboard genre; all
+// content and expression are original Raconteur work.
+import { getVisibleStories } from '../data/stories';
+import { supabase } from '../lib/supabase';
+import SkinToggle from '../components/plus/SkinToggle.astro';
+import SkinSplash from '../components/plus/SkinSplash.astro';
+import '../styles/pro.css';
+
+interface Props {
+    title: string;
+    description?: string;
+    ogImage?: string;
+}
+
+// Same search-index queries as BaseLayout (feature parity — no schema changes)
+const { data: searchDbRows } = await supabase
+    .from('stories')
+    .select('id,title,author_name,genre_tag,kind')
+    .eq('status', 'published');
+const searchStories = [
+    ...getVisibleStories().map((s: any) => ({ slug: s.slug, title: s.title, author: s.author, genre: s.genre })),
+    ...(searchDbRows || []).map((r: any) => ({ slug: r.id, title: r.title, author: r.author_name, genre: r.genre_tag || (r.kind === 'poem' ? 'Poetry' : '') })),
+];
+
+const { title, description = 'Literature you want to read.', ogImage = '' } = Astro.props as any;
+
+// Canonical → classic counterpart (SEO: pro is a mirror skin, classic stays canonical)
+const canonical = Astro.url.href.replace('/pro', '');
+
+// NAV LINKS — pro pages exist only for the ones built; everything else
+// points at classic pages so nothing 404s mid-build.
+const navHref = {
+    stories: '/stories',
+    about: '/about',
+    feed: '/feed',
+    login: '/login',
+    signup: '/signup',
+    dashboard: '/dashboard',
+    digest: '/digest',
+};
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#06080a" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <title>{title}</title>
+
+    <meta property="og:site_name" content="Raconteur Pro" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content={Astro.url.href} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body class="pro-skin">
+    {/* Search data island — same queries as classic, lives in layout so search works everywhere */}
+    <script type="application/json" id="all-stories-data" set:html={JSON.stringify(searchStories).replace(/</g,'\\u003c')} />
+
+    {/* Ambient glow fields — the desk lamp warmth + reading-nook cool */}
+    <div class="pro-ambient" aria-hidden="true"></div>
+
+    {/* Royal entrance — pro variant, born covered on skin switches (?welcome=1) */}
+    <SkinSplash variant="pro" eager={Astro.url.searchParams.get('welcome') === '1'} />
+
+    {/* Top nav — logo left, pill nav center, search + auth right (the brief's top-nav pattern) */}
+    <header class="pro-topbar" id="proTopbar">
+        <div class="pro-topbar-inner">
+            <a href="/pro" class="pro-logo" aria-label="Raconteur Pro home">
+                <span class="pro-logo-word">Raconteur</span>
+                <span class="pro-logo-tag">PRO</span>
+            </a>
+
+            <nav class="pro-pillnav" aria-label="Primary">
+                <a href="/pro" class="pro-pill-link active" aria-current="page">Desk</a>
+                <a href={navHref.stories} class="pro-pill-link">Library</a>
+                <a href={navHref.feed} class="pro-pill-link">Feed</a>
+                <a href={navHref.about} class="pro-pill-link">About</a>
+            </nav>
+
+            <div class="pro-topbar-right">
+                <div class="pro-search" id="proSearchWrap">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search stories &amp; writers…"
+                        autocomplete="off"
+                        aria-label="Search stories and writers"
+                    />
+                    <span class="pro-search-icon" aria-hidden="true">⌕</span>
+                    <div id="searchDropdown" class="pro-search-dropdown" style="display: none;">
+                        <div id="searchResults" class="pro-search-results"></div>
+                    </div>
+                </div>
+
+                <div class="pro-auth" id="authArea">
+                    <a href={navHref.login} class="pro-auth-link">Log in</a>
+                    <a href={navHref.signup} class="pro-btn pro-btn-amber pro-auth-cta">Sign up</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    {/* Skin switch — PRO HOME ONLY (SkinToggle also self-guards to home paths) */}
+    {Astro.url.pathname === '/pro' && (
+        <div class="pro-toggle-row">
+            <SkinToggle variant="regal" />
+        </div>
+    )}
+
+    <main class="pro-main">
+        <slot />
+    </main>
+
+    <footer class="pro-footer">
+        <p class="pro-footer-brand">Raconteur <em>Pro</em> — The Reader's Desk</p>
+        <nav class="pro-footer-links" aria-label="Footer">
+            <a href="/pro">Desk</a>
+            <a href={navHref.stories}>Library</a>
+            <a href={navHref.feed}>Feed</a>
+            <a href="/about">About</a>
+            <a href="/tos">Terms</a>
+            <a href="/privacy">Privacy</a>
+        </nav>
+        <p class="pro-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur</p>
+    </footer>
+
+    <script is:inline>
+        // Service worker disabled — same policy as classic (unregister + clear caches)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
+        }
+        if ('caches' in window) {
+            caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+        }
+    </script>
+
+    <script>
+        // Reveal engine — IntersectionObserver adds .pro-revealed to [data-pro-reveal].
+        const proRevealEls = document.querySelectorAll('[data-pro-reveal]');
+        if ('IntersectionObserver' in window && proRevealEls.length) {
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('pro-revealed');
+                        io.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+            proRevealEls.forEach((el) => io.observe(el));
+        } else {
+            proRevealEls.forEach((el) => el.classList.add('pro-revealed'));
+        }
+    </script>
+
+    <script>
+        // Auth widget — feature parity with PlusLayout's auth + notifications
+        import { supabase } from '../lib/supabase';
+        import { esc } from '../lib/escape';
+
+        const authArea = document.getElementById('authArea');
+
+        async function renderAuth(user: { email?: string; id?: string } | null) {
+            if (!authArea) return;
+            if (user) {
+                const fallback = (user.email ?? 'reader').split('@')[0];
+                let name = fallback;
+                if (user.id) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('pen_name')
+                        .eq('user_id', user.id)
+                        .maybeSingle();
+                    if (profile?.pen_name) name = profile.pen_name;
+                }
+                const safeName = esc(name);
+                const profileSlug = esc(name.toLowerCase().replace(/\s+/g, '-'));
+                authArea.innerHTML = `
+                    <a href="/dashboard" class="pro-auth-link">My Shelf</a>
+                    <a href="/author/${profileSlug}" class="pro-hello" title="Your public writer page">Hello, ${safeName}</a>
+                    <span class="pro-notif-wrap">
+                        <button id="notifBell" class="pro-notif-bell" type="button" aria-label="Notifications">🔔<span id="notifDot" class="pro-notif-dot" hidden></span></button>
+                        <div id="notifPanel" class="pro-notif-panel" hidden>
+                            <div class="pro-notif-head">Notifications</div>
+                            <div id="notifList" class="pro-notif-list"></div>
+                        </div>
+                    </span>
+                    <a href="#" id="logoutBtn" class="pro-auth-link">Log out</a>`;
+                if (user.id) initNotifications(user.id);
+                document.getElementById('logoutBtn')?.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await supabase.auth.signOut();
+                    window.location.href = '/pro';
+                });
+            } else {
+                authArea.innerHTML = `<a href="/login" class="pro-auth-link">Log in</a><a href="/signup" class="pro-btn pro-btn-amber pro-auth-cta">Sign up</a>`;
+            }
+        }
+
+        async function initNotifications(userId: string) {
+            const bell = document.getElementById('notifBell')!;
+            const dot = document.getElementById('notifDot')!;
+            const panel = document.getElementById('notifPanel')!;
+            const list = document.getElementById('notifList')!;
+
+            const actorLabel = (n: any) => n.actor_id ? (n._actorName || 'Someone') : (n.body_preview || 'A Wandering Reader');
+            const icon = (t: string) => ({ like: '♥', comment: '💬', reply: '↩', follow: '👤', message: '✉' }[t] || '•');
+            const text = (n: any) => {
+                if (n.type === 'like') return `${actorLabel(n)} appreciated your story`;
+                if (n.type === 'follow') return `${actorLabel(n)} started following you`;
+                if (n.type === 'reply') return `${actorLabel(n)} replied: “${(n.body_preview || '').slice(0, 60)}”`;
+                if (n.type === 'message') return `${actorLabel(n)} messaged you: “${(n.body_preview || '').slice(0, 60)}”`;
+                return `${actorLabel(n)} commented: “${(n.body_preview || '').slice(0, 60)}”`;
+            };
+            const href = (n: any) => n.type === 'message' ? '/messages' : (n.story_id ? `/story/${n.story_id}` : '#');
+
+            async function load() {
+                const { data: all } = await supabase
+                    .from('notifications')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false })
+                    .limit(12);
+                let enriched: any[] = all || [];
+                if (enriched.some((n: any) => n.actor_id)) {
+                    const actorIds = Array.from(new Set(enriched.map((n: any) => n.actor_id).filter(Boolean)));
+                    const { data: profs } = await supabase
+                        .from('profiles')
+                        .select('user_id,pen_name')
+                        .in('user_id', actorIds);
+                    const nameMap: Record<string, string> = {};
+                    (profs || []).forEach((p: any) => { nameMap[p.user_id] = p.pen_name; });
+                    enriched = enriched.map((r: any) => ({ ...r, _actorName: r.actor_id ? nameMap[r.actor_id] : null }));
+                }
+                const unread = enriched.filter((n: any) => !n.read).length;
+                dot.hidden = unread === 0;
+                list.innerHTML = enriched.length === 0
+                    ? '<p class="pro-notif-empty">No notifications yet.</p>'
+                    : enriched.map((n: any) => `
+                        <a href="${esc(href(n))}" class="pro-notif-item ${n.read ? '' : 'unread'}" data-id="${esc(n.id)}">
+                          <span class="pro-notif-icon">${icon(n.type)}</span>
+                          <span class="pro-notif-text">${esc(text(n))}</span>
+                          <span class="pro-notif-time">${timeAgo(n.created_at)}</span>
+                        </a>`).join('');
+                list.querySelectorAll('.pro-notif-item.unread').forEach(el => el.addEventListener('click', async () => {
+                    const id = (el as HTMLElement).dataset.id;
+                    await supabase.from('notifications').update({ read: true }).eq('id', id);
+                }));
+            }
+
+            function timeAgo(iso: string) {
+                const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+                if (m < 1) return 'now'; if (m < 60) return m + 'm'; const h = Math.floor(m / 60);
+                if (h < 24) return h + 'h'; return Math.floor(h / 24) + 'd';
+            }
+
+            bell.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const open = !panel.hidden;
+                panel.hidden = open;
+                if (!open) {
+                    await load();
+                    await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
+                    dot.hidden = true;
+                }
+            });
+            document.addEventListener('click', (e) => {
+                if (!panel.hidden && !panel.contains(e.target as Node) && e.target !== bell) panel.hidden = true;
+            });
+
+            await load();
+            setInterval(load, 30000);
+        }
+
+        supabase.auth.getSession().then(({ data }) => renderAuth(data.session?.user ?? null));
+        supabase.auth.onAuthStateChange((_e, session) => renderAuth(session?.user ?? null));
+    </script>
+
+    <script>
+        // Live search — stories AND writers (same queries as classic)
+        import { supabase } from '../lib/supabase';
+        import { esc } from '../lib/escape';
+
+        const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+        const searchDropdown = document.getElementById('searchDropdown');
+        const searchResults = document.getElementById('searchResults');
+
+        document.addEventListener('click', (e) => {
+            if (searchDropdown && searchDropdown.style.display === 'block') {
+                if (!searchDropdown.contains(e.target as Node) && e.target !== searchInput) {
+                    searchDropdown.style.display = 'none';
+                }
+            }
+        });
+
+        searchInput?.addEventListener('focus', () => {
+            if (searchInput.value.trim().length > 0 && searchDropdown) {
+                searchDropdown.style.display = 'block';
+            }
+        });
+
+        let allStories: any[] = [];
+        async function loadAllStories() {
+            if (allStories.length > 0) return;
+            const staticData = JSON.parse((document.getElementById('all-stories-data') as HTMLScriptElement).textContent || '[]');
+            const { data: dbRows } = await supabase.from('stories').select('id, title, author_name, genre').eq('status', 'published');
+            const dbStories = (dbRows || []).map(r => ({ slug: r.id, title: r.title, author: r.author_name, genre: r.genre }));
+            allStories = [...staticData, ...dbStories];
+        }
+
+        searchInput?.addEventListener('input', async (e) => {
+            const query = (e.target as HTMLInputElement).value.toLowerCase().trim();
+            if (!searchResults || !searchDropdown) return;
+            if (!query) {
+                searchDropdown.style.display = 'none';
+                return;
+            }
+            searchDropdown.style.display = 'block';
+            await loadAllStories();
+
+            const writerMap = new Map<string, string>();
+            allStories.forEach(s => {
+                if (s.author) {
+                    const slug = s.author.toLowerCase().replace(/\s+/g, '-');
+                    writerMap.set(slug, s.author);
+                }
+            });
+            const writerMatches = Array.from(writerMap.entries())
+                .filter(([, name]) => name.toLowerCase().includes(query))
+                .slice(0, 3)
+                .map(([slug, name]) => `
+                    <a href="/author/${esc(slug)}" class="pro-search-item pro-search-writer">
+                      <h4>👤 ${esc(name)}</h4>
+                      <p>View writer page</p>
+                    </a>
+                `);
+
+            const storyMatches = allStories.filter(s =>
+                s.title.toLowerCase().includes(query) ||
+                (s.author && s.author.toLowerCase().includes(query))
+            ).slice(0, 6).map(s => `
+                <a href="/story/${esc(s.slug)}" class="pro-search-item">
+                  <h4>${esc(s.title)}</h4>
+                  <p>By ${esc(s.author || 'Anonymous')} · ${esc(s.genre || 'Story')}</p>
+                </a>
+            `);
+
+            const combined = [...writerMatches, ...storyMatches];
+            searchResults.innerHTML = combined.length === 0
+                ? '<p class="pro-search-empty">No stories or writers found.</p>'
+                : combined.join('');
+        });
+    </script>
+</body>
+</html>
+
+<style>
+    /* === PRO TOPBAR — logo left, pill nav center, tools right === */
+    .pro-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(6, 8, 10, 0.72);
+        border-bottom: 1px solid var(--pro-line);
+        backdrop-filter: blur(16px) saturate(1.15);
+        -webkit-backdrop-filter: blur(16px) saturate(1.15);
+    }
+
+    .pro-topbar-inner {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 0.8rem 1.6rem;
+        display: flex;
+        align-items: center;
+        gap: 1.4rem;
+    }
+
+    .pro-logo {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.45rem;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .pro-logo-word {
+        font-size: 1.22rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--pro-text);
+    }
+
+    .pro-logo-tag {
+        font-size: 0.64rem;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        color: var(--pro-amber);
+        border: 1px solid rgba(255, 106, 0, 0.4);
+        border-radius: 6px;
+        padding: 0.14rem 0.4rem;
+        transform: translateY(-2px);
+    }
+
+    .pro-pillnav {
+        display: flex;
+        gap: 0.25rem;
+        margin: 0 auto;
+        padding: 0.28rem;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: 999px;
+    }
+
+    .pro-pill-link {
+        padding: 0.42rem 1.05rem;
+        border-radius: 999px;
+        font-size: 0.88rem;
+        font-weight: 500;
+        color: var(--pro-text-2);
+        text-decoration: none;
+        transition: color 0.2s, background 0.2s;
+    }
+
+    .pro-pill-link:hover { color: var(--pro-text); background: rgba(255, 255, 255, 0.05); }
+
+    .pro-pill-link.active {
+        color: #1a0d00;
+        background: var(--pro-amber);
+        font-weight: 600;
+    }
+
+    .pro-topbar-right { display: flex; align-items: center; gap: 1rem; }
+
+    /* === SEARCH === */
+    .pro-search { position: relative; }
+
+    .pro-search input {
+        width: 210px;
+        padding: 0.52rem 0.9rem 0.52rem 2.1rem;
+        border-radius: 999px;
+        border: 1px solid var(--pro-line);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--pro-text);
+        font-family: var(--pro-font);
+        font-size: 0.85rem;
+        outline: none;
+        transition: width 0.3s, border-color 0.25s, background 0.25s;
+    }
+
+    .pro-search input:focus {
+        width: 260px;
+        border-color: var(--pro-amber);
+        background: rgba(6, 8, 10, 0.9);
+    }
+
+    .pro-search input::placeholder { color: var(--pro-text-3); }
+
+    .pro-search-icon {
+        position: absolute;
+        left: 0.8rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--pro-text-3);
+        font-size: 0.95rem;
+        pointer-events: none;
+    }
+
+    .pro-search-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        width: 320px;
+        background: rgba(10, 13, 16, 0.97);
+        border: 1px solid var(--pro-line-hi);
+        border-radius: var(--pro-r-md);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+        padding: 0.5rem;
+        z-index: 60;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    .pro-search-results { max-height: 360px; overflow-y: auto; }
+
+    .pro-search-item {
+        display: block;
+        padding: 0.6rem 0.7rem;
+        border-radius: var(--pro-r-sm);
+        text-decoration: none;
+        color: var(--pro-text);
+    }
+
+    .pro-search-item:hover { background: rgba(255, 255, 255, 0.05); }
+
+    .pro-search-item h4 { font-size: 0.88rem; font-weight: 500; margin: 0; }
+    .pro-search-item p { font-size: 0.75rem; color: var(--pro-text-3); margin: 0.15rem 0 0; }
+    .pro-search-writer h4 { color: var(--pro-mint); }
+    .pro-search-empty { padding: 0.8rem; font-size: 0.8rem; color: var(--pro-text-3); margin: 0; }
+
+    /* === AUTH + NOTIFICATIONS === */
+    .pro-auth { display: flex; align-items: center; gap: 0.9rem; white-space: nowrap; }
+    .pro-auth-link { color: var(--pro-text-2); font-size: 0.86rem; font-weight: 500; text-decoration: none; }
+    .pro-auth-link:hover { color: var(--pro-text); }
+    .pro-auth-cta { padding: 0.5rem 1.1rem; font-size: 0.84rem; }
+    .pro-hello { color: var(--pro-honey); font-size: 0.86rem; font-weight: 500; text-decoration: none; }
+
+    .pro-notif-wrap { position: relative; }
+    .pro-notif-bell {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--pro-line);
+        border-radius: 999px;
+        padding: 0.36rem 0.6rem;
+        font-size: 0.9rem;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .pro-notif-dot {
+        position: absolute;
+        top: -2px; right: -2px;
+        width: 8px; height: 8px;
+        background: var(--pro-amber);
+        border-radius: 50%;
+        box-shadow: 0 0 8px rgba(255, 106, 0, 0.8);
+    }
+
+    .pro-notif-panel {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        width: 320px;
+        background: rgba(10, 13, 16, 0.97);
+        border: 1px solid var(--pro-line-hi);
+        border-radius: var(--pro-r-md);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+        padding: 0.9rem;
+        z-index: 60;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    .pro-notif-head { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--pro-text-2); margin-bottom: 0.6rem; }
+    .pro-notif-list { max-height: 320px; overflow-y: auto; }
+    .pro-notif-empty { color: var(--pro-text-3); font-size: 0.8rem; margin: 0; padding: 0.6rem 0; }
+    .pro-notif-item {
+        display: flex; gap: 0.6rem; align-items: flex-start;
+        padding: 0.55rem 0.6rem; border-radius: var(--pro-r-sm);
+        text-decoration: none; color: var(--pro-text-2);
+    }
+    .pro-notif-item:hover { background: rgba(255, 255, 255, 0.05); }
+    .pro-notif-item.unread { background: rgba(255, 106, 0, 0.07); }
+    .pro-notif-icon { color: var(--pro-mint); }
+    .pro-notif-text { font-size: 0.82rem; flex: 1; }
+    .pro-notif-time { font-size: 0.7rem; color: var(--pro-text-3); }
+
+    /* === TOGGLE ROW (skin switch) === */
+    .pro-toggle-row {
+        display: flex;
+        justify-content: center;
+        padding: 1.4rem 1rem 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 1024px) {
+        .pro-search input { width: 160px; }
+        .pro-search input:focus { width: 200px; }
+    }
+
+    @media (max-width: 860px) {
+        .pro-pillnav { display: none; }
+        .pro-topbar-inner { justify-content: space-between; }
+        .pro-search input { width: 130px; }
+        .pro-search input:focus { width:  170px; }
+        .pro-search-dropdown { width: 260px; }
+    }
+
+    @media (max-width: 560px) {
+        .pro-auth .pro-auth-link { display: none; }
+        .pro-hello { display: none; }
+    }
+</style>
+

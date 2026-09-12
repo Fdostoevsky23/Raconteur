@@ -5,20 +5,21 @@
 // Query strings are preserved so ?edit=, ?next=, etc. survive the switch.
 // variant="regal" — the brass-and-obsidian crown used in the /plus masthead;
 // default (no prop) keeps the classic cream pill untouched.
-import { isPlusPath, isHomePath, toPlusPath, toClassicPath } from '../../lib/skin';
+import { isPlusPath, isProPath, isHomePath, toPlusPath, toProPath, toClassicPath } from '../../lib/skin';
 
 const here = Astro.url.pathname;
 const onPlus = isPlusPath(here);
-const onHome = isHomePath(here); // the switch only lives on the two home pages
-// Switching INTO the plus skin carries ?welcome=1 — the royal entrance
-// splash on the other side. In-skin navigation (plus → plus) stays clean.
-const basePlusHref = toPlusPath(here) + Astro.url.search;
-const plusHref = onPlus ? basePlusHref : basePlusHref + (Astro.url.search ? '&' : '?') + 'welcome=1';
-// Switching BACK to classic carries ?return=1 — the homecoming veil on the
-// classic side (the cream cover with the RACONTEUR wordmark that lifts to
-// reveal the classic home). In-classic navigation stays clean.
-const baseClassicHref = toClassicPath(here) + Astro.url.search;
-const classicHref = onPlus ? baseClassicHref + (Astro.url.search ? '&' : '?') + 'return=1' : baseClassicHref;
+const onPro = isProPath(here);
+const onHome = isHomePath(here); // the switch only lives on the home pages
+// Cross-skin arrivals carry a flag so the destination renders born-covered:
+// welcome=1 → the royal entrance splash (plus or pro skin)
+// return=1  → the homecoming veil (classic skin)
+// In-skin buttons stay clean (no flags, no replays).
+const q = Astro.url.search;
+const suffix = (flag: string) => (q ? '&' : '?') + flag;
+const classicHref = (onPlus || onPro) ? toClassicPath(here) + q + suffix('return=1') : toClassicPath(here) + q;
+const plusHref = onPlus ? toPlusPath(here) + q : toPlusPath(here) + q + suffix('welcome=1');
+const proHref = onPro ? toProPath(here) + q : toProPath(here) + q + suffix('welcome=1');
 
 interface Props {
     variant?: 'classic' | 'regal';
@@ -39,7 +40,7 @@ if (!onHome) return;
     so the navigation handoff is invisible — with the RACONTEUR wordmark
     rising in; then the curtain lifts to reveal the classic home. The
     inline script below runs before the rest of the page paints. */}
-{!onPlus && Astro.url.searchParams.get('return') === '1' && (
+{!onPlus && !onPro && Astro.url.searchParams.get('return') === '1' && (
     <div class="skin-return-veil" id="skinReturnVeil" aria-hidden="true">
         <div class="skin-return-veil-core">
             <span class="skin-return-veil-word">RACONTEUR</span>
@@ -48,13 +49,13 @@ if (!onHome) return;
     </div>
 )}
 
-<div class={`skin-toggle ${variant === 'regal' ? 'regal' : ''}`} data-skin={onPlus ? 'plus' : 'classic'} role="group" aria-label="Choose site design">
+<div class={`skin-toggle ${variant === 'regal' ? 'regal' : ''}`} data-skin={onPro ? 'pro' : (onPlus ? 'plus' : 'classic')} role="group" aria-label="Choose site design">
     <a
         href={classicHref}
         data-dest="classic"
-        data-cross={onPlus ? '1' : undefined}
-        class={`toggle-btn ${!onPlus ? 'active' : ''}`}
-        aria-current={!onPlus ? 'page' : undefined}
+        data-cross={(onPlus || onPro) ? '1' : undefined}
+        class={`toggle-btn ${!onPlus && !onPro ? 'active' : ''}`}
+        aria-current={!onPlus && !onPro ? 'page' : undefined}
         title="The original Raconteur design"
     >
         Raconteur
@@ -62,12 +63,22 @@ if (!onHome) return;
     <a
         href={plusHref}
         data-dest="plus"
-        data-cross={!onPlus ? '1' : undefined}
+        data-cross={(!onPlus && !onPro) || onPro ? '1' : undefined}
         class={`toggle-btn plus ${onPlus ? 'active' : ''}`}
         aria-current={onPlus ? 'page' : undefined}
-        title="The new Raconteur+ design"
+        title="The Obsidian Editorial design"
     >
         Raconteur<span class="plus-sign">+</span>
+    </a>
+    <a
+        href={proHref}
+        data-dest="pro"
+        data-cross={(!onPlus && !onPro) || onPlus ? '1' : undefined}
+        class={`toggle-btn pro ${onPro ? 'active' : ''}`}
+        aria-current={onPro ? 'page' : undefined}
+        title="The Reader's Desk — Raconteur Pro design"
+    >
+        Raconteur <span class="pro-sign">Pro</span>
     </a>
 </div>
 
@@ -129,6 +140,23 @@ if (!onHome) return;
     /* The inactive plus button gets a brass glow hint on hover */
     .toggle-btn.plus:hover:not(.active) {
         box-shadow: inset 0 0 0 1px rgba(201, 162, 75, 0.5);
+    }
+
+    /* Pro button carries the amber identity in every skin */
+    .toggle-btn.pro .pro-sign {
+        font-weight: 700;
+        margin-left: 2px;
+        font-size: 0.7em;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #ff6a00;
+        transition: color 0.25s;
+    }
+
+    .toggle-btn.pro.active .pro-sign { color: #7a3400; } /* dark amber on cream pill */
+
+    .toggle-btn.pro:hover:not(.active) {
+        box-shadow: inset 0 0 0 1px rgba(255, 106, 0, 0.5);
     }
 
     /* === REGAL VARIANT — the /plus masthead crown ===
@@ -251,13 +279,18 @@ if (!onHome) return;
             // The veil wears the DESTINATION's exact cover so the handoff
             // at navigation time is pixel-identical:
             // → plus: the Mesher gradient (same stops as .skin-splash-plus .ss-bg)
+            // → pro: the Reader's Desk amber-on-void (matches .skin-splash-pro)
             // → classic: the homecoming cream (same as .skin-return-veil)
             var bg;
-            if (/\bwelcome=1\b/.test(href)) {
+            if (/[?&]welcome=1/.test(href) && /\/pro(\?|$|\/)/.test(href.replace(/^https?:\/\/[^/]+/, ''))) {
+                bg = 'radial-gradient(85% 70% at 78% 6%, rgba(255, 106, 0, 0.34) 0%, rgba(255, 106, 0, 0) 60%),'
+                   + 'radial-gradient(70% 60% at 8% 96%, rgba(46, 230, 168, 0.22) 0%, rgba(46, 230, 168, 0) 60%),'
+                   + '#06080a';
+            } else if (/[?&]welcome=1/.test(href)) {
                 bg = 'radial-gradient(at 10% 15%, hsla(28, 100%, 74%, 1) 0px, transparent 55%),'
                    + 'radial-gradient(at 38% 28%, hsla(28, 100%, 74%, 1) 0px, transparent 45%),'
-                   + 'radial-gradient(at 2% 55%, hsla(28, 100%, 70%, 1) 0px, transparent 40%),'
-                   + 'radial-gradient(at 78% 8%, hsla(189, 100%, 56%, 1) 0px, transparent 50%),'
+                   + 'radial-gradient(at 2%  55%, hsla(28, 100%, 70%, 1) 0px, transparent 40%),'
+                   + 'radial-gradient(at 78% 8%,  hsla(189, 100%, 56%, 1) 0px, transparent 50%),'
                    + 'radial-gradient(at 100% 38%, hsla(189, 100%, 56%, 1) 0px, transparent 45%),'
                    + 'radial-gradient(at 65% 100%, hsla(263, 100%, 45%, 1) 0px, transparent 50%),'
                    + 'hsla(263, 100%, 50%, 1)';
