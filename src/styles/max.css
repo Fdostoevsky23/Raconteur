@@ -1,0 +1,336 @@
+/* ============================================================
+   max.css — Raconteur MAX design system
+   "The Editorial Split" — a dual-mode system:
+   · HOME (/max): pure editorial — warm paper, ink, vermilion,
+     split-screen compositions, print-style motion.
+   · INNER PAGES (/max/**): bright glassmorphism — luminous
+     white-glass cards over colour fields, floating motion.
+   Both modes share one type system (Fraunces + Inter) and one
+   accent (vermilion #d8341c + brass #c9a24b). All expression is
+   original Raconteur work.
+   ============================================================ */
+
+/* === 1. TOKENS === */
+:root {
+    /* Canvas & ink */
+    --mx-paper: #faf6ef;          /* warm editorial paper */
+    --mx-paper-deep: #f2ecdf;
+    --mx-ink: #1c1917;
+    --mx-ink-soft: #57504a;
+    --mx-ink-faint: #9a918a;
+    --mx-line: rgba(28, 25, 23, 0.16);
+    --mx-line-strong: rgba(28, 25, 23, 0.34);
+
+    /* Accents */
+    --mx-vermilion: #d8341c;      /* the editor's red pen */
+    --mx-vermilion-deep: #b02410;
+    --mx-brass: #c9a24b;          /* lineage with the plus skin */
+    --mx-brass-soft: rgba(201, 162, 75, 0.22);
+
+    /* Bright-glass mode (inner pages) */
+    --mx-glass-bg: rgba(255, 255, 255, 0.55);
+    --mx-glass-bg-hi: rgba(255, 255, 255, 0.72);
+    --mx-glass-line: rgba(255, 255, 255, 0.65);
+    --mx-glass-shadow: 0 20px 60px rgba(84, 62, 40, 0.16);
+    --mx-glass-blur: 22px;
+
+    /* Type */
+    --mx-font-display: 'Fraunces', Georgia, serif;
+    --mx-font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --mx-font-read: 'Newsreader', Georgia, serif;
+
+    /* Motion */
+    --mx-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --mx-ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* === 2. BASE === */
+body.max-skin {
+    background-color: var(--mx-paper);
+    color: var(--mx-ink);
+    font-family: var(--mx-font-body);
+    line-height: 1.68;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow-x: hidden;
+}
+
+main.mx-main { flex: 1; }
+
+/* Mode switch: the <body> carries data-max-mode —
+   editorial (home) or glass (inner pages). */
+[data-max-mode='glass'] {
+    /* Bright glassmorphism: colour fields bloom beneath white glass */
+    --mx-glass-field-a: rgba(216, 52, 28, 0.20);
+    --mx-glass-field-b: rgba(201, 162, 75, 0.26);
+    --mx-glass-field-c: rgba(64, 112, 150, 0.16);
+}
+
+/* === 3. BRIGHT GLASS SURFACES (inner-page mode) === */
+[data-max-mode='glass'] .mx-glass-field {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+[data-max-mode='glass'] .mx-glass-field span {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+}
+
+[data-max-mode='glass'] .mx-glass-field span:nth-child(1) {
+    width: 55vmax; height: 55vmax; top: -18vmax; left: -12vmax;
+    background: var(--mx-glass-field-a);
+    animation: mx-field-drift 26s ease-in-out infinite alternate;
+}
+
+[data-max-mode='glass'] .mx-glass-field span:nth-child(2) {
+    width: 48vmax; height: 48vmax; bottom: -16vmax; right: -10vmax;
+    background: var(--mx-glass-field-b);
+    animation: mx-field-drift 32s ease-in-out infinite alternate-reverse;
+}
+
+[data-max-mode='glass'] .mx-glass-field span:nth-child(3) {
+    width: 40vmax; height: 40vmax; top: 30%; left: 55%;
+    background: var(--mx-glass-field-c);
+    animation: mx-field-drift 38s ease-in-out infinite alternate;
+}
+
+@keyframes mx-field-drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(6vmax, 4vmax, 0) scale(1.12); }
+}
+
+/* The glass card — luminous white on the colour fields */
+.mx-glass {
+    background: var(--mx-glass-bg);
+    border: 1px solid var(--mx-glass-line);
+    border-radius: 18px;
+    box-shadow: var(--mx-glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(var(--mx-glass-blur)) saturate(1.3);
+    -webkit-backdrop-filter: blur(var(--mx-glass-blur)) saturate(1.3);
+    overflow: hidden;
+    transition: transform 0.45s var(--mx-ease), box-shadow 0.45s var(--mx-ease), background 0.45s var(--mx-ease);
+}
+
+.mx-glass:hover {
+    transform: translateY(-6px);
+    background: var(--mx-glass-bg-hi);
+    box-shadow: 0 28px 70px rgba(84, 62, 40, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* === 4. EDITORIAL PRIMITIVES (home mode) === */
+.mx-eyebrow {
+    font-family: var(--mx-font-body);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--mx-vermilion);
+}
+
+.mx-eyebrow::before {
+    content: '— ';
+    color: var(--mx-ink-faint);
+}
+
+.mx-rule {
+    border: none;
+    border-top: 1px solid var(--mx-line);
+    margin: 0;
+}
+
+.mx-rule-strong { border-top: 2px solid var(--mx-ink); }
+
+/* Display headline with editorial motion built in */
+.mx-display {
+    font-family: var(--mx-font-display);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1.02;
+    color: var(--mx-ink);
+}
+
+.mx-display em {
+    font-style: italic;
+    color: var(--mx-vermilion);
+}
+
+/* Buttons — ink pill (primary) and hairline ghost */
+.mx-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.78rem 1.6rem;
+    border: none;
+    border-radius: 999px;
+    font-family: var(--mx-font-body);
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.25s var(--mx-ease), background 0.25s, color 0.25s, box-shadow 0.25s, border-color 0.25s;
+}
+
+.mx-btn-ink {
+    background: var(--mx-ink);
+    color: var(--mx-paper);
+    box-shadow: 0 8px 24px rgba(28, 25, 23, 0.22);
+}
+
+.mx-btn-ink:hover { background: var(--mx-vermilion); transform: translateY(-2px); }
+
+.mx-btn-ghost {
+    background: transparent;
+    border: 1px solid var(--mx-line-strong);
+    color: var(--mx-ink);
+}
+
+.mx-btn-ghost:hover { border-color: var(--mx-ink); background: rgba(28, 25, 23, 0.05); }
+
+/* Underline link — the editorial signature */
+.mx-ulink {
+    position: relative;
+    display: inline-block;
+    color: var(--mx-ink);
+    text-decoration: none;
+    padding-bottom: 2px;
+}
+
+.mx-ulink::after {
+    content: '';
+    position: absolute;
+    left: 0; bottom: 0;
+    width: 100%; height: 1.5px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.4s var(--mx-ease);
+}
+
+.mx-ulink:hover::after { transform: scaleX(1); transform-origin: left; }
+
+/* === 5. SPLIT LAYOUT — the home's core composition === */
+.mx-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 78vh;
+    position: relative;
+}
+
+.mx-split > .mx-split-side {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4rem clamp(1.4rem, 5vw, 5rem);
+}
+
+/* Split halves reveal on load with a wipe — the split hero moment */
+.mx-split[data-wipe] > .mx-split-side {
+    clip-path: inset(0 0 0 100%);
+    transition: clip-path 1.1s var(--mx-ease);
+}
+
+.mx-split[data-wipe].mx-wiped > .mx-split-side:first-child {
+    clip-path: inset(0 0 0 0);
+}
+
+.mx-split[data-wipe].mx-wiped > .mx-split-side:last-child {
+    clip-path: inset(0 0 0 0);
+    transition-delay: 0.12s;
+}
+
+/* === 6. REVEAL ENGINE === */
+[data-mx-reveal] {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity 0.9s var(--mx-ease), transform 0.9s var(--mx-ease);
+    transition-delay: var(--mx-reveal-delay, 0s);
+}
+
+[data-mx-reveal].mx-revealed {
+    opacity: 1;
+    transform: none;
+}
+
+/* A second flavor: lines that wipe up like print rules */
+[data-mx-reveal='rule'] {
+    transform: scaleX(0);
+    opacity: 1;
+    transform-origin: left;
+}
+
+[data-mx-reveal='rule'].mx-revealed { transform: scaleX(1); }
+
+@media (prefers-reduced-motion: reduce) {
+    [data-mx-reveal], [data-mx-reveal='rule'] { opacity: 1; transform: none; transition: none; }
+    .mx-split[data-wipe] > .mx-split-side { clip-path: none; transition: none; }
+    [data-max-mode='glass'] .mx-glass-field span { animation: none; }
+}
+
+/* === 7. GLASS NAV — inner-mode top bar (bright glassmorphism) === */
+[data-max-mode='glass'] .mx-glass-nav {
+    position: sticky;
+    top: 12px;
+    z-index: 50;
+    margin: 12px auto 0;
+    max-width: 1240px;
+    width: calc(100% - 2.4rem);
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 0.7rem 1.2rem;
+    background: var(--mx-glass-bg);
+    border: 1px solid var(--mx-glass-line);
+    border-radius: 999px;
+    box-shadow: var(--mx-glass-shadow);
+    backdrop-filter: blur(var(--mx-glass-blur)) saturate(1.35);
+    -webkit-backdrop-filter: blur(var(--mx-glass-blur)) saturate(1.35);
+}
+
+.mx-glass-nav .mx-nav-links { display: flex; gap: 0.9rem; margin: 0 auto; }
+.mx-glass-nav .mx-nav-links a {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--mx-ink-soft);
+    text-decoration: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    transition: color 0.2s, background 0.2s;
+}
+.mx-glass-nav .mx-nav-links a:hover { color: var(--mx-ink); background: rgba(255, 255, 255, 0.5); }
+
+/* === 8. FOOTER (shared by both modes) === */
+.mx-footer {
+    position: relative;
+    z-index: 1;
+    margin-top: 4rem;
+    border-top: 1px solid var(--mx-line);
+    padding: 2.4rem 2rem 2.8rem;
+    text-align: center;
+}
+
+.mx-footer-brand { font-family: var(--mx-font-display); font-size: 1.05rem; font-weight: 900; letter-spacing: 0.01em; }
+.mx-footer-brand em { font-style: normal; color: var(--mx-vermilion); }
+.mx-footer-links { margin-top: 0.8rem; display: flex; gap: 1.1rem; justify-content: center; flex-wrap: wrap; }
+.mx-footer-links a { color: var(--mx-ink-soft); font-size: 0.85rem; text-decoration: none; }
+.mx-footer-links a:hover { color: var(--mx-ink); }
+.mx-fineprint { margin-top: 1rem; color: var(--mx-ink-faint); font-size: 0.75rem; }
+
+/* === 9. RESPONSIVE === */
+@media (max-width: 860px) {
+    .mx-split { grid-template-columns: 1fr; min-height: 0; }
+    .mx-split > .mx-split-side { padding: 2.6rem 1.4rem; min-height: 44vh; }
+    .mx-glass-nav .mx-nav-links { display: none; }
+}
+
+

@@ -1,0 +1,645 @@
+---
+// MaxLayout.astro — the Raconteur Max shell ("The Editorial Split").
+// DUAL-MODE skin per boss brief (Session 20):
+//   · HOME (/max): editorial design — paper, ink, split compositions.
+//   · INNER (/max/**): bright glassmorphism with movement.
+// The body carries data-max-mode so max.css can switch systems.
+import { getVisibleStories } from '../data/stories';
+import { supabase } from '../lib/supabase';
+import SkinToggle from '../components/plus/SkinToggle.astro';
+import SkinSplash from '../components/plus/SkinSplash.astro';
+import '../styles/max.css';
+
+interface Props {
+    title: string;
+    description?: string;
+    ogImage?: string;
+}
+
+// Same search-index queries as BaseLayout (feature parity — no schema changes)
+const { data: searchDbRows } = await supabase
+    .from('stories')
+    .select('id,title,author_name,genre_tag,kind')
+    .eq('status', 'published');
+const searchStories = [
+    ...getVisibleStories().map((s: any) => ({ slug: s.slug, title: s.title, author: s.author, genre: s.genre })),
+    ...(searchDbRows || []).map((r: any) => ({ slug: r.id, title: r.title, author: r.author_name, genre: r.genre_tag || (r.kind === 'poem' ? 'Poetry' : '') })),
+];
+
+const { title, description = 'Literature you want to read.', ogImage = '' } = Astro.props as any;
+
+// Mode: editorial on the home, bright glass on every inner page
+const isHome = Astro.url.pathname === '/max' || Astro.url.pathname === '/max/';
+const mode = isHome ? 'editorial' : 'glass';
+
+// Canonical → classic counterpart (SEO: max is a mirror skin, classic stays canonical)
+const canonical = Astro.url.href.replace('/max', '');
+
+// NAV LINKS — max pages exist only for the ones built; everything else
+// points at classic pages so nothing 404s mid-build.
+const navHref = {
+    stories: '/stories',
+    about: '/about',
+    feed: '/feed',
+    login: '/login',
+    signup: '/signup',
+    dashboard: '/dashboard',
+    digest: '/digest',
+};
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#faf6ef" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <title>{title}</title>
+
+    <meta property="og:site_name" content="Raconteur Max" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content={Astro.url.href} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,400;1,9..144,900&family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body class="max-skin" data-max-mode={mode}>
+    {/* Search data island — same queries as classic, lives in layout so search works everywhere */}
+    <script type="application/json" id="all-stories-data" set:html={JSON.stringify(searchStories).replace(/</g,'\\u003c')} />
+
+    {/* Bright-glass colour fields — inner-mode only (max.css hides the wrapper otherwise) */}
+    {!isHome && (
+        <div class="mx-glass-field" aria-hidden="true">
+            <span></span><span></span><span></span>
+        </div>
+    )}
+
+    {/* Royal entrance — max variant, born covered on skin switches (?welcome=1) */}
+    <SkinSplash variant="max" eager={Astro.url.searchParams.get('welcome') === '1'} />
+
+    {isHome ? (
+        <header class="mx-topbar">
+            <div class="mx-topbar-inner">
+                <a href="/max" class="mx-brand" aria-label="Raconteur Max home">
+                    Raconteur <span class="mx-brand-max">Max</span>
+                </a>
+                <nav class="mx-topnav" aria-label="Primary">
+                    <a href={navHref.stories}>Library</a>
+                    <a href={navHref.feed}>Feed</a>
+                    <a href={navHref.about}>About</a>
+                </nav>
+                <div class="mx-topbar-tools">
+                    <div class="mx-search" id="mxSearchWrap">
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Search…"
+                            autocomplete="off"
+                            aria-label="Search stories and writers"
+                        />
+                        <span class="mx-search-icon" aria-hidden="true">⌕</span>
+                        <div id="searchDropdown" class="mx-search-dropdown" style="display: none;">
+                            <div id="searchResults" class="mx-search-results"></div>
+                        </div>
+                    </div>
+                    <div class="mx-auth" id="authArea">
+                        <a href={navHref.login} class="mx-auth-link">Log in</a>
+                        <a href={navHref.signup} class="mx-btn mx-btn-ink mx-auth-cta">Sign up</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+    ) : (
+        <header class="mx-glass-nav">
+            <a href="/max" class="mx-brand" aria-label="Raconteur Max home">
+                Raconteur <span class="mx-brand-max">Max</span>
+            </a>
+            <nav class="mx-nav-links" aria-label="Primary">
+                <a href={navHref.stories}>Library</a>
+                <a href={navHref.feed}>Feed</a>
+                <a href={navHref.about}>About</a>
+            </nav>
+            <div class="mx-topbar-tools">
+                <div class="mx-search" id="mxSearchWrap">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search…"
+                        autocomplete="off"
+                        aria-label="Search stories and writers"
+                    />
+                    <span class="mx-search-icon" aria-hidden="true">⌕</span>
+                    <div id="searchDropdown" class="mx-search-dropdown" style="display: none;">
+                        <div id="searchResults" class="mx-search-results"></div>
+                    </div>
+                </div>
+                <div class="mx-auth" id="authArea">
+                    <a href={navHref.login} class="mx-auth-link">Log in</a>
+                    <a href={navHref.signup} class="mx-btn mx-btn-ink mx-auth-cta">Sign up</a>
+                </div>
+            </div>
+        </header>
+    )}
+
+    {/* Skin switch — MAX HOME ONLY */}
+    {isHome && (
+        <div class="mx-toggle-row">
+            <SkinToggle variant="editorial" />
+        </div>
+    )}
+
+    <main class="mx-main">
+        <slot />
+    </main>
+
+    <footer class="mx-footer">
+        <p class="mx-footer-brand">Raconteur <em>Max</em> — The Editorial Split</p>
+        <nav class="mx-footer-links" aria-label="Footer">
+            <a href="/max">Home</a>
+            <a href={navHref.stories}>Library</a>
+            <a href={navHref.feed}>Feed</a>
+            <a href="/about">About</a>
+            <a href="/tos">Terms</a>
+            <a href="/privacy">Privacy</a>
+        </nav>
+        <p class="mx-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur</p>
+    </footer>
+
+    <script is:inline>
+        // Service worker disabled — same policy as classic (unregister + clear caches)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
+        }
+        if ('caches' in window) {
+            caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+        }
+    </script>
+
+    <script>
+        // Reveal engine — IntersectionObserver adds .mx-revealed to [data-mx-reveal].
+        const mxRevealEls = document.querySelectorAll('[data-mx-reveal]');
+        if ('IntersectionObserver' in window && mxRevealEls.length) {
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('mx-revealed');
+                        io.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+            mxRevealEls.forEach((el) => io.observe(el));
+        } else {
+            mxRevealEls.forEach((el) => el.classList.add('mx-revealed'));
+        }
+    </script>
+
+    <script>
+        // Split wipe — the home's split screens unclip on load (hero) or in view.
+        const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const wipes = document.querySelectorAll('.mx-split[data-wipe]');
+        if (wipes.length && !REDUCED) {
+            const wipeIO = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('mx-wiped');
+                        wipeIO.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            wipes.forEach((el) => wipeIO.observe(el));
+        } else {
+            wipes.forEach((el) => el.classList.add('mx-wiped'));
+        }
+    </script>
+
+    <script>
+        // Parallax-lite — data-mx-parallax elements drift with scroll (max ±px).
+        const mxReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const parallaxEls = Array.from(document.querySelectorAll<HTMLElement>('[data-mx-parallax]'));
+        if (parallaxEls.length && !mxReduced) {
+            let ticking = false;
+            const onScroll = () => {
+                if (ticking) return;
+                ticking = true;
+                requestAnimationFrame(() => {
+                    parallaxEls.forEach((el) => {
+                        const amt = Number(el.dataset.mxParallax || '10');
+                        const rect = el.getBoundingClientRect();
+                        const mid = rect.top + rect.height / 2 - window.innerHeight / 2;
+                        const p = Math.max(-1, Math.min(1, mid / window.innerHeight));
+                        el.style.transform = `translateY(${(-p * amt).toFixed(1)}px)`;
+                    });
+                    ticking = false;
+                });
+            };
+            window.addEventListener('scroll', onScroll, { passive: true });
+            onScroll();
+        }
+    </script>
+
+    <script>
+        // Auth widget — feature parity with PlusLayout's auth + notifications
+        import { supabase } from '../lib/supabase';
+        import { esc } from '../lib/escape';
+
+        const authArea = document.getElementById('authArea');
+
+        async function renderAuth(user: { email?: string; id?: string } | null) {
+            if (!authArea) return;
+            if (user) {
+                const fallback = (user.email ?? 'reader').split('@')[0];
+                let name = fallback;
+                if (user.id) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('pen_name')
+                        .eq('user_id', user.id)
+                        .maybeSingle();
+                    if (profile?.pen_name) name = profile.pen_name;
+                }
+                const safeName = esc(name);
+                const profileSlug = esc(name.toLowerCase().replace(/\s+/g, '-'));
+                authArea.innerHTML = `
+                    <a href="/dashboard" class="mx-auth-link">My Shelf</a>
+                    <a href="/author/${profileSlug}" class="mx-hello" title="Your public writer page">Hello, ${safeName}</a>
+                    <span class="mx-notif-wrap">
+                        <button id="notifBell" class="mx-notif-bell" type="button" aria-label="Notifications">🔔<span id="notifDot" class="mx-notif-dot" hidden></span></button>
+                        <div id="notifPanel" class="mx-notif-panel" hidden>
+                            <div class="mx-notif-head">Notifications</div>
+                            <div id="notifList" class="mx-notif-list"></div>
+                        </div>
+                    </span>
+                    <a href="#" id="logoutBtn" class="mx-auth-link">Log out</a>`;
+                if (user.id) initNotifications(user.id);
+                document.getElementById('logoutBtn')?.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await supabase.auth.signOut();
+                    window.location.href = '/max';
+                });
+            } else {
+                authArea.innerHTML = `<a href="/login" class="mx-auth-link">Log in</a><a href="/signup" class="mx-btn mx-btn-ink mx-auth-cta">Sign up</a>`;
+            }
+        }
+
+        async function initNotifications(userId: string) {
+            const bell = document.getElementById('notifBell')!;
+            const dot = document.getElementById('notifDot')!;
+            const panel = document.getElementById('notifPanel')!;
+            const list = document.getElementById('notifList')!;
+
+            const actorLabel = (n: any) => n.actor_id ? (n._actorName || 'Someone') : (n.body_preview || 'A Wandering Reader');
+            const icon = (t: string) => ({ like: '♥', comment: '💬', reply: '↩', follow: '👤', message: '✉' }[t] || '•');
+            const text = (n: any) => {
+                if (n.type === 'like') return `${actorLabel(n)} appreciated your story`;
+                if (n.type === 'follow') return `${actorLabel(n)} started following you`;
+                if (n.type === 'reply') return `${actorLabel(n)} replied: “${(n.body_preview || '').slice(0, 60)}”`;
+                if (n.type === 'message') return `${actorLabel(n)} messaged you: “${(n.body_preview || '').slice(0, 60)}”`;
+                return `${actorLabel(n)} commented: “${(n.body_preview || '').slice(0, 60)}”`;
+            };
+            const href = (n: any) => n.type === 'message' ? '/messages' : (n.story_id ? `/story/${n.story_id}` : '#');
+
+            async function load() {
+                const { data: all } = await supabase
+                    .from('notifications')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false })
+                    .limit(12);
+                let enriched: any[] = all || [];
+                if (enriched.some((n: any) => n.actor_id)) {
+                    const actorIds = Array.from(new Set(enriched.map((n: any) => n.actor_id).filter(Boolean)));
+                    const { data: profs } = await supabase
+                        .from('profiles')
+                        .select('user_id,pen_name')
+                        .in('user_id', actorIds);
+                    const nameMap: Record<string, string> = {};
+                    (profs || []).forEach((p: any) => { nameMap[p.user_id] = p.pen_name; });
+                    enriched = enriched.map((r: any) => ({ ...r, _actorName: r.actor_id ? nameMap[r.actor_id] : null }));
+                }
+                const unread = enriched.filter((n: any) => !n.read).length;
+                dot.hidden = unread === 0;
+                list.innerHTML = enriched.length === 0
+                    ? '<p class="mx-notif-empty">No notifications yet.</p>'
+                    : enriched.map((n: any) => `
+                        <a href="${esc(href(n))}" class="mx-notif-item ${n.read ? '' : 'unread'}" data-id="${esc(n.id)}">
+                          <span class="mx-notif-icon">${icon(n.type)}</span>
+                          <span class="mx-notif-text">${esc(text(n))}</span>
+                          <span class="mx-notif-time">${timeAgo(n.created_at)}</span>
+                        </a>`).join('');
+                list.querySelectorAll('.mx-notif-item.unread').forEach(el => el.addEventListener('click', async () => {
+                    const id = (el as HTMLElement).dataset.id;
+                    await supabase.from('notifications').update({ read: true }).eq('id', id);
+                }));
+            }
+
+            function timeAgo(iso: string) {
+                const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+                if (m < 1) return 'now'; if (m < 60) return m + 'm'; const h = Math.floor(m / 60);
+                if (h < 24) return h + 'h'; return Math.floor(h / 24) + 'd';
+            }
+
+            bell.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const open = !panel.hidden;
+                panel.hidden = open;
+                if (!open) {
+                    await load();
+                    await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
+                    dot.hidden = true;
+                }
+            });
+            document.addEventListener('click', (e) => {
+                if (!panel.hidden && !panel.contains(e.target as Node) && e.target !== bell) panel.hidden = true;
+            });
+
+            await load();
+            setInterval(load, 30000);
+        }
+
+        supabase.auth.getSession().then(({ data }) => renderAuth(data.session?.user ?? null));
+        supabase.auth.onAuthStateChange((_e, session) => renderAuth(session?.user ?? null));
+    </script>
+
+    <script>
+        // Live search — stories AND writers (same queries as classic)
+        import { supabase } from '../lib/supabase';
+        import { esc } from '../lib/escape';
+
+        const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+        const searchDropdown = document.getElementById('searchDropdown');
+        const searchResults = document.getElementById('searchResults');
+
+        document.addEventListener('click', (e) => {
+            if (searchDropdown && searchDropdown.style.display === 'block') {
+                if (!searchDropdown.contains(e.target as Node) && e.target !== searchInput) {
+                    searchDropdown.style.display = 'none';
+                }
+            }
+        });
+
+        searchInput?.addEventListener('focus', () => {
+            if (searchInput.value.trim().length > 0 && searchDropdown) {
+                searchDropdown.style.display = 'block';
+            }
+        });
+
+        let allStories: any[] = [];
+        async function loadAllStories() {
+            if (allStories.length > 0) return;
+            const staticData = JSON.parse((document.getElementById('all-stories-data') as HTMLScriptElement).textContent || '[]');
+            const { data: dbRows } = await supabase.from('stories').select('id, title, author_name, genre').eq('status', 'published');
+            const dbStories = (dbRows || []).map(r => ({ slug: r.id, title: r.title, author: r.author_name, genre: r.genre }));
+            allStories = [...staticData, ...dbStories];
+        }
+
+        searchInput?.addEventListener('input', async (e) => {
+            const query = (e.target as HTMLInputElement).value.toLowerCase().trim();
+            if (!searchResults || !searchDropdown) return;
+            if (!query) {
+                searchDropdown.style.display = 'none';
+                return;
+            }
+            searchDropdown.style.display = 'block';
+            await loadAllStories();
+
+            const writerMap = new Map<string, string>();
+            allStories.forEach(s => {
+                if (s.author) {
+                    const slug = s.author.toLowerCase().replace(/\s+/g, '-');
+                    writerMap.set(slug, s.author);
+                }
+            });
+            const writerMatches = Array.from(writerMap.entries())
+                .filter(([, name]) => name.toLowerCase().includes(query))
+                .slice(0, 3)
+                .map(([slug, name]) => `
+                    <a href="/author/${esc(slug)}" class="mx-search-item mx-search-writer">
+                      <h4>👤 ${esc(name)}</h4>
+                      <p>View writer page</p>
+                    </a>
+                `);
+
+            const storyMatches = allStories.filter(s =>
+                s.title.toLowerCase().includes(query) ||
+                (s.author && s.author.toLowerCase().includes(query))
+            ).slice(0, 6).map(s => `
+                <a href="/story/${esc(s.slug)}" class="mx-search-item">
+                  <h4>${esc(s.title)}</h4>
+                  <p>By ${esc(s.author || 'Anonymous')} · ${esc(s.genre || 'Story')}</p>
+                </a>
+            `);
+
+            const combined = [...writerMatches, ...storyMatches];
+            searchResults.innerHTML = combined.length === 0
+                ? '<p class="mx-search-empty">No stories or writers found.</p>'
+                : combined.join('');
+        });
+    </script>
+</body>
+</html>
+
+<style>
+    /* === EDITORIAL TOPBAR (home mode) === */
+    .mx-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgba(250, 246, 239, 0.88);
+        border-bottom: 1px solid var(--mx-line);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .mx-topbar-inner {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 0.9rem 1.6rem;
+        display: flex;
+        align-items: center;
+        gap: 1.4rem;
+    }
+
+    .mx-brand {
+        font-family: var(--mx-font-display);
+        font-size: 1.24rem;
+        font-weight: 900;
+        letter-spacing: -0.01em;
+        color: var(--mx-ink);
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .mx-brand-max {
+        font-style: italic;
+        color: var(--mx-vermilion);
+    }
+
+    .mx-topnav { display: flex; gap: 1.2rem; margin: 0 auto; }
+
+    .mx-topnav a {
+        font-size: 0.86rem;
+        font-weight: 500;
+        color: var(--mx-ink-soft);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .mx-topnav a:hover { color: var(--mx-ink); }
+
+    .mx-topbar-tools { display: flex; align-items: center; gap: 0.9rem; }
+
+    /* === SEARCH === */
+    .mx-search { position: relative; }
+
+    .mx-search input {
+        width: 180px;
+        padding: 0.5rem 0.85rem 0.5rem 2rem;
+        border: 1px solid var(--mx-line-strong);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.5);
+        color: var(--mx-ink);
+        font-family: var(--mx-font-body);
+        font-size: 0.84rem;
+        outline: none;
+        transition: width 0.3s var(--mx-ease), border-color 0.25s, background 0.25s;
+    }
+
+    .mx-search input:focus {
+        width: 230px;
+        border-color: var(--mx-ink);
+        background: #fffdf9;
+    }
+
+    .mx-search input::placeholder { color: var(--mx-ink-faint); }
+
+    .mx-search-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--mx-ink-faint);
+        font-size: 0.95rem;
+        pointer-events: none;
+    }
+
+    .mx-search-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        width: 320px;
+        background: #fffdf9;
+        border: 1px solid var(--mx-line-strong);
+        border-radius: 14px;
+        box-shadow: 0 22px 60px rgba(28, 25, 23, 0.14);
+        padding: 0.5rem;
+        z-index: 60;
+    }
+
+    .mx-search-results { max-height: 360px; overflow-y: auto; }
+
+    .mx-search-item {
+        display: block;
+        padding: 0.6rem 0.7rem;
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--mx-ink);
+    }
+
+    .mx-search-item:hover { background: rgba(28, 25, 23, 0.06); }
+    .mx-search-item h4 { font-size: 0.88rem; font-weight: 600; margin: 0; }
+    .mx-search-item p { font-size: 0.75rem; color: var(--mx-ink-faint); margin: 0.12rem 0 0; }
+    .mx-search-writer h4 { color: var(--mx-vermilion); }
+    .mx-search-empty { padding: 0.8rem; font-size: 0.8rem; color: var(--mx-ink-faint); margin: 0; }
+
+    /* === AUTH + NOTIFICATIONS === */
+    .mx-auth { display: flex; align-items: center; gap: 0.85rem; white-space: nowrap; }
+    .mx-auth-link { color: var(--mx-ink-soft); font-size: 0.85rem; font-weight: 500; text-decoration: none; }
+    .mx-auth-link:hover { color: var(--mx-ink); }
+    .mx-auth-cta { padding: 0.5rem 1.1rem; font-size: 0.82rem; }
+    .mx-hello { color: var(--mx-brass); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+
+    .mx-notif-wrap { position: relative; }
+    .mx-notif-bell {
+        background: transparent;
+        border: 1px solid var(--mx-line-strong);
+        border-radius: 999px;
+        padding: 0.32rem 0.6rem;
+        font-size: 0.88rem;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .mx-notif-dot {
+        position: absolute;
+        top: -2px; right: -2px;
+        width: 8px; height: 8px;
+        background: var(--mx-vermilion);
+        border-radius: 50%;
+        box-shadow: 0 0 8px rgba(216, 52, 28, 0.7);
+    }
+
+    .mx-notif-panel {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        width: 320px;
+        background: #fffdf9;
+        border: 1px solid var(--mx-line-strong);
+        border-radius: 14px;
+        box-shadow: 0 22px 60px rgba(28, 25, 23, 0.16);
+        padding: 0.9rem;
+        z-index: 60;
+    }
+
+    .mx-notif-head { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mx-ink-faint); margin-bottom: 0.6rem; }
+    .mx-notif-list { max-height: 320px; overflow-y: auto; }
+    .mx-notif-empty { color: var(--mx-ink-faint); font-size: 0.8rem; margin: 0; padding: 0.6rem 0; }
+    .mx-notif-item {
+        display: flex; gap: 0.6rem; align-items: flex-start;
+        padding: 0.55rem 0.6rem; border-radius: 10px;
+        text-decoration: none; color: var(--mx-ink-soft);
+    }
+    .mx-notif-item:hover { background: rgba(28, 25, 23, 0.06); }
+    .mx-notif-item.unread { background: rgba(216, 52, 28, 0.07); }
+    .mx-notif-icon { color: var(--mx-vermilion); }
+    .mx-notif-text { font-size: 0.82rem; flex: 1; }
+    .mx-notif-time { font-size: 0.7rem; color: var(--mx-ink-faint); }
+
+    /* === TOGGLE ROW === */
+    .mx-toggle-row {
+        display: flex;
+        justify-content: center;
+        padding: 1.1rem 1rem 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 860px) {
+        .mx-topnav { display: none; }
+        .mx-topbar-inner { justify-content: space-between; }
+        .mx-search input { width: 120px; }
+        .mx-search input:focus { width: 160px; }
+    }
+
+    @media (max-width: 560px) {
+        .mx-auth .mx-auth-link { display: none; }
+        .mx-hello { display: none; }
+    }
+</style>
+

@@ -5,24 +5,27 @@
 // Query strings are preserved so ?edit=, ?next=, etc. survive the switch.
 // variant="regal" — the brass-and-obsidian crown used in the /plus masthead;
 // default (no prop) keeps the classic cream pill untouched.
-import { isPlusPath, isProPath, isHomePath, toPlusPath, toProPath, toClassicPath } from '../../lib/skin';
+import { isPlusPath, isProPath, isMaxPath, isHomePath, toPlusPath, toProPath, toMaxPath, toClassicPath } from '../../lib/skin';
 
 const here = Astro.url.pathname;
 const onPlus = isPlusPath(here);
 const onPro = isProPath(here);
+const onMax = isMaxPath(here);
+const onNew = onPlus || onPro || onMax; // any of the modern skins
 const onHome = isHomePath(here); // the switch only lives on the home pages
 // Cross-skin arrivals carry a flag so the destination renders born-covered:
-// welcome=1 → the royal entrance splash (plus or pro skin)
+// welcome=1 → the royal entrance splash (plus, pro, or max skin)
 // return=1  → the homecoming veil (classic skin)
 // In-skin buttons stay clean (no flags, no replays).
 const q = Astro.url.search;
 const suffix = (flag: string) => (q ? '&' : '?') + flag;
-const classicHref = (onPlus || onPro) ? toClassicPath(here) + q + suffix('return=1') : toClassicPath(here) + q;
+const classicHref = onNew ? toClassicPath(here) + q + suffix('return=1') : toClassicPath(here) + q;
 const plusHref = onPlus ? toPlusPath(here) + q : toPlusPath(here) + q + suffix('welcome=1');
 const proHref = onPro ? toProPath(here) + q : toProPath(here) + q + suffix('welcome=1');
+const maxHref = onMax ? toMaxPath(here) + q : toMaxPath(here) + q + suffix('welcome=1');
 
 interface Props {
-    variant?: 'classic' | 'regal';
+    variant?: 'classic' | 'regal' | 'editorial';
 }
 const { variant = 'classic' } = Astro.props as any;
 
@@ -40,7 +43,7 @@ if (!onHome) return;
     so the navigation handoff is invisible — with the RACONTEUR wordmark
     rising in; then the curtain lifts to reveal the classic home. The
     inline script below runs before the rest of the page paints. */}
-{!onPlus && !onPro && Astro.url.searchParams.get('return') === '1' && (
+{!onNew && Astro.url.searchParams.get('return') === '1' && (
     <div class="skin-return-veil" id="skinReturnVeil" aria-hidden="true">
         <div class="skin-return-veil-core">
             <span class="skin-return-veil-word">RACONTEUR</span>
@@ -49,13 +52,13 @@ if (!onHome) return;
     </div>
 )}
 
-<div class={`skin-toggle ${variant === 'regal' ? 'regal' : ''}`} data-skin={onPro ? 'pro' : (onPlus ? 'plus' : 'classic')} role="group" aria-label="Choose site design">
+<div class={`skin-toggle ${variant === 'regal' ? 'regal' : variant === 'editorial' ? 'editorial' : ''}`} data-skin={onMax ? 'max' : (onPro ? 'pro' : (onPlus ? 'plus' : 'classic'))} role="group" aria-label="Choose site design">
     <a
         href={classicHref}
         data-dest="classic"
-        data-cross={(onPlus || onPro) ? '1' : undefined}
-        class={`toggle-btn ${!onPlus && !onPro ? 'active' : ''}`}
-        aria-current={!onPlus && !onPro ? 'page' : undefined}
+        data-cross={onNew ? '1' : undefined}
+        class={`toggle-btn ${!onNew ? 'active' : ''}`}
+        aria-current={!onNew ? 'page' : undefined}
         title="The original Raconteur design"
     >
         Raconteur
@@ -63,7 +66,7 @@ if (!onHome) return;
     <a
         href={plusHref}
         data-dest="plus"
-        data-cross={(!onPlus && !onPro) || onPro ? '1' : undefined}
+        data-cross={onPlus ? undefined : '1'}
         class={`toggle-btn plus ${onPlus ? 'active' : ''}`}
         aria-current={onPlus ? 'page' : undefined}
         title="The Obsidian Editorial design"
@@ -73,12 +76,22 @@ if (!onHome) return;
     <a
         href={proHref}
         data-dest="pro"
-        data-cross={(!onPlus && !onPro) || onPlus ? '1' : undefined}
+        data-cross={onPro ? undefined : '1'}
         class={`toggle-btn pro ${onPro ? 'active' : ''}`}
         aria-current={onPro ? 'page' : undefined}
         title="The Reader's Desk — Raconteur Pro design"
     >
         Raconteur <span class="pro-sign">Pro</span>
+    </a>
+    <a
+        href={maxHref}
+        data-dest="max"
+        data-cross={onMax ? undefined : '1'}
+        class={`toggle-btn max ${onMax ? 'active' : ''}`}
+        aria-current={onMax ? 'page' : undefined}
+        title="The Editorial Split — Raconteur Max design"
+    >
+        Raconteur <span class="max-sign">Max</span>
     </a>
 </div>
 
@@ -159,6 +172,23 @@ if (!onHome) return;
         box-shadow: inset 0 0 0 1px rgba(255, 106, 0, 0.5);
     }
 
+    /* Max button carries the vermilion identity in every skin */
+    .toggle-btn.max .max-sign {
+        font-weight: 700;
+        margin-left: 2px;
+        font-size: 0.7em;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #d8341c;
+        transition: color 0.25s;
+    }
+
+    .toggle-btn.max.active .max-sign { color: #7d1e12; } /* dark vermilion on cream pill */
+
+    .toggle-btn.max:hover:not(.active) {
+        box-shadow: inset 0 0 0 1px rgba(216, 52, 28, 0.5);
+    }
+
     /* === REGAL VARIANT — the /plus masthead crown ===
        Brass-and-obsidian: gilded brass border on deep obsidian glass,
        active pill poured in brass gradient. The classic cream pill
@@ -206,9 +236,53 @@ if (!onHome) return;
         box-shadow: inset 0 0 0 1px rgba(201, 162, 75, 0.55);
     }
 
+    /* === EDITORIAL VARIANT — the Max masthead pill ============================
+       Paper on paper: hairline ink border on translucent warm paper, the
+       active pill pours ink (vermilion for the max button). The classic
+       cream pill and the regal crown above stay untouched. */
+    .skin-toggle.editorial {
+        padding: 3px;
+        gap: 3px;
+        border: 1px solid rgba(28, 25, 23, 0.22);
+        background: rgba(250, 246, 239, 0.75);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 4px 18px rgba(28, 25, 23, 0.08);
+    }
+
+    .skin-toggle.editorial .toggle-btn {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 0.74rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        padding: 0.3rem 0.9rem;
+        color: rgba(28, 25, 23, 0.55);
+    }
+
+    .skin-toggle.editorial .toggle-btn:hover { color: #1c1917; }
+
+    .skin-toggle.editorial .toggle-btn.active {
+        background: #1c1917;
+        color: #faf6ef;
+        box-shadow: 0 2px 10px rgba(28, 25, 23, 0.25);
+    }
+
+    .skin-toggle.editorial .toggle-btn.plus .plus-sign { color: #a8842f; }
+    .skin-toggle.editorial .toggle-btn.pro .pro-sign { color: #c25a12; }
+    .skin-toggle.editorial .toggle-btn.max .max-sign { color: #d8341c; }
+
+    .skin-toggle.editorial .toggle-btn.plus.active .plus-sign { color: #e6cc7d; }
+    .skin-toggle.editorial .toggle-btn.pro.active .pro-sign { color: #ffb27a; }
+    .skin-toggle.editorial .toggle-btn.max.active .max-sign { color: #ff6a4a; }
+
+    .skin-toggle.editorial .toggle-btn:hover:not(.active) {
+        box-shadow: inset 0 0 0 1px rgba(28, 25, 23, 0.28);
+    }
+
     @media (max-width: 640px) {
         .toggle-btn { padding: 0.25rem 0.75rem; font-size: 0.75rem; }
         .skin-toggle.regal .toggle-btn { font-size: 0.68rem; padding: 0.26rem 0.8rem; }
+        .skin-toggle.editorial .toggle-btn { font-size: 0.66rem; padding: 0.26rem 0.62rem; }
     }
 </style>
 
@@ -280,13 +354,19 @@ if (!onHome) return;
             // at navigation time is pixel-identical:
             // → plus: the Mesher gradient (same stops as .skin-splash-plus .ss-bg)
             // → pro: the Reader's Desk amber-on-void (matches .skin-splash-pro)
+            // → max: Editorial paper + vermilion (matches .skin-splash-max)
             // → classic: the homecoming cream (same as .skin-return-veil)
+            var path = href.replace(/^https?:\/\/[^/]+/, '').split('?')[0];
             var bg;
-            if (/[?&]welcome=1/.test(href) && /\/pro(\?|$|\/)/.test(href.replace(/^https?:\/\/[^/]+/, ''))) {
+            if (path === '/max') {
+                bg = 'radial-gradient(90% 80% at 85% 90%, rgba(216, 52, 28, 0.30) 0%, rgba(216, 52, 28, 0) 55%),'
+                   + 'radial-gradient(80% 70% at 10% 8%, rgba(201, 162, 75, 0.18) 0%, rgba(201, 162, 75, 0) 50%),'
+                   + '#faf6ef';
+            } else if (path === '/pro') {
                 bg = 'radial-gradient(85% 70% at 78% 6%, rgba(255, 106, 0, 0.34) 0%, rgba(255, 106, 0, 0) 60%),'
                    + 'radial-gradient(70% 60% at 8% 96%, rgba(46, 230, 168, 0.22) 0%, rgba(46, 230, 168, 0) 60%),'
                    + '#06080a';
-            } else if (/[?&]welcome=1/.test(href)) {
+            } else if (path === '/plus') {
                 bg = 'radial-gradient(at 10% 15%, hsla(28, 100%, 74%, 1) 0px, transparent 55%),'
                    + 'radial-gradient(at 38% 28%, hsla(28, 100%, 74%, 1) 0px, transparent 45%),'
                    + 'radial-gradient(at 2%  55%, hsla(28, 100%, 70%, 1) 0px, transparent 40%),'

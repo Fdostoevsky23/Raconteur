@@ -1,0 +1,534 @@
+---
+// src/pages/max/index.astro — Raconteur Max homepage ("The Editorial Split").
+// Editorial design: paper + ink + vermilion, split-screen compositions,
+// print-style motion. Inner max pages will use bright glassmorphism
+// (handled by MaxLayout's mode switch); the home stays pure editorial.
+import MaxLayout from '../../layouts/MaxLayout.astro';
+import { getVisibleStories } from '../../data/stories';
+import { supabase } from '../../lib/supabase';
+import { buildStoryFromDB } from '../../lib/storyLoader';
+
+// 1. Static stories
+const staticStories = getVisibleStories();
+
+// 2. Published DB stories (same query as classic home)
+const { data: dbRows } = await supabase
+    .from('stories')
+    .select('*')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false });
+const dbStories = (dbRows || []).map(buildStoryFromDB);
+
+// 3. Merge — DB first (newest first)
+const stories = [...dbStories, ...staticStories];
+const totalWords = stories.reduce((sum, s) => sum + s.wordCount, 0);
+const poems = stories.filter(s => (s as any).kind === 'poem' || s.genre === 'Poetry');
+const prose = stories.filter(s => !((s as any).kind === 'poem' || s.genre === 'Poetry'));
+
+// The shelf — 5 featured/latest prose works for the split-screen browser
+const shelf = [...stories]
+    .sort((a: any, b: any) => new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime())
+    .slice(0, 5);
+
+// Verse — featured poems for the verse split
+const verse = poems.slice(0, 3);
+
+// Daily hero plate — deterministic daily rotation across the 13 hero images
+const heroImageCount = 13;
+const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+const heroIndex = (dayOfYear % heroImageCount) + 1;
+
+// Edition number — print flavour
+const editionNo = `№ ${dayOfYear}`;
+
+// Ticker — rotating one-liners across the marquee strip
+const tickerItems = [
+    'Literature you want to read',
+    `${stories.length} works on the shelf`,
+    `${totalWords.toLocaleString()} words and counting`,
+    'No algorithms · No noise · No slush pile',
+    'Writers publish instantly',
+];
+
+// Moods — deep-link into archive search
+const moods = [
+    { emoji: '🌧', name: 'Melancholy', query: 'rain' },
+    { emoji: '🌙', name: 'Nocturnal', query: 'night' },
+    { emoji: '❤', name: 'Tender', query: 'love' },
+    { emoji: '🕯', name: 'Still', query: 'silence' },
+    { emoji: '🏠', name: 'Homeward', query: 'home' },
+    { emoji: '✨', name: 'Wonder', query: 'light' },
+];
+---
+
+<MaxLayout title="Raconteur Max — The Editorial Split" description="Literature you want to read — the Raconteur Max edition.">
+    {/* ===== SPLIT HERO — type left, daily plate right ===== */}
+    <section class="mx-split mx-hero" data-wipe>
+        <div class="mx-split-side mx-hero-type">
+            <p class="mx-eyebrow">The Max Edition · {editionNo}</p>
+            <h1 class="mx-display mx-hero-headline">
+                Stories that<br />stay <em>with you.</em>
+            </h1>
+            <p class="mx-hero-lede">
+                A quiet literary home on the internet. Drop caps, pull quotes, and room
+                to breathe — publishing for people who still believe in the sentence.
+            </p>
+            <div class="mx-hero-actions">
+                <a href="/stories" class="mx-btn mx-btn-ink">Enter the library</a>
+                <a href="/submit" class="mx-btn mx-btn-ghost">Publish a story</a>
+            </div>
+            <p class="mx-hero-meta">
+                {stories.length} works · {totalWords.toLocaleString()} words · EST. 2026
+            </p>
+        </div>
+        <div class="mx-split-side mx-hero-plate">
+            <div class="mx-plate" data-mx-parallax="14">
+                <img src={`/hero/${heroIndex}.jpg`} alt="Today's editorial plate" />
+                <span class="mx-plate-caption">Plate of the day — {editionNo}</span>
+            </div>
+        </div>
+    </section>
+
+    {/* ===== TICKER — the print strip ===== */}
+    <div class="mx-ticker" aria-hidden="true">
+        <div class="mx-ticker-track">
+            {[...tickerItems, ...tickerItems].map((t, i) => (
+                <span class="mx-ticker-item">{t} <i>✦</i></span>
+            ))}
+        </div>
+    </div>
+
+    {/* ===== SPLIT SHELF — hover a title, the plate changes (split-screen browser) ===== */}
+    <section class="mx-split mx-shelf" data-wipe>
+        <div class="mx-split-side mx-shelf-list">
+            <p class="mx-eyebrow">01 — The Shelf</p>
+            <h2 class="mx-display mx-shelf-title">Fresh from the desk</h2>
+            <ul class="mx-shelf-items">
+                {shelf.map((s: any, i: number) => (
+                    <li>
+                        <a
+                            href={`/story/${s.slug}`}
+                            class="mx-shelf-item"
+                            data-plate={s.cover || `/hero/${(i % heroImageCount) + 1}.jpg`}
+                            data-genre={s.genre}
+                        >
+                            <span class="mx-shelf-num">{String(i + 1).padStart(2, '0')}</span>
+                            <span class="mx-shelf-main">
+                                <span class="mx-shelf-name">{s.title}</span>
+                                <span class="mx-shelf-by">{s.author} · {s.readTime}</span>
+                            </span>
+                            <span class="mx-shelf-arrow" aria-hidden="true">→</span>
+                        </a>
+                    </li>
+                ))}
+            </ul>
+            <a href="/stories" class="mx-ulink mx-shelf-more">Browse the full archive</a>
+        </div>
+        <div class="mx-split-side mx-shelf-plate">
+            <div class="mx-shelf-frame" data-mx-parallax="10">
+                <div class="mx-shelf-plates" id="mxShelfPlates">
+                    {shelf.map((s: any, i: number) => (
+                        <img
+                            src={s.cover || `/hero/${(i % heroImageCount) + 1}.jpg`}
+                            alt={`Cover of ${s.title}`}
+                            class={`mx-shelf-plate-img ${i === 0 ? 'active' : ''}`}
+                            data-idx={i}
+                            loading="lazy"
+                        />
+                    ))}
+                </div>
+                <span class="mx-shelf-frame-caption" id="mxShelfCaption">{shelf[0]?.genre || 'Literature'}</span>
+            </div>
+        </div>
+    </section>
+
+    {/* ===== VERSE SPLIT — poetry on paper ===== */}
+    {verse.length > 0 && (
+        <section class="mx-split mx-verse" data-wipe>
+            <div class="mx-split-side mx-verse-paper">
+                <p class="mx-eyebrow">02 — Verse</p>
+                <h2 class="mx-display mx-verse-title">The poem<br />of the week</h2>
+                <blockquote class="mx-verse-quote">
+                    “{verse[0].excerpt}”
+                </blockquote>
+                <p class="mx-verse-cite">— from <a href={`/story/${verse[0].slug}`} class="mx-ulink">{verse[0].title}</a> by {verse[0].author}</p>
+            </div>
+            <div class="mx-split-side mx-verse-list">
+                {verse.slice(0, 3).map((v: any) => (
+                    <a href={`/story/${v.slug}`} class="mx-verse-item">
+                        <span class="mx-verse-mark">✦</span>
+                        <span>
+                            <strong>{v.title}</strong>
+                            <em>{v.author}</em>
+                        </span>
+                    </a>
+                ))}
+            </div>
+        </section>
+    )}
+
+    {/* ===== EDITOR'S LETTER — desk note split ===== */}
+    <section class="mx-letter" data-mx-reveal>
+        <hr class="mx-rule-strong" data-mx-reveal="rule" />
+        <div class="mx-letter-inner">
+            <p class="mx-eyebrow">03 — From the editor's desk</p>
+            <p class="mx-letter-body">
+                Raconteur began with a simple conviction: that a story deserves a quiet room.
+                No recommendation engines shouting over the prose, no infinite scroll
+                pulling you away from the last page. Just writing, typeset with care,
+                waiting for the reader it was written for. Whether you arrive here weekly
+                or once a season — the shelf keeps.
+            </p>
+            <p class="mx-letter-sign">— The Editor, Kohima · {editionNo}</p>
+        </div>
+    </section>
+
+    {/* ===== STATS BAND — the colophon ===== */}
+    <section class="mx-stats-band">
+        <div class="mx-stat" data-mx-reveal>
+            <span class="mx-stat-num">{stories.length}</span>
+            <span class="mx-stat-label">works published</span>
+        </div>
+        <div class="mx-stat" data-mx-reveal style="--mx-reveal-delay: 0.08s">
+            <span class="mx-stat-num">{totalWords.toLocaleString()}</span>
+            <span class="mx-stat-label">words written</span>
+        </div>
+        <div class="mx-stat" data-mx-reveal style="--mx-reveal-delay: 0.16s">
+            <span class="mx-stat-num">∞</span>
+            <span class="mx-stat-label">stories yet to come</span>
+        </div>
+    </section>
+
+    {/* ===== MOOD INDEX — feelings as entries ===== */}
+    <section class="mx-moods" data-mx-reveal>
+        <hr class="mx-rule" data-mx-reveal="rule" />
+        <p class="mx-eyebrow">04 — The Mood Index</p>
+        <div class="mx-moods-row">
+            {moods.map(m => (
+                <a href={`/stories?q=${m.query}`} class="mx-mood">
+                    <span class="mx-mood-emoji">{m.emoji}</span>
+                    <span class="mx-mood-name">{m.name}</span>
+                </a>
+            ))}
+        </div>
+    </section>
+</MaxLayout>
+
+<script>
+    // Split shelf — hover/focus a title and its plate crossfades into the frame.
+    const items = Array.from(document.querySelectorAll<HTMLElement>('.mx-shelf-item'));
+    const plates = Array.from(document.querySelectorAll<HTMLElement>('.mx-shelf-plate-img'));
+    const caption = document.getElementById('mxShelfCaption');
+
+    items.forEach((item, i) => {
+        const show = () => {
+            plates.forEach((p) => p.classList.toggle('active', Number(p.dataset.idx) === i));
+            if (caption && item.dataset.genre) caption.textContent = item.dataset.genre;
+        };
+        item.addEventListener('mouseenter', show);
+        item.addEventListener('focus', show);
+    });
+</script>
+
+<style>
+    /* === SPLIT HERO === */
+    .mx-hero { min-height: 82vh; border-bottom: 1px solid var(--mx-line); }
+
+    .mx-hero-type { padding-top: 5rem; padding-bottom: 5rem; }
+
+    .mx-hero-headline {
+        font-size: clamp(2.8rem, 6.4vw, 5.4rem);
+        margin: 1.1rem 0 1.4rem;
+    }
+
+    .mx-hero-lede {
+        font-family: var(--mx-font-read);
+        font-size: 1.12rem;
+        color: var(--mx-ink-soft);
+        max-width: 42ch;
+        margin: 0 0 2rem;
+    }
+
+    .mx-hero-actions { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-bottom: 1.6rem; }
+
+    .mx-hero-meta {
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--mx-ink-faint);
+        margin: 0;
+    }
+
+    /* The plate — today's framed image */
+    .mx-hero-plate { align-items: center; }
+
+    .mx-plate {
+        position: relative;
+        width: min(78%, 460px);
+        border: 1px solid var(--mx-line-strong);
+        padding: 0.9rem;
+        background: #fffdf9;
+        box-shadow: 0 30px 80px rgba(28, 25, 23, 0.14);
+    }
+
+    .mx-plate img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 4 / 5;
+        object-fit: cover;
+        filter: saturate(0.9) contrast(1.02);
+    }
+
+    .mx-plate-caption {
+        display: block;
+        margin-top: 0.7rem;
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--mx-ink-faint);
+    }
+
+    /* === TICKER === */
+    .mx-ticker {
+        overflow: hidden;
+        border-bottom: 1px solid var(--mx-line);
+        padding: 0.85rem 0;
+        background: var(--mx-paper-deep);
+    }
+
+    .mx-ticker-track {
+        display: flex;
+        gap: 2.6rem;
+        width: max-content;
+        animation: mx-ticker-run 30s linear infinite;
+    }
+
+    .mx-ticker-item {
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--mx-ink-soft);
+        white-space: nowrap;
+    }
+
+    .mx-ticker-item i { font-style: normal; color: var(--mx-vermilion); margin-left: 2.6rem; }
+
+    @keyframes mx-ticker-run {
+        from { transform: translateX(0); }
+        to   { transform: translateX(-50%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mx-ticker-track { animation: none; }
+    }
+
+    /* === SPLIT SHELF === */
+    .mx-shelf-list { padding-top: 3rem; padding-bottom: 3rem; }
+
+    .mx-shelf-title { font-size: clamp(2rem, 4vw, 3.2rem); margin: 0.9rem 0 1.6rem; }
+
+    .mx-shelf-items { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--mx-line); }
+
+    .mx-shelf-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.05rem 0.3rem;
+        border-bottom: 1px solid var(--mx-line);
+        text-decoration: none;
+        color: var(--mx-ink);
+        transition: padding-left 0.35s var(--mx-ease);
+    }
+
+    .mx-shelf-item:hover, .mx-shelf-item:focus-visible { padding-left: 0.9rem; }
+
+    .mx-shelf-num {
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        color: var(--mx-vermilion);
+    }
+
+    .mx-shelf-main { flex: 1; display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+
+    .mx-shelf-name {
+        font-family: var(--mx-font-display);
+        font-size: 1.18rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .mx-shelf-by { font-size: 0.76rem; color: var(--mx-ink-faint); }
+
+    .mx-shelf-arrow {
+        color: var(--mx-ink-faint);
+        transform: translateX(-6px);
+        opacity: 0;
+        transition: transform 0.35s var(--mx-ease), opacity 0.35s var(--mx-ease);
+    }
+
+    .mx-shelf-item:hover .mx-shelf-arrow { transform: none; opacity: 1; }
+
+    .mx-shelf-more { margin-top: 1.4rem; font-size: 0.88rem; font-weight: 600; }
+
+    /* The plate frame — images crossfade on hover */
+    .mx-shelf-plate { align-items: center; }
+
+    .mx-shelf-frame {
+        position: relative;
+        width: min(78%, 440px);
+        aspect-ratio: 3 / 4;
+        border: 1px solid var(--mx-line-strong);
+        padding: 0.8rem;
+        background: #fffdf9;
+        box-shadow: 0 26px 70px rgba(28, 25, 23, 0.13);
+    }
+
+    .mx-shelf-plates { position: relative; width: 100%; height: 100%; }
+
+    .mx-shelf-plate-img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transform: scale(1.04);
+        transition: opacity 0.5s var(--mx-ease), transform 0.5s var(--mx-ease);
+    }
+
+    .mx-shelf-plate-img.active { opacity: 1; transform: none; }
+
+    .mx-shelf-frame-caption {
+        position: absolute;
+        left: 0.8rem;
+        bottom: -1.7rem;
+        font-size: 0.64rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--mx-vermilion);
+    }
+
+    /* === VERSE SPLIT === */
+    .mx-verse { background: var(--mx-paper-deep); border-top: 1px solid var(--mx-line); border-bottom: 1px solid var(--mx-line); }
+
+    .mx-verse-title { font-size: clamp(2rem, 4vw, 3.2rem); margin: 0.9rem 0 1.4rem; }
+
+    .mx-verse-quote {
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        font-size: 1.2rem;
+        line-height: 1.7;
+        color: var(--mx-ink-soft);
+        margin: 0 0 1rem;
+        max-width: 40ch;
+    }
+
+    .mx-verse-cite { font-size: 0.85rem; color: var(--mx-ink-faint); }
+
+    .mx-verse-list { gap: 1rem; justify-content: center; }
+
+    .mx-verse-item {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 1rem 1.2rem;
+        background: #fffdf9;
+        border: 1px solid var(--mx-line);
+        text-decoration: none;
+        color: var(--mx-ink);
+        max-width: 380px;
+        transition: transform 0.35s var(--mx-ease), box-shadow 0.35s var(--mx-ease);
+    }
+
+    .mx-verse-item:hover { transform: translateX(8px); box-shadow: 0 14px 40px rgba(28, 25, 23, 0.12); }
+
+    .mx-verse-mark { color: var(--mx-vermilion); }
+
+    .mx-verse-item strong { display: block; font-family: var(--mx-font-display); font-size: 0.98rem; }
+    .mx-verse-item em { font-size: 0.76rem; color: var(--mx-ink-faint); font-style: normal; }
+
+    /* === EDITOR'S LETTER === */
+    .mx-letter { padding: 4rem clamp(1.4rem, 5vw, 5rem) 3rem; }
+
+    .mx-letter-inner { max-width: 720px; margin: 0 auto; text-align: center; padding-top: 2.4rem; }
+
+    .mx-letter-body {
+        font-family: var(--mx-font-read);
+        font-size: 1.14rem;
+        line-height: 1.8;
+        color: var(--mx-ink-soft);
+        margin: 1.2rem 0 1.4rem;
+    }
+
+    .mx-letter-sign { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mx-vermilion); }
+
+    /* === STATS BAND === */
+    .mx-stats-band {
+        display: flex;
+        justify-content: space-around;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        padding: 3rem 2rem;
+        border-top: 1px solid var(--mx-line);
+        border-bottom: 1px solid var(--mx-line);
+        background: var(--mx-paper-deep);
+    }
+
+    .mx-stat { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+
+    .mx-stat-num {
+        font-family: var(--mx-font-display);
+        font-size: clamp(2.2rem, 4.4vw, 3.4rem);
+        font-weight: 900;
+        line-height: 1;
+    }
+
+    .mx-stat-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mx-ink-faint); }
+
+    /* === MOOD INDEX === */
+    .mx-moods { padding: 3rem clamp(1.4rem, 5vw, 5rem) 4rem; }
+    .mx-moods .mx-rule { margin-bottom: 1.6rem; }
+    .mx-moods-row { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-top: 1.2rem; }
+
+    .mx-mood {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.7rem 1.2rem;
+        border: 1px solid var(--mx-line-strong);
+        border-radius: 999px;
+        text-decoration: none;
+        color: var(--mx-ink);
+        font-size: 0.86rem;
+        font-weight: 500;
+        background: transparent;
+        transition: background 0.3s var(--mx-ease), border-color 0.3s, transform 0.3s var(--mx-ease);
+    }
+
+    .mx-mood:hover {
+        background: var(--mx-ink);
+        color: var(--mx-paper);
+        border-color: var(--mx-ink);
+        transform: translateY(-3px);
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 860px) {
+        .mx-hero { min-height: 0; }
+        .mx-hero-type { padding-top: 3rem; }
+        .mx-hero-plate { min-height: 0; padding: 2rem 1.4rem; }
+        .mx-plate { width: min(92%, 380px); }
+        .mx-shelf-plate { min-height: 0; padding: 2.4rem 1.4rem; }
+        .mx-shelf-frame { width: min(92%, 360px); }
+        .mx-verse-list { padding: 0 1.4rem 2.6rem; }
+        .mx-letter { padding: 3rem 1.4rem 2.4rem; }
+    }
+</style>
+</style>
