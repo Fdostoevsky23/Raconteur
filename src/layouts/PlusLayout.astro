@@ -96,6 +96,33 @@ const navHref = {
         Four hand-poured mixtures take the stage one at a time —
         gilded dusk · moonlit indigo · ember study · sage & brass —
         a different mixture every 10s on a seamless 40s master loop. */}
+    <style>
+        /* de-vibe DR4: the silk responds to the reader — swells with scroll, settles when idle */
+        .silk { opacity: calc(0.88 + var(--silk-boost, 0) * 0.12); transition: opacity 0.5s var(--ph-ease-out, ease); }
+    </style>
+    <script>
+        {
+            const silk = document.querySelector('.silk');
+            const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (silk && !reduced) {
+                let lastY = window.scrollY;
+                let boost = 0;
+                const tick = () => {
+                    const y = window.scrollY;
+                    const delta = Math.min(1, Math.abs(y - lastY) / 500);
+                    lastY = y;
+                    boost = Math.min(1, Math.max(boost * 0.92, delta));
+                    silk.style.setProperty('--silk-boost', boost.toFixed(3));
+                };
+                window.addEventListener('scroll', () => requestAnimationFrame(tick), { passive: true });
+                setInterval(() => {
+                    boost *= 0.94;
+                    if (boost < 0.01) boost = 0;
+                    silk.style.setProperty('--silk-boost', boost.toFixed(3));
+                }, 160);
+            }
+        }
+    </script>
     <div class="silk" aria-hidden="true">
         <span class="silk-scene silk-scene-1"></span>
         <span class="silk-scene silk-scene-2"></span>

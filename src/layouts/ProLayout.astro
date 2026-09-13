@@ -79,6 +79,29 @@ const navHref = {
     <script type="application/json" id="all-stories-data" set:html={JSON.stringify(searchStories).replace(/</g,'\\u003c')} />
 
     {/* Ambient glow fields — the desk lamp warmth + reading-nook cool */}
+    <script>
+        {
+            const amb = document.querySelector('.pro-ambient');
+            const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (amb && !reduced) {
+                let lastY = window.scrollY;
+                let boost = 0;
+                const tick = () => {
+                    const y = window.scrollY;
+                    const delta = Math.min(1, Math.abs(y - lastY) / 500);
+                    lastY = y;
+                    boost = Math.min(1, Math.max(boost * 0.92, delta));
+                    amb.style.setProperty('--pro-boost', boost.toFixed(3));
+                };
+                window.addEventListener('scroll', () => requestAnimationFrame(tick), { passive: true });
+                setInterval(() => {
+                    boost *= 0.94;
+                    if (boost < 0.01) boost = 0;
+                    amb.style.setProperty('--pro-boost', boost.toFixed(3));
+                }, 160);
+            }
+        }
+    </script>
     <div class="pro-ambient" aria-hidden="true"></div>
 
     {/* Royal entrance — pro variant, born covered on skin switches (?welcome=1) */}

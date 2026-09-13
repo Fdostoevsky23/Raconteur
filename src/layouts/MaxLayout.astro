@@ -192,6 +192,36 @@ const navHref = {
     </script>
 
     <script>
+        // De-vibe DR4 — the colour fields respond to the reader: they swell gently
+        // with scroll movement and settle when idle. Reduced-motion: stays quiet.
+        {
+            const fields = document.querySelector('.mx-glass-field');
+            const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (fields && !reduced) {
+                let lastY = window.scrollY;
+                let boost = 0;
+                let decay = 0;
+                const tick = () => {
+                    const y = window.scrollY;
+                    const delta = Math.min(1, Math.abs(y - lastY) / 500);
+                    lastY = y;
+                    boost = Math.min(1, Math.max(boost * 0.92, delta));
+                    fields.style.setProperty('--mx-field-boost', boost.toFixed(3));
+                };
+                window.addEventListener('scroll', () => {
+                    requestAnimationFrame(tick);
+                }, { passive: true });
+                decay = setInterval(() => {
+                    boost *= 0.94;
+                    if (boost < 0.01) { boost = 0; fields.style.setProperty('--mx-field-boost', '0'); }
+                    else fields.style.setProperty('--mx-field-boost', boost.toFixed(3));
+                    if (boost === 0) { /* keep interval, cheap */ }
+                }, 160);
+            }
+        }
+    </script>
+
+    <script>
         // Reveal engine — IntersectionObserver adds .mx-revealed to [data-mx-reveal].
         const mxRevealEls = document.querySelectorAll('[data-mx-reveal]');
         if ('IntersectionObserver' in window && mxRevealEls.length) {

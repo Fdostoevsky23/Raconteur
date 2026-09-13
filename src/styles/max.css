@@ -83,6 +83,10 @@ main.mx-main { flex: 1; }
     position: absolute;
     border-radius: 50%;
     filter: blur(80px);
+    /* de-vibe DR4: the fields respond to the reader — they swell as you scroll,
+       settle when idle. No always-on decoration. */
+    opacity: calc(0.62 + var(--mx-field-boost, 0) * 0.38);
+    transition: opacity 0.5s var(--mx-ease-soft);
 }
 
 [data-max-mode='glass'] .mx-glass-field span:nth-child(1) {
@@ -108,22 +112,21 @@ main.mx-main { flex: 1; }
     to   { transform: translate3d(6vmax, 4vmax, 0) scale(1.12); }
 }
 
-/* The glass card — luminous white on the colour fields */
+/* The card — solid warm paper with an ink hairline (de-vibe DR4: glass is an
+   ACCENT, reserved for the floating nav + focal surfaces, never every card). */
 .mx-glass {
-    background: var(--mx-glass-bg);
-    border: 1px solid var(--mx-glass-line);
+    background: #fffdf9;
+    border: 1px solid rgba(28, 25, 23, 0.12);
     border-radius: 18px;
-    box-shadow: var(--mx-glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(var(--mx-glass-blur)) saturate(1.3);
-    -webkit-backdrop-filter: blur(var(--mx-glass-blur)) saturate(1.3);
+    box-shadow: 0 16px 44px rgba(84, 62, 40, 0.1);
     overflow: hidden;
-    transition: transform 0.45s var(--mx-ease), box-shadow 0.45s var(--mx-ease), background 0.45s var(--mx-ease);
+    transition: transform 0.45s var(--mx-ease), box-shadow 0.45s var(--mx-ease), border-color 0.45s var(--mx-ease);
 }
 
 .mx-glass:hover {
     transform: translateY(-6px);
-    background: var(--mx-glass-bg-hi);
-    box-shadow: 0 28px 70px rgba(84, 62, 40, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    border-color: rgba(28, 25, 23, 0.22);
+    box-shadow: 0 24px 60px rgba(84, 62, 40, 0.16);
 }
 
 /* === 4. EDITORIAL PRIMITIVES (home mode) === */
@@ -494,16 +497,23 @@ main.mx-main { flex: 1; }
     box-shadow: 0 14px 40px rgba(84, 62, 40, 0.22), 0 0 0 4px rgba(255, 255, 255, 0.5);
 }
 
-/* Stats strip — glass pill of numbers with hairline dividers */
+/* Stats — a ruled editorial meta line, not a big-number banner (de-vibe DR4) */
 .mx-statstrip {
     display: flex;
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 1.8rem;
-    padding: 1.4rem 2rem;
-    border-radius: 26px;
+    gap: 1.6rem;
+    padding: 1.1rem 1.6rem;
     margin: 0 auto;
+    background: transparent;
+    border: none;
+    border-top: 1px solid rgba(28, 25, 23, 0.14);
+    border-bottom: 1px solid rgba(28, 25, 23, 0.14);
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 .mx-stat { text-align: center; }
@@ -513,9 +523,10 @@ main.mx-main { flex: 1; }
 
 .mx-stat-num {
     display: block;
-    font-family: var(--mx-font-display);
-    font-size: 1.5rem;
-    font-weight: 900;
+    font-family: var(--mx-font-body);
+    font-size: 1.02rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
     color: var(--mx-ink);
 }
 

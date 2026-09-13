@@ -60,8 +60,11 @@ body.pro-skin {
 
 main.pro-main { flex: 1; }
 
-/* Ambient glow fields — fixed, non-interactive */
+/* Ambient glow fields — they respond to the reader: swell with scroll,
+   settle when idle (de-vibe DR4 — no always-on decoration) */
 .pro-ambient {
+    opacity: calc(0.7 + var(--pro-boost, 0) * 0.3);
+    transition: opacity 0.5s ease;
     position: fixed;
     inset: 0;
     z-index: 0;
