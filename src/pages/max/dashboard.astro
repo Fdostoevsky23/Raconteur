@@ -139,7 +139,7 @@ import MaxLayout from '../../layouts/MaxLayout.astro';
     const storiesList = document.getElementById('storiesList')!;
     const emptyState = document.getElementById('emptyState')!;
     const writeNewBtn = document.getElementById('writeNewBtn')!;
-    const show = (el: HTMLElement, d: string = '') => { el.hidden = false; };
+    const show = (el: HTMLElement) => { el.hidden = false; };
 
     async function initDashboard() {
         const { data: { session } } = await supabase.auth.getSession();
@@ -177,7 +177,8 @@ import MaxLayout from '../../layouts/MaxLayout.astro';
         const phoneInput = document.getElementById('phoneInput') as HTMLInputElement;
 
         // Phone lives in private_profiles (owner-only)
-        let privatePhone = '';
+        const DAY_MS = 86400000;
+    let privatePhone = '';
         const { data: priv } = await supabase.from('private_profiles').select('phone').eq('user_id', session.user.id).maybeSingle();
         if (priv?.phone) privatePhone = priv.phone;
         if (profile) {

@@ -31,7 +31,8 @@ const prose = stories.filter(s => !((s as any).kind === 'poem' || s.genre === 'P
 const BOSS_NAME = 'Nzan Kikon';
 
 // deterministic daily shuffle — same lineup all day, fresh tomorrow
-const daySeed = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000) * 2654435761;
+const DAY_MS = 86400000;
+const daySeed = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / DAY_MS) * 2654435761;
 const dailyRank = (id: string) => {
     let h = daySeed;
     for (let c = 0; c < id.length; c++) h = ((h ^ id.charCodeAt(c)) * 16777619) >>> 0;
@@ -74,7 +75,7 @@ const verse = curate(poemPool, 4);
 
 // Daily hero plate — deterministic daily rotation across the 13 hero images
 const heroImageCount = 13;
-const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / DAY_MS);
 const heroIndex = (dayOfYear % heroImageCount) + 1;
 
 // Ticker — rotating one-liners across the marquee strip
@@ -160,7 +161,7 @@ const rotatingWriters = [
 // Bookshelf today: editor's books + a community writer's books, daily rotation
 import authorsData from '../../data/authors.json';
 const altarAuthor = (authorsData as any[]).find((a: any) => a.name === 'Nzan Kikon') || (authorsData as any[])[0];
-const dayIndex = Math.floor(Date.now() / 86400000);
+const dayIndex = Math.floor(Date.now() / DAY_MS);
 const adminSlug = String(altarAuthor.name).toLowerCase().replace(/[ ]/g, '-');
 const adminBooks = (altarAuthor.books as any[]) || [];
 
@@ -718,7 +719,7 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
             note_type: type,
             body,
             display_name: displayName,
-            expires_at: new Date(Date.now() + days * 86400000).toISOString(),
+            expires_at: new Date(Date.now() + days * DAY_MS).toISOString(),
         };
         const parentId = input.dataset.replyTo || null;
         if (parentId) payload.parent_id = parentId;
