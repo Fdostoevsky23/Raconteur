@@ -347,15 +347,15 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         <p class="mx-eyebrow mx-featured-eyebrow">Featured writers of the day</p>
         {[adminAuthor, ...rotatingWriters].map((w: any, i: number) => (
             <article class={`mx-profile-row ${i === 0 ? 'lead' : ''}`} data-mx-reveal style={`--mx-reveal-delay: ${i * 0.08}s`}>
-                <div class="mx-profile-plate">
+                <a href={`/max/author/${w.name.toLowerCase().replace(/\s+/g, '-')}`} class="mx-profile-plate mx-profile-plate-link">
                     {w.avatarUrl
                         ? <img src={w.avatarUrl} alt={`Portrait of ${w.name}`} />
                         : <span class="mx-avatar" style="background: linear-gradient(135deg, var(--mx-vermilion), var(--mx-vermilion-deep));">{w.avatarInitials}</span>}
-                </div>
+                </a>
                 <div class="mx-profile-body">
                     <div class="mx-profile-namebar">
-                        <h3 class="mx-profile-name">{w.name}</h3>
-                        <span class="mx-profile-role">{i === 0 ? 'The editor\u2019s desk' : w.role}</span>
+                        <h3 class="mx-profile-name"><a href={`/max/author/${w.name.toLowerCase().replace(/\s+/g, '-')}`} class="mx-profile-link">{w.name}</a></h3>
+                        {i === 0 && <span class="mx-profile-role mx-role-admin">Admin</span>}
                     </div>
                     <p class="mx-profile-place">{w.place} · Joined {w.joinedDate}</p>
                     <p class="mx-profile-bio">{w.bio}</p>
@@ -1153,6 +1153,17 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     /* === FEATURED WRITERS — magazine profile rows === */
     .mx-featured { padding: 4rem clamp(1.4rem, 5vw, 5rem) 2rem; }
     .mx-featured-eyebrow { margin: 2rem 0 1.2rem; }
+
+    .mx-profile-link { color: inherit; text-decoration: none; transition: color 0.2s; }
+    .mx-profile-link:hover { color: var(--mx-vermilion); }
+    a.mx-profile-plate-link { display: block; text-decoration: none; }
+    a.mx-profile-plate-link:hover img { transform: scale(1.03); }
+    a.mx-profile-plate-link img { transition: transform 0.4s var(--mx-ease, ease); }
+    .mx-role-admin {
+        font-size: 0.62rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+        color: var(--mx-paper); background: var(--mx-ink);
+        border-radius: 999px; padding: 0.22rem 0.7rem;
+    }
 
     .mx-profile-row {
         display: grid;

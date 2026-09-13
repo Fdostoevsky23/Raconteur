@@ -501,6 +501,7 @@ function safeCover(c: any): string | null {
 
             let me: any = null;
             let storyAuthorId: string | null = null;
+            let meIsAdmin = false;
 
             function esc(s: string) {
                 return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]!));
@@ -530,7 +531,7 @@ function safeCover(c: any): string | null {
 
                                     const renderOne = (c: any, isReply: boolean): string => {
                     const name = c.display_name || 'reader';
-                    const canDelete = me && (me.id === c.user_id || me.id === storyAuthorId);
+                    const canDelete = me && (me.id === c.user_id || meIsAdmin);
                     const replyBtn = (!isReply)
                         ? `<button class="reply-btn" data-id="${c.id}" data-name="${esc(name)}">Reply</button>` : '';
                     const delBtn = canDelete
@@ -697,6 +698,10 @@ function safeCover(c: any): string | null {
                 // Find the story's author so the author can moderate comments
                 const { data: storyRow } = await supabase.from('stories').select('author_id').eq('id', slug).maybeSingle();
                 storyAuthorId = storyRow?.author_id || null;
+                if (me) {
+                    const { data: myProf } = await supabase.from('profiles').select('is_admin').eq('user_id', me.id).maybeSingle();
+                    meIsAdmin = !!myProf?.is_admin;
+                }
                 if (!me) hint.textContent = 'Commenting as a Wandering Reader.';
                 await loadComments();
             }

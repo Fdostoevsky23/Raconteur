@@ -7,9 +7,9 @@ import Icon from '../../components/Icon.astro';
 
 <MaxLayout title="Log In · Raconteur Max" description="Your shelf missed you.">
     <div class="mx-auth-wrap">
-        <div class="mx-glass mx-auth-card" data-mx-reveal>
+        <div class="mx-auth-card" data-mx-reveal>
             <p class="mx-eyebrow">Welcome back</p>
-            <h1 class="mx-auth-title">Log in</h1>
+            <h1 class="mx-auth-title">Log in<span class="mx-auth-stop">.</span></h1>
             <p class="mx-auth-sub">Your shelf missed you.</p>
 
             <form id="loginForm" class="mx-auth-form">
@@ -27,6 +27,7 @@ import Icon from '../../components/Icon.astro';
 
             <p class="mx-auth-alt">New here? <a href="/max/signup">Create an account</a></p>
         </div>
+        <p class="mx-auth-foot">The bright-glass edition of Raconteur</p>
     </div>
 </MaxLayout>
 
@@ -61,38 +62,135 @@ import Icon from '../../components/Icon.astro';
 </script>
 
 <style>
-    .mx-auth-wrap { min-height: 62vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
-
-    .mx-auth-card {
-        width: 100%;
-        max-width: 420px;
-        padding: 2.6rem 2.3rem;
-        text-align: center;
+    .mx-auth-wrap {
+        min-height: 72vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1rem;
     }
 
-    .mx-auth-title { font-family: var(--mx-font-display); font-size: 1.9rem; font-weight: 900; color: var(--mx-ink); margin: 0.6rem 0 0.4rem; }
-    .mx-auth-sub { font-size: 0.9rem; color: var(--mx-ink-soft); margin: 0 0 1.8rem; }
+    .mx-auth-card {
+        position: relative;
+        width: 100%;
+        max-width: 440px;
+        padding: 3.2rem 2.8rem 2.6rem;
+        text-align: center;
+        background: var(--mx-paper, #fffdf9);
+        border: 1px solid var(--mx-line-strong, rgba(28, 25, 23, 0.14));
+        border-radius: 18px;
+        box-shadow: 0 34px 90px rgba(28, 25, 23, 0.16), 0 2px 8px rgba(28, 25, 23, 0.06);
+        overflow: hidden;
+    }
+
+    /* The editor's red pen — a vermilion rule crowns the card */
+    .mx-auth-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 18%;
+        right: 18%;
+        height: 3px;
+        background: var(--mx-vermilion);
+        border-radius: 0 0 3px 3px;
+    }
+
+    .mx-auth-title {
+        font-family: var(--mx-font-display);
+        font-size: 2.5rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        color: var(--mx-ink);
+        margin: 0.7rem 0 0.4rem;
+        line-height: 1.05;
+    }
+
+    .mx-auth-stop { color: var(--mx-vermilion); }
+
+    .mx-auth-sub {
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        font-size: 1rem;
+        color: var(--mx-ink-soft);
+        margin: 0 0 2rem;
+    }
 
     .mx-auth-form { display: flex; flex-direction: column; text-align: left; }
-    .mx-auth-form label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mx-vermilion); margin: 0.9rem 0 0.35rem; }
+    .mx-auth-form label {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--mx-vermilion);
+        margin: 0.9rem 0 0.4rem;
+    }
+
+    .mx-field {
+        width: 100%;
+        padding: 0.8rem 1rem;
+        background: #fff;
+        border: 1px solid rgba(28, 25, 23, 0.18);
+        border-radius: 10px;
+        color: var(--mx-ink);
+        font-family: var(--mx-font-body);
+        font-size: 0.95rem;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .mx-field:focus {
+        border-color: var(--mx-vermilion);
+        box-shadow: 0 0 0 3px rgba(216, 52, 28, 0.1);
+    }
+    .mx-field::placeholder { color: var(--mx-ink-faint); }
 
     .mx-pw-wrap { position: relative; display: flex; align-items: center; }
     .mx-pw-wrap input { flex: 1; padding-right: 3rem; }
     .mx-pw-toggle {
-        position: absolute; right: 0.6rem;
+        position: absolute; right: 0.7rem;
         background: transparent; border: none;
         color: var(--mx-ink-faint); cursor: pointer;
-        padding: 0.2rem; opacity: 0.7; transition: opacity 0.2s;
+        padding: 0.2rem; opacity: 0.7; transition: opacity 0.2s, color 0.2s;
     }
-    .mx-pw-toggle:hover { opacity: 1; }
+    .mx-pw-toggle:hover { opacity: 1; color: var(--mx-vermilion); }
 
-    .mx-auth-btn { margin-top: 1.5rem; width: 100%; justify-content: center; }
+    .mx-auth-btn {
+        margin-top: 1.7rem;
+        width: 100%;
+        justify-content: center;
+        padding: 0.9rem 1.5rem;
+        font-size: 0.98rem;
+        letter-spacing: 0.02em;
+    }
 
-    .mx-forgot { text-align: center; margin-top: 1rem; }
-    .mx-forgot a { color: var(--mx-ink-soft); text-decoration: none; font-size: 0.85rem; }
+    .mx-forgot { text-align: center; margin-top: 1.1rem; }
+    .mx-forgot a {
+        color: var(--mx-ink-soft);
+        text-decoration: none;
+        font-size: 0.86rem;
+        border-bottom: 1px dotted rgba(216, 52, 28, 0.5);
+        padding-bottom: 1px;
+    }
     .mx-forgot a:hover { color: var(--mx-vermilion); }
 
     .mx-auth-msg { min-height: 1.2rem; margin-top: 0.9rem; font-size: 0.85rem; color: var(--mx-vermilion); text-align: center; }
-    .mx-auth-alt { margin-top: 1.4rem; font-size: 0.88rem; color: var(--mx-ink-soft); }
-    .mx-auth-alt a { color: var(--mx-vermilion); font-weight: 600; }
+
+    .mx-auth-alt {
+        margin-top: 1.6rem;
+        padding-top: 1.4rem;
+        border-top: 1px solid var(--mx-line, rgba(28, 25, 23, 0.1));
+        font-size: 0.88rem;
+        color: var(--mx-ink-soft);
+    }
+    .mx-auth-alt a { color: var(--mx-vermilion); font-weight: 700; text-decoration: none; }
+    .mx-auth-alt a:hover { text-decoration: underline; }
+
+    .mx-auth-foot {
+        margin-top: 1.6rem;
+        font-size: 0.64rem;
+        font-weight: 600;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--mx-ink-faint);
+    }
 </style>

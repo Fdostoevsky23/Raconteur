@@ -199,7 +199,7 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
             </p>
             <div class="pro-hero-actions">
                 <a href="/pro/stories" class="pro-btn pro-btn-amber">Begin reading</a>
-                <a href="/submit" class="pro-btn pro-btn-ghost">Publish a story</a>
+                <a href="/pro/submit" class="pro-btn pro-btn-ghost">Publish a story</a>
             </div>
             <p class="pro-hero-meta">
                 {stories.length} works · {totalWords.toLocaleString()} words · EST. 2026
@@ -318,14 +318,14 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
         </header>
         <div class="pro-writers-grid">
             <article class="pro-writer-card lead" data-pro-reveal>
-                <div class="pro-writer-portrait">
+                <a href={`/pro/author/${adminAuthor.name.toLowerCase().replace(/\s+/g, '-')}`} class="pro-writer-portrait pro-writer-portrait-link">
                     {adminAuthor.avatarUrl
                         ? <img src={adminAuthor.avatarUrl} alt={`Portrait of ${adminAuthor.name}`} />
                         : <span class="pro-writer-initials">{adminAuthor.avatarInitials}</span>}
-                </div>
+                </a>
                 <div class="pro-writer-body">
                     <div class="pro-writer-namebar">
-                        <h3 class="pro-writer-name">{adminAuthor.name}</h3>
+                        <h3 class="pro-writer-name"><a href={`/pro/author/${adminAuthor.name.toLowerCase().replace(/\s+/g, '-')}`} class="pro-writer-link">{adminAuthor.name}</a></h3>
                         <span class="pro-writer-tag">Admin</span>
                     </div>
                     <p class="pro-writer-place">{adminAuthor.place}</p>
@@ -339,14 +339,14 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
             </article>
             {rotatingWriters.map((w: any) => (
                 <article class="pro-writer-card" data-pro-reveal>
-                    <div class="pro-writer-portrait">
+                    <a href={`/pro/author/${w.name.toLowerCase().replace(/\s+/g, '-')}`} class="pro-writer-portrait pro-writer-portrait-link">
                         {w.avatarUrl
                             ? <img src={w.avatarUrl} alt={`Portrait of ${w.name}`} />
                             : <span class="pro-writer-initials">{w.avatarInitials}</span>}
-                    </div>
+                    </a>
                     <div class="pro-writer-body">
                         <div class="pro-writer-namebar">
-                            <h3 class="pro-writer-name">{w.name}</h3>
+                            <h3 class="pro-writer-name"><a href={`/pro/author/${w.name.toLowerCase().replace(/\s+/g, '-')}`} class="pro-writer-link">{w.name}</a></h3>
                         </div>
                         <p class="pro-writer-place">{w.place} · Joined {w.joinedDate}</p>
                         <p class="pro-writer-bio">{w.bio}</p>
@@ -373,7 +373,7 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
         <div class="pro-book-row">
             {shelfBooks.map((b: any) => (
                 <a
-                    href={`/author/${b.authorSlug}`}
+                    href={`/pro/author/${b.authorSlug}`}
                     class="pro-book"
                     title={`${b.title} by ${b.authorName} · visit their page`}
                 >
@@ -521,6 +521,262 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
             wordIdx = (wordIdx + 1) % heroWords.length;
             heroWords[wordIdx].classList.add('active');
         }, 7000);
+    }
+</script>
+
+<script>
+    // RESTORED ENGINES — the r2 hero splice ate this script: quote rotator + dossier + reading room
+    // Quote interlude — rotates every 8 seconds
+    const quotes = JSON.parse(document.getElementById('pro-quotes-data')?.textContent || '[]');
+    const quoteEl = document.getElementById('proQuote');
+    const citeEl = document.getElementById('proCite');
+    if (quoteEl && citeEl && quotes.length > 1) {
+        let qIndex = Math.floor(Math.random() * quotes.length);
+        setInterval(() => {
+            qIndex = (qIndex + 1) % quotes.length;
+            quoteEl.style.opacity = '0';
+            citeEl.style.opacity = '0';
+            setTimeout(() => {
+                quoteEl.textContent = quotes[qIndex].text;
+                citeEl.textContent = '— ' + quotes[qIndex].cite;
+                quoteEl.style.opacity = '1';
+                citeEl.style.opacity = '1';
+            }, 600);
+        }, 8000);
+    }
+
+    // Giants dossier modal
+    const giantsData = JSON.parse(document.getElementById('pro-giants-data')?.textContent || '[]');
+    const giantModal = document.getElementById('proGiantModal');
+    function fillGiant(i: number) {
+        const g = giantsData[i];
+        if (!g || !giantModal) return;
+        giantModal.querySelector('.pro-gm-name')!.textContent = g.name;
+        giantModal.querySelector('.pro-gm-years')!.textContent = `${g.born} – ${g.died} · Active ${g.active}`;
+        giantModal.querySelector('.pro-gm-bio')!.textContent = g.bio;
+        giantModal.querySelector('.pro-gm-opus')!.textContent = g.magnumOpus;
+        giantModal.querySelector('.pro-gm-years-inline')!.textContent = g.active;
+        giantModal.querySelector('.pro-gm-books')!.textContent = g.books.join(' · ');
+        giantModal.querySelector('.pro-gm-fact')!.textContent = g.unknownFact;
+        giantModal.querySelector('.pro-gm-line')!.textContent = '“' + g.greatestLine + '”';
+    }
+    document.querySelectorAll('.pro-giant-card').forEach((tile, i) => {
+        tile.addEventListener('click', () => {
+            fillGiant(i);
+            giantModal?.removeAttribute('hidden');
+            document.body.style.overflow = 'hidden';
+        });
+    });
+    function closeGiant() {
+        giantModal?.setAttribute('hidden', '');
+        document.body.style.overflow = '';
+    }
+    giantModal?.querySelector('.pro-modal-close')?.addEventListener('click', closeGiant);
+    giantModal?.addEventListener('click', (e) => { if (e.target === giantModal) closeGiant(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGiant(); });
+
+    // ===== The Reading Room — whispers + notes (faithful clone of classic) =====
+    import { supabase } from '../../lib/supabase';
+    import { dvToast } from '../../lib/dialog';
+    import { iconSvg } from '../../lib/icons';
+    import { esc } from '../../lib/escape';
+
+    function timeAgo(iso: string): string {
+        const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+        if (m < 1) return 'just now';
+        if (m < 60) return m + 'm ago';
+        const h = Math.floor(m / 60);
+        if (h < 24) return h + 'h ago';
+        return Math.floor(h / 24) + 'd ago';
+    }
+
+    const BLOCKED_WORDS = ['fuck','shit','ass','bitch','cunt','dick','pussy','nigger','faggot','retard'];
+    function isVulgar(text: string): boolean {
+        const words: string[] = (text.toLowerCase().match(/[a-z']+/g) || []);
+        return BLOCKED_WORDS.some(w => words.includes(w));
+    }
+
+    const VISITOR_NAMES = ['Wandering Reader','Quiet Guest','Night Owl','Book Wanderer','Shelf Browser','Page Turner','Ink Dreamer','Story Seeker'];
+
+    async function loadNotes(type: 'whisper' | 'note', listId: string) {
+        const { data: notes } = await supabase
+            .from('community_notes')
+            .select('*')
+            .eq('note_type', type)
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: true });
+        const list = document.getElementById(listId)!;
+        if (!notes || notes.length === 0) {
+            list.innerHTML = `<p class="pro-notes-empty">No ${type === 'whisper' ? 'whispers' : 'notes'} yet. Be the first.</p>`;
+            return;
+        }
+        const byParent: Record<string, any[]> = {};
+        notes.forEach(n => {
+            const key = n.parent_id || 'root';
+            (byParent[key] ||= []).push(n);
+        });
+        const renderNote = (n: any, isReply: boolean): string => {
+            const replies = (byParent[n.id] || []).map(r => renderNote(r, true)).join('');
+            const replyBtn = (!isReply && type === 'note')
+                ? `<button class="pro-note-reply" data-id="${esc(n.id)}" data-name="${esc(n.display_name)}">Reply</button>`
+                : '';
+            const reportBtn = `<button class="pro-note-report" data-id="${esc(n.id)}" data-type="${type}" aria-label="Report">${iconSvg('flag', 12)}</button>`;
+            return `
+                <div class="pro-note-card ${isReply ? 'reply' : ''}" data-id="${esc(n.id)}">
+                    <p class="pro-note-body">${esc(n.body)}</p>
+                    <div class="pro-note-meta">
+                        <span class="pro-note-author">— ${esc(n.display_name)}</span>
+                        <span class="pro-note-time">${timeAgo(n.created_at)}</span>
+                        ${replyBtn}${reportBtn}
+                    </div>
+                    ${replies ? `<div class="pro-note-replies">${replies}</div>` : ''}
+                </div>`;
+        };
+        const topLevel = (byParent['root'] || []).reverse();
+        list.innerHTML = topLevel.map(n => renderNote(n, false)).join('');
+        list.querySelectorAll('.pro-note-report').forEach(btn => {
+            btn.addEventListener('click', () => openReportModal((btn as HTMLElement).dataset.id!, (btn as HTMLElement).dataset.type!));
+        });
+        if (type === 'note') {
+            list.querySelectorAll('.pro-note-reply').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const input = document.getElementById('noteInput') as HTMLTextAreaElement;
+                    input.value = `@${(btn as HTMLElement).dataset.name} `;
+                    input.focus();
+                    input.dataset.replyTo = (btn as HTMLElement).dataset.id!;
+                    const hint = document.getElementById('noteHint');
+                    if (hint) hint.textContent = 'Replying. Post to send.';
+                });
+            });
+        }
+    }
+
+    async function postNote(type: 'whisper' | 'note', inputId: string, listId: string): Promise<boolean> {
+        const input = document.getElementById(inputId) as HTMLTextAreaElement;
+        const body = input.value.trim();
+        if (!body) return false;
+        if (isVulgar(body)) {
+            dvToast('Please keep it kind. Raconteur is a quiet place.');
+            return false;
+        }
+        const nameEl = document.getElementById(type === 'whisper' ? 'whisperName' : 'noteName') as HTMLInputElement;
+        const displayName = (nameEl && nameEl.value.trim()) ? nameEl.value.trim()
+            : (type === 'whisper' ? 'Anonymous' : VISITOR_NAMES[Math.floor(Math.random() * VISITOR_NAMES.length)]);
+        const days = type === 'whisper' ? 7 : 30;
+        const payload: any = {
+            note_type: type,
+            body,
+            display_name: displayName,
+            expires_at: new Date(Date.now() + days * 86400000).toISOString(),
+        };
+        const parentId = (input as any).dataset.replyTo || null;
+        if (parentId) payload.parent_id = parentId;
+        const { error } = await supabase.from('community_notes').insert(payload);
+        if (error) { console.error('postNote error:', error); dvToast('Something went wrong. Please try again.'); return false; }
+        delete (input as any).dataset.replyTo;
+        const hint = document.getElementById(type === 'whisper' ? 'whisperHint' : 'noteHint');
+        if (hint) hint.textContent = '';
+        input.value = '';
+        if (nameEl) nameEl.value = '';
+        loadNotes(type, listId);
+        return true;
+    }
+
+    loadNotes('whisper', 'whispersList');
+    loadNotes('note', 'notesList');
+
+    let lastWhisper = 0;
+    const WHISPER_COOLDOWN = 15000;
+    document.getElementById('whisperForm')!.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const now = Date.now();
+        const btn = document.querySelector('#whisperForm button[type="submit"]') as HTMLButtonElement;
+        const hint = document.getElementById('whisperHint');
+        if (now - lastWhisper < WHISPER_COOLDOWN) {
+            const wait = Math.ceil((WHISPER_COOLDOWN - (now - lastWhisper)) / 1000);
+            if (hint) hint.textContent = `Wait ${wait}s before another whisper.`;
+            return;
+        }
+        if (btn) { btn.disabled = true; btn.textContent = 'Wait a moment…'; }
+        const ok = await postNote('whisper', 'whisperInput', 'whispersList');
+        if (ok) {
+            lastWhisper = now;
+            setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = 'Post Whisper'; } if (hint) hint.textContent = ''; }, WHISPER_COOLDOWN);
+        } else {
+            if (btn) { btn.disabled = false; btn.textContent = 'Post Whisper'; }
+        }
+    });
+
+    let lastNote = 0;
+    const NOTE_COOLDOWN = 15000;
+    document.getElementById('noteForm')!.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const now = Date.now();
+        const btn = document.querySelector('#noteForm button[type="submit"]') as HTMLButtonElement;
+        const hint = document.getElementById('noteHint');
+        if (now - lastNote < NOTE_COOLDOWN) {
+            const wait = Math.ceil((NOTE_COOLDOWN - (now - lastNote)) / 1000);
+            if (hint) hint.textContent = `Wait ${wait}s before another note.`;
+            return;
+        }
+        if (btn) { btn.disabled = true; btn.textContent = 'Wait a moment…'; }
+        const ok = await postNote('note', 'noteInput', 'notesList');
+        if (ok) {
+            lastNote = now;
+            setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = 'Post Note'; } if (hint) hint.textContent = ''; }, NOTE_COOLDOWN);
+        } else {
+            if (btn) { btn.disabled = false; btn.textContent = 'Post Note'; }
+        }
+    });
+
+    // Report modal — dark glass
+    function openReportModal(targetId: string, targetType: string) {
+        let modal = document.getElementById('proRoomReportModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'proRoomReportModal';
+            modal.className = 'pro-modal';
+            modal.innerHTML = `
+                <div class="pro-modal-backdrop"></div>
+                <div class="pro-modal-card">
+                    <button class="pro-modal-close" aria-label="Close">×</button>
+                    <h3 class="pro-gm-name" style="font-size:1.2rem;">Report this ${targetType}</h3>
+                    <p class="pro-report-sub">Help keep Raconteur quiet and kind.</p>
+                    <select id="proReportReason" class="pro-field">
+                        <option value="spam">Spam or advertising</option>
+                        <option value="harassment">Harassment or abuse</option>
+                        <option value="other">Something else</option>
+                    </select>
+                    <div class="pro-report-actions">
+                        <button id="proReportCancel" class="pro-btn pro-btn-ghost">Cancel</button>
+                        <button id="proReportSubmit" class="pro-btn pro-btn-amber">Submit report</button>
+                    </div>
+                    <p id="proReportMsg" class="pro-report-msg"></p>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('.pro-modal-close')!.addEventListener('click', () => modal!.setAttribute('hidden', ''));
+            modal.querySelector('.pro-modal-backdrop')!.addEventListener('click', () => modal!.setAttribute('hidden', ''));
+        }
+        const reasonSel = document.getElementById('proReportReason') as HTMLSelectElement;
+        const msg = document.getElementById('proReportMsg')!;
+        const submitBtn = document.getElementById('proReportSubmit')!;
+        reasonSel.value = 'spam';
+        msg.textContent = '';
+        modal.removeAttribute('hidden');
+        submitBtn.onclick = async () => {
+            submitBtn.textContent = 'Sending...';
+            const { data: { session } } = await supabase.auth.getSession();
+            const { error } = await supabase.from('reports').insert({
+                reporter_id: session?.user.id || null,
+                target_type: targetType,
+                target_id: targetId,
+                reason: reasonSel.value,
+            });
+            if (error) { msg.textContent = 'Something went wrong.'; msg.style.color = '#ff6b6b'; }
+            else { msg.textContent = 'Thank you. We will look into it.'; msg.style.color = '#2ee6a8'; }
+            submitBtn.textContent = 'Submit report';
+            setTimeout(() => modal!.setAttribute('hidden', ''), 1400);
+        };
     }
 </script>
 

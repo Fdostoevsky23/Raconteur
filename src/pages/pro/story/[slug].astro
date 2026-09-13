@@ -509,6 +509,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
 
     let me: any = null;
     let storyAuthorId: string | null = null;
+    let meIsAdmin = false;
 
     function timeAgo(iso: string) {
         const diff = Date.now() - new Date(iso).getTime();
@@ -535,7 +536,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
 
         const renderOne = (c: any, isReply: boolean): string => {
             const name = c.display_name || 'reader';
-            const canDelete = me && (me.id === c.user_id || me.id === storyAuthorId);
+            const canDelete = me && (me.id === c.user_id || meIsAdmin);
             const replyBtn = (!isReply)
                 ? `<button class="pro-c-reply" data-id="${c.id}" data-name="${esc(name)}">Reply</button>` : '';
             const delBtn = canDelete
@@ -700,6 +701,10 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
         me = session?.user || null;
         const { data: storyRow } = await supabase.from('stories').select('author_id').eq('id', slug).maybeSingle();
         storyAuthorId = storyRow?.author_id || null;
+        if (me) {
+            const { data: myProf } = await supabase.from('profiles').select('is_admin').eq('user_id', me.id).maybeSingle();
+            meIsAdmin = !!myProf?.is_admin;
+        }
         if (!me) hint.textContent = 'Commenting as a Wandering Reader.';
         await loadComments();
     }
