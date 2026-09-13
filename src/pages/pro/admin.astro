@@ -1,0 +1,438 @@
+---
+// src/pages/pro/admin.astro — the editor's desk (the dark desk language).
+// Client logic is a faithful copy of classic /admin (feature parity): shelf
+// curation, moderation, collections, reports, writers, per-user recommendations.
+import ProLayout from '../../layouts/ProLayout.astro';
+import Icon from '../../components/Icon.astro';
+---
+
+<ProLayout title="The Editor's Desk · Raconteur Pro" description="Curate the shelf, moderate the room, guide the readers.">
+    <div class="pro-page pro-admin-page">
+        <header class="pro-page-head" data-pro-reveal>
+            <p class="pro-browser-kicker">Editor only</p>
+            <h1 class="pro-page-title">The Editor's Desk</h1>
+            <p class="pro-page-sub">Curate the shelf, moderate the room, guide the readers.</p>
+        </header>
+
+        <div id="authCheck" class="pro-empty-state">Checking credentials...</div>
+
+        <div id="adminPanel" hidden>
+            <section class="pro-card pro-admin-section" data-pro-reveal>
+                <h2 class="pro-admin-h2">Homepage Shelf</h2>
+                <p class="pro-admin-hint">Everything below appears on the homepage. ✦ Feature pins a work to the top with an Editor's Pick mark. "Remove from home" hides it from the front page only. It stays published in the archive.</p>
+                <div id="featuredList" class="pro-admin-list"></div>
+            </section>
+
+            <section class="pro-card pro-admin-section">
+                <h2 class="pro-admin-h2">Hidden from Homepage</h2>
+                <p class="pro-admin-hint">Published and in the archive, but resting off the front page.</p>
+                <div id="allWorksList" class="pro-admin-list"></div>
+            </section>
+
+            <section class="pro-card pro-admin-section">
+                <h2 class="pro-admin-h2">Reading Room Notes</h2>
+                <div id="notesList" class="pro-admin-list"></div>
+            </section>
+
+            <section class="pro-card pro-admin-section">
+                <h2 class="pro-admin-h2">Story Comments</h2>
+                <div id="commentsList" class="pro-admin-list"></div>
+            </section>
+
+            <section class="pro-card pro-admin-section">
+                <h2 class="pro-admin-h2">Reports</h2>
+                <p class="pro-admin-hint">Flagged comments and notes. Dismiss or delete the content.</p>
+                <div id="reportsList" class="pro-admin-list"></div>
+            </section>
+
+            <section class="pro-card pro-admin-section">
+                <h2 class="pro-admin-h2">Collections</h2>
+                <p class="pro-admin-hint">Curated reading bundles. Create a collection, then add stories to it.</p>
+                <form id="collectionForm" class="pro-admin-form">
+                    <input type="text" id="collectionTitle" class="pro-field" placeholder="Collection title (e.g. Rainy Sunday Reads)" required />
+                    <input type="text" id="collectionSlug" class="pro-field" placeholder="slug (e.g. rainy-sunday-reads)" required />
+                    <textarea id="collectionNote" class="pro-field" placeholder="Curator's note (optional)" rows="2"></textarea>
+                    <button type="submit" class="pro-btn pro-btn-amber">Create Collection</button>
+                </form>
+                <div id="collectionsList" class="pro-admin-list"></div>
+            </section>
+
+            <section class="pro-card pro-admin-section">
+                <h2 class="pro-admin-h2">Per-User Recommendations</h2>
+                <p class="pro-admin-hint">Pick one of your stories for a reader; the house adds one random piece beside it. They'll see both on their dashboard and at the end of stories.</p>
+                <button id="autoRecsBtn" class="pro-btn pro-btn-amber" style="margin-bottom: 1rem;"><Icon name="refresh" size={14} /> Auto-fill recommendations for all accounts</button>
+                <div id="recsPanel" class="pro-recs-panel"></div>
+            </section>
+
+            <section class="pro-card pro-admin-section">
+                <h2 class="pro-admin-h2">All Writers</h2>
+                <div id="writersList" class="pro-admin-list"></div>
+            </section>
+        </div>
+    </div>
+</ProLayout>
+
+<script>
+    // Editor's desk engine — faithful clone of classic /admin (links in-skin).
+    import { supabase } from '../../lib/supabase';
+    import { dvConfirm, dvToast, dvPick } from '../../lib/dialog';
+    import { esc } from '../../lib/escape';
+
+    const authCheck = document.getElementById('authCheck')!;
+    const adminPanel = document.getElementById('adminPanel')!;
+
+    async function initAdmin() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { window.location.href = '/login'; return; }
+        const { data: prof } = await supabase.from('profiles').select('is_admin').eq('user_id', session.user.id).maybeSingle();
+        if (!prof?.is_admin) { authCheck.textContent = 'Access denied. This page is for the editor only.'; return; }
+        authCheck.hidden = true;
+        adminPanel.hidden = false;
+
+        // ===== Stories =====
+        const { data: stories } = await supabase.from('stories')
+            .select('id, title, author_name, is_featured, kind, genre_tag, on_homepage')
+            .eq('status', 'published').order('created_at', { ascending: false });
+        const allStories: any[] = stories || [];
+
+        function renderWorks() {
+            const onHome = allStories.filter((s: any) => s.on_homepage !== false);
+            const hidden = allStories.filter((s: any) => s.on_homepage === false);
+            onHome.sort((a: any, b: any) => (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0));
+            document.getElementById('featuredList')!.innerHTML = onHome.length === 0
+                ? '<p class="pro-admin-hint">Nothing on the homepage shelf.</p>'
+                : onHome.map((s: any) => `
+                    <div class="pro-admin-row">
+                        <div class="pro-admin-row-info"><span class="pro-admin-row-title">${s.is_featured ? '✦ ' : ''}${esc(s.title)}</span><br><span class="pro-admin-row-meta">${esc(s.author_name)}</span></div>
+                        <div class="pro-admin-row-actions">
+                            <button class="pro-admin-btn ${s.is_featured ? 'unfeature' : 'feature'}" data-id="${s.id}" data-act="feature">${s.is_featured ? 'Unfeature' : 'Feature'}</button>
+                            <button class="pro-admin-btn delete" data-id="${s.id}" data-act="hide">Remove from home</button>
+                            <button class="pro-admin-btn feature" data-id="${s.id}" data-act="add-to-collection">+ Collection</button>
+                            <button class="pro-admin-btn delete" data-id="${s.id}" data-act="delete">Delete</button>
+                        </div>
+                    </div>`).join('');
+            document.getElementById('allWorksList')!.innerHTML = hidden.length === 0
+                ? '<p class="pro-admin-hint">Nothing hidden.</p>'
+                : hidden.map((s: any) => `
+                    <div class="pro-admin-row">
+                        <div class="pro-admin-row-info"><span class="pro-admin-row-title">${esc(s.title)}</span><br><span class="pro-admin-row-meta">${esc(s.author_name)}</span></div>
+                        <div class="pro-admin-row-actions">
+                            <button class="pro-admin-btn feature" data-id="${s.id}" data-act="restore">Restore to home</button>
+                        </div>
+                    </div>`).join('');
+            attachWorkHandlers();
+        }
+
+        async function setStory(id: string, patch: any) {
+            const { error } = await supabase.from('stories').update(patch).eq('id', id);
+            if (error) { dvToast('Error: ' + error.message, 'err'); return; }
+            const s = allStories.find((x: any) => x.id === id);
+            if (s) Object.assign(s, patch);
+            renderWorks();
+        }
+
+        function attachWorkHandlers() {
+            document.querySelectorAll('[data-act="feature"]').forEach(b => b.addEventListener('click', async () => {
+                const id = (b as HTMLElement).dataset.id!;
+                const s = allStories.find((x: any) => x.id === id);
+                setStory(id, { is_featured: !(s && s.is_featured) });
+            }));
+            document.querySelectorAll('[data-act="hide"]').forEach(b => b.addEventListener('click', async () => {
+                if (!(await dvConfirm({ title: 'Are you sure?', body: 'Hide this story from the homepage? It stays in the archive.', danger: true }))) return;
+                setStory((b as HTMLElement).dataset.id!, { on_homepage: false, is_featured: false });
+            }));
+            document.querySelectorAll('[data-act="restore"]').forEach(b => b.addEventListener('click', async () => {
+                setStory((b as HTMLElement).dataset.id!, { on_homepage: true });
+            }));
+            document.querySelectorAll('[data-act="delete"]').forEach(b => b.addEventListener('click', async () => {
+                if (!(await dvConfirm({ title: 'Are you sure?', body: 'Delete this story permanently?', danger: true }))) return;
+                const id = (b as HTMLElement).dataset.id!;
+                const { error } = await supabase.from('stories').delete().eq('id', id);
+                if (error) { dvToast('Error: ' + error.message, 'err'); return; }
+                const idx = allStories.findIndex((x: any) => x.id === id);
+                if (idx >= 0) allStories.splice(idx, 1);
+                renderWorks();
+            }));
+        }
+        renderWorks();
+
+        // Add-to-collection picker (styled — no native prompt)
+        document.querySelectorAll('[data-act="add-to-collection"]').forEach(b => b.addEventListener('click', async () => {
+            const storyId = (b as HTMLElement).dataset.id!;
+            const { data: cols } = await supabase.from('collections').select('id,title,slug');
+            if (!cols || cols.length === 0) { dvToast('Create a collection first.', 'err'); return; }
+            const idx = await dvPick('Add to collection:', cols.map((c: any) => c.title));
+            if (idx === null) return;
+            const col = cols[idx];
+            const { data: existing } = await supabase.from('collection_stories').select('sort_order').eq('collection_id', col.id).order('sort_order', { ascending: false }).limit(1);
+            const nextOrder = (existing?.[0]?.sort_order || 0) + 1;
+            const { error } = await supabase.from('collection_stories').insert({ collection_id: col.id, story_id: storyId, sort_order: nextOrder });
+            if (error) { dvToast('Error: ' + error.message, 'err'); return; }
+            dvToast(`Added to "${col.title}"`);
+        }));
+
+        // ===== Notes =====
+        const { data: notes } = await supabase.from('community_notes').select('*').order('created_at', { ascending: false }).limit(50);
+        document.getElementById('notesList')!.innerHTML = (notes || []).map((n: any) => `
+            <div class="pro-admin-row">
+                <div class="pro-admin-row-info"><span class="pro-admin-row-meta">${esc(n.note_type || 'note')} · ${esc(n.display_name || 'Anonymous')}</span><br><span class="pro-admin-row-title small">${esc((n.body || '').slice(0, 100))}</span></div>
+                <div class="pro-admin-row-actions"><button class="pro-admin-btn delete" data-id="${n.id}" data-type="note">Delete</button></div>
+            </div>`).join('') || '<p class="pro-admin-hint">No notes yet.</p>';
+        document.querySelectorAll('.btn-delete[data-type="note"], .pro-admin-btn[data-type="note"]').forEach(b => b.addEventListener('click', async () => {
+            if (!(await dvConfirm({ title: 'Are you sure?', body: 'Delete this note?', danger: true }))) return;
+            const { error } = await supabase.from('community_notes').delete().eq('id', (b as HTMLElement).dataset.id!);
+            if (error) { dvToast('Error: ' + error.message, 'err'); return; }
+            (b as HTMLElement).closest('.pro-admin-row')?.remove();
+        }));
+
+        // ===== Comments =====
+        const { data: comments } = await supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(50);
+        document.getElementById('commentsList')!.innerHTML = (comments || []).map((c: any) => `
+            <div class="pro-admin-row">
+                <div class="pro-admin-row-info"><span class="pro-admin-row-meta">${esc(c.author_name || c.display_name || c.pen_name || 'Reader')} · on story ${esc((c.story_id || '').slice(0, 8))}</span><br><span class="pro-admin-row-title small">${esc((c.body || c.text || '').slice(0, 100))}</span></div>
+                <div class="pro-admin-row-actions"><button class="pro-admin-btn delete" data-id="${c.id}" data-type="comment">Delete</button></div>
+            </div>`).join('') || '<p class="pro-admin-hint">No comments yet.</p>';
+        document.querySelectorAll('.pro-admin-btn[data-type="comment"]').forEach(b => b.addEventListener('click', async () => {
+            if (!(await dvConfirm({ title: 'Are you sure?', body: 'Delete this comment?', danger: true }))) return;
+            const { error } = await supabase.from('comments').delete().eq('id', (b as HTMLElement).dataset.id!);
+            if (error) { dvToast('Error: ' + error.message, 'err'); return; }
+            (b as HTMLElement).closest('.pro-admin-row')?.remove();
+        }));
+
+        // ===== Collections =====
+        const { data: collections } = await supabase.from('collections').select('*, collection_stories(story_id, sort_order)').order('created_at', { ascending: false });
+        document.getElementById('collectionsList')!.innerHTML = (collections || []).length === 0
+            ? '<p class="pro-admin-hint">No collections yet. Create your first curated bundle above.</p>'
+            : (collections || []).map((c: any) => `
+                <div class="pro-admin-row">
+                    <div class="pro-admin-row-info">
+                        <span class="pro-admin-row-title">${esc(c.title)}</span><br>
+                        <span class="pro-admin-row-meta">/${esc(c.slug)} · ${c.collection_stories?.length || 0} stories</span>
+                    </div>
+                    <div class="pro-admin-row-actions">
+                        <button class="pro-admin-btn feature" data-slug="${esc(c.slug)}" data-act="view-collection">View</button>
+                        <button class="pro-admin-btn delete" data-id="${c.id}" data-act="delete-collection">Delete</button>
+                    </div>
+                </div>`).join('');
+        document.querySelectorAll('[data-act="view-collection"]').forEach(b => b.addEventListener('click', async () => {
+            window.open(`/pro/collection/${(b as HTMLElement).dataset.slug}`, '_blank');
+        }));
+        document.querySelectorAll('[data-act="delete-collection"]').forEach(b => b.addEventListener('click', async () => {
+            if (!(await dvConfirm({ title: 'Are you sure?', body: 'Delete this collection and all its story links?', danger: true }))) return;
+            const { error } = await supabase.from('collections').delete().eq('id', (b as HTMLElement).dataset.id!);
+            if (error) { dvToast('Error: ' + error.message, 'err'); return; }
+            (b as HTMLElement).closest('.pro-admin-row')?.remove();
+        }));
+        document.getElementById('collectionForm')!.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = (document.getElementById('collectionTitle') as HTMLInputElement).value.trim();
+            const slug = (document.getElementById('collectionSlug') as HTMLInputElement).value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            const note = (document.getElementById('collectionNote') as HTMLTextAreaElement).value.trim();
+            if (!title || !slug) return;
+            const { error } = await supabase.from('collections').insert({ title, slug, curator_note: note || null });
+            if (error) { dvToast('Error: ' + error.message, 'err'); return; }
+            dvToast('Collection created. Now add stories to it from the story list above.');
+            location.reload();
+        });
+
+        // ===== Reports =====
+        const { data: reports } = await supabase.from('reports').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+        document.getElementById('reportsList')!.innerHTML = (reports || []).length === 0
+            ? '<p class="pro-admin-hint">No pending reports. The room is quiet.</p>'
+            : (reports || []).map((r: any) => `
+                <div class="pro-admin-row">
+                    <div class="pro-admin-row-info">
+                        <span class="pro-admin-row-meta">${r.target_type} · ${r.reason} · ${new Date(r.created_at).toLocaleDateString()}</span><br>
+                        <span class="pro-admin-row-title small">ID: ${r.target_id.slice(0, 8)}…</span>
+                    </div>
+                    <div class="pro-admin-row-actions">
+                        <button class="pro-admin-btn feature" data-id="${r.id}" data-act="dismiss">Dismiss</button>
+                        <button class="pro-admin-btn delete" data-id="${r.id}" data-tid="${r.target_id}" data-ttype="${r.target_type}" data-act="delete-reported">Delete content</button>
+                    </div>
+                </div>`).join('');
+        document.querySelectorAll('[data-act="dismiss"]').forEach(b => b.addEventListener('click', async () => {
+            const { error } = await supabase.from('reports').update({ status: 'dismissed' }).eq('id', (b as HTMLElement).dataset.id!);
+            if (error) { dvToast('Error: ' + error.message, 'err'); return; }
+            (b as HTMLElement).closest('.pro-admin-row')?.remove();
+        }));
+        document.querySelectorAll('[data-act="delete-reported"]').forEach(b => b.addEventListener('click', async () => {
+            if (!(await dvConfirm({ title: 'Are you sure?', body: 'Delete the reported content and resolve the report?', danger: true }))) return;
+            const tid = (b as HTMLElement).dataset.tid!;
+            const ttype = (b as HTMLElement).dataset.ttype!;
+            const table = ttype === 'comment' ? 'comments' : 'community_notes';
+            const { error: delErr } = await supabase.from(table).delete().eq('id', tid);
+            const { error: repErr } = await supabase.from('reports').update({ status: 'resolved' }).eq('id', (b as HTMLElement).dataset.id!);
+            if (delErr || repErr) { dvToast('Error: ' + (delErr || repErr)?.message, 'err'); return; }
+            (b as HTMLElement).closest('.pro-admin-row')?.remove();
+        }));
+
+        // ===== Writers =====
+        const { data: writers } = await supabase.from('profiles').select('user_id, pen_name, work_count, is_admin, verified').order('pen_name');
+        document.getElementById('writersList')!.innerHTML = (writers || []).map((w: any) => `
+            <div class="pro-admin-row">
+                <div class="pro-admin-row-info"><span class="pro-admin-row-title">${esc(w.pen_name)}${w.is_admin ? ' ✦ Admin' : ''}${w.verified ? ' ✓' : ''}</span><br><span class="pro-admin-row-meta">${w.work_count || 0} works</span></div>
+            </div>`).join('');
+
+        // ===== Per-user recommendations =====
+        const { data: myProf } = await supabase.from('profiles').select('pen_name').eq('user_id', session.user.id).maybeSingle();
+        const myStories = allStories.filter((s: any) => s.author_name === myProf?.pen_name);
+        const { data: allUsers } = await supabase.from('profiles')
+            .select('user_id, pen_name')
+            .neq('user_id', session.user.id);
+        const recsPanel = document.getElementById('recsPanel')!;
+        recsPanel.innerHTML = (allUsers || []).map((u: any) => `
+            <div class="pro-recs-row">
+                <span class="pro-recs-name">${esc(u.pen_name)}</span>
+                <select data-uid="${esc(u.user_id)}" class="recs-select pro-field">
+                    <option value="">pick your story</option>
+                    ${myStories.map((s: any) => `<option value="${esc(s.id)}">${esc(s.title)}</option>`).join('')}
+                </select>
+                <button class="pro-admin-btn feature recs-save" data-uid="${esc(u.user_id)}">Save</button>
+            </div>`).join('');
+        document.querySelectorAll('.recs-save').forEach(b => b.addEventListener('click', async () => {
+            const uid = (b as HTMLElement).dataset.uid!;
+            const sel = document.querySelector(`.recs-select[data-uid="${uid}"]`) as HTMLSelectElement;
+            const adminStoryId = sel.value || null;
+            if (!adminStoryId) { dvToast('Pick one of your stories first.', 'err'); return; }
+            const randomPool = allStories.filter((s: any) => s.id !== adminStoryId);
+            const randomStoryId = randomPool.length > 0 ? randomPool[Math.floor(Math.random() * randomPool.length)].id : null;
+            const { error } = await supabase.from('recommendations').upsert(
+                { user_id: uid, admin_story_id: adminStoryId, random_story_id: randomStoryId, updated_at: new Date().toISOString() },
+                { onConflict: 'user_id' }
+            );
+            if (error) { dvToast('Error: ' + error.message, 'err'); return; }
+            dvToast('Recommendation saved for ' + uid.slice(0, 8) + '…');
+        }));
+        // Auto-fill recommendations
+        document.getElementById('autoRecsBtn')?.addEventListener('click', async () => {
+            if (!(await dvConfirm({ title: 'Are you sure?', body: 'Auto-assign one of your stories + one random story to every account without a manual pick?', danger: true }))) return;
+            const { error } = await supabase.rpc('auto_assign_recommendations');
+            if (error) { dvToast('Error: ' + error.message, 'err'); return; }
+            dvToast('Recommendations auto-filled for all accounts.');
+            window.location.reload();
+        });
+    }
+    initAdmin();
+</script>
+
+<style>
+    .pro-page {
+        position: relative;
+        z-index: 1;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 3.4rem 1.6rem 3rem;
+    }
+
+    .pro-admin-page { max-width: 900px; }
+
+    .pro-page-head { text-align: center; margin-bottom: 2.4rem; }
+
+    .pro-page-title {
+        font-family: var(--pro-font);
+        font-size: clamp(2.2rem, 4.8vw, 3.4rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--pro-text);
+        margin: 0.6rem 0 0;
+    }
+
+    .pro-page-sub {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        font-size: 1rem;
+        color: var(--pro-text-2);
+        margin: 0.5rem 0 0;
+    }
+
+    .pro-empty-state {
+        text-align: center;
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-3);
+        padding: 3rem 0;
+    }
+
+    .pro-admin-section { padding: 1.6rem 1.8rem; margin-bottom: 1.6rem; }
+
+    .pro-admin-h2 {
+        font-family: var(--pro-font);
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--pro-text);
+        margin: 0 0 0.4rem;
+        padding-bottom: 0.6rem;
+        border-bottom: 1px solid var(--pro-line);
+    }
+
+    .pro-admin-hint { font-size: 0.84rem; color: var(--pro-text-3); font-style: italic; margin-bottom: 1rem; }
+    .pro-admin-list { display: flex; flex-direction: column; gap: 0.8rem; }
+
+    :global(.pro-admin-row) {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        padding: 0.9rem 1.2rem;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: 12px;
+        transition: background 0.2s;
+    }
+    :global(.pro-admin-row:hover) { background: rgba(255, 255, 255, 0.06); }
+    :global(.pro-admin-row-info) { flex: 1; }
+    :global(.pro-admin-row-title) { font-family: var(--pro-font); color: var(--pro-text); font-size: 0.98rem; display: block; margin-bottom: 0.2rem; }
+    :global(.pro-admin-row-title.small) { font-size: 0.85rem; }
+    :global(.pro-admin-row-meta) { font-size: 0.78rem; color: var(--pro-text-3); font-style: italic; }
+    :global(.pro-admin-row-actions) { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
+
+    :global(.pro-admin-btn) {
+        padding: 0.38rem 0.9rem;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        cursor: pointer;
+        font-family: var(--pro-font);
+        font-size: 0.76rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    :global(.pro-admin-btn.feature) { background: var(--pro-amber); color: #1a0d00; }
+    :global(.pro-admin-btn.feature:hover) { background: var(--pro-honey); }
+    :global(.pro-admin-btn.unfeature) { background: var(--pro-mint-soft); color: var(--pro-mint); }
+    :global(.pro-admin-btn.delete) { background: transparent; color: #e05a3a; border-color: rgba(224, 90, 58, 0.4); }
+    :global(.pro-admin-btn.delete:hover) { background: #e05a3a; color: #1a0d00; }
+
+    .pro-admin-form {
+        display: flex; flex-direction: column; gap: 0.9rem;
+        margin-bottom: 1.6rem; padding: 1.4rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--pro-line);
+        border-radius: 14px;
+    }
+    .pro-admin-form button { align-self: flex-start; }
+
+    .pro-field {
+        width: 100%;
+        padding: 0.65rem 0.8rem;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: 10px;
+        color: var(--pro-text);
+        font-family: var(--pro-font);
+        font-size: 0.93rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .pro-field:focus { border-color: var(--pro-amber); }
+    input.pro-field::placeholder, textarea.pro-field::placeholder { color: var(--pro-text-3); }
+
+    .pro-recs-panel { display: flex; flex-direction: column; gap: 0.8rem; }
+    :global(.pro-recs-row) {
+        display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap;
+        padding: 0.8rem; background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line); border-radius: 12px;
+    }
+    :global(.pro-recs-name) { min-width: 140px; color: var(--pro-text); font-family: var(--pro-font); font-weight: 600; }
+    :global(.pro-recs-row .pro-field) { flex: 1; min-width: 200px; width: auto; }
+
+    @media (max-width: 640px) {
+        .pro-page { padding: 2.2rem 1rem 2.4rem; }
+    }
+</style>

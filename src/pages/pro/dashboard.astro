@@ -1,0 +1,999 @@
+---
+// src/pages/pro/dashboard.astro — the writer's desk (the dark desk language).
+// Client logic is a faithful copy of classic /dashboard (feature parity):
+// profile editor + identity preview, stories/poetry/collections managers,
+// books manager, recommendations, saved link, email change, account deletion.
+import ProLayout from '../../layouts/ProLayout.astro';
+---
+
+<ProLayout title="Your Stories · Raconteur Pro" description="Your writing desk: stories, poems, collections, and books.">
+    <div class="pro-page pro-dash">
+        <header class="pro-page-head pro-dash-head" data-pro-reveal>
+            <p class="pro-browser-kicker">Your writing desk</p>
+            <h1 class="pro-page-title">Your Stories</h1>
+            <a href="/pro/submit" class="pro-btn pro-btn-amber" id="writeNewBtn" hidden>Write something new</a>
+        </header>
+
+        <p class="pro-badges-note">✦ Writer badges mark stories published, words written, and milestones reached. They'll appear on every writer's public page.</p>
+
+        <div id="recsWidget" class="pro-card pro-panel" hidden>
+            <h3 class="pro-panel-title">✦ Recommended for you</h3>
+            <div id="recsList"></div>
+        </div>
+
+        <div id="profilePreview" class="pro-card pro-profile-preview" hidden>
+            <img id="previewAvatar" class="pro-dash-avatar" alt="" hidden />
+            <div id="previewInitials" class="pro-dash-initials">–</div>
+            <div class="pro-preview-info">
+                <span id="previewName" class="pro-preview-name"></span>
+                <p id="previewBio" class="pro-preview-bio"></p>
+            </div>
+            <a id="viewPublicBtn" class="pro-card-link pro-view-public" href="#">View public page</a>
+        </div>
+
+        <button id="editProfileBtn" class="pro-btn pro-btn-ghost" hidden>Edit Profile</button>
+
+        <div id="profileEditor" class="pro-card pro-panel" hidden>
+            <h2 class="pro-panel-title">Writer Profile</h2>
+            <div class="pro-fgroup">
+                <label for="penNameInput">Pen Name</label>
+                <input type="text" id="penNameInput" class="pro-field" placeholder="How your name appears on stories..." />
+            </div>
+            <div class="pro-fgroup">
+                <label for="bioInput">Short Bio</label>
+                <textarea id="bioInput" rows="3" class="pro-field" placeholder="Tell your readers who you are..."></textarea>
+                <label class="pro-flabel">Top 5 Book Recommendations (one per line, optional)</label>
+                <textarea id="bookRecsInput" rows="5" class="pro-field" placeholder="1. The Great Gatsby&#10;2. Beloved&#10;3. ..."></textarea>
+                <button type="button" id="saveBookRecsBtn" class="pro-mini-btn">Save Book Recommendations</button>
+                <label class="pro-flabel">Change Email</label>
+                <input type="email" id="changeEmailInput" class="pro-field" placeholder="new@email.com" />
+                <button type="button" id="changeEmailBtn" class="pro-link-btn">Send confirmation to new email</button>
+                <div class="pro-danger-zone">
+                    <button type="button" id="deleteAccountBtn" class="pro-link-btn danger">Delete my account permanently</button>
+                </div>
+            </div>
+            <div class="pro-fgroup">
+                <label for="avatarInput">Profile picture (optional)</label>
+                <input type="file" id="avatarInput" accept="image/*" class="pro-field" />
+                <button type="button" id="removeAvatarBtn" class="pro-link-btn danger">Remove Profile Picture</button>
+                <img id="avatarPreview" alt="" hidden style="max-width: 80px; border-radius: 50%; margin-top: 0.5rem;" />
+            </div>
+            <div class="pro-fgroup"><label for="xUrlInput">X / Twitter link (optional)</label><input type="text" id="xUrlInput" class="pro-field" placeholder="https://x.com/yourname" /></div>
+            <div class="pro-fgroup"><label for="instagramUrlInput">Instagram link (optional)</label><input type="text" id="instagramUrlInput" class="pro-field" placeholder="https://instagram.com/yourname" /></div>
+            <div class="pro-fgroup"><label for="facebookUrlInput">Facebook link (optional)</label><input type="text" id="facebookUrlInput" class="pro-field" placeholder="https://facebook.com/yourname" /></div>
+            <div class="pro-fgroup"><label for="publicEmailInput">Public email (optional)</label><input type="text" id="publicEmailInput" class="pro-field" placeholder="An address readers may write to" /></div>
+            <div class="pro-fgroup"><label for="phoneInput">Phone (optional: stored privately, never shown)</label><input type="text" id="phoneInput" class="pro-field" placeholder="Kept private" /></div>
+            <button id="saveProfileBtn" class="pro-btn pro-btn-amber">Save Profile</button>
+            <span id="profileStatus" class="pro-status"></span>
+        </div>
+
+        <div class="pro-dash-toggles">
+            <button id="booksToggleBtn" class="pro-btn pro-btn-ghost" hidden>My Books</button>
+            <a id="savedLink" href="/pro/saved" class="pro-btn pro-btn-ghost" hidden>Saved for Later</a>
+        </div>
+
+        <div id="booksPanel" class="pro-card pro-panel" hidden>
+            <h2 class="pro-panel-title">My Books</h2>
+            <div id="booksList" class="pro-books-list"></div>
+            <form id="bookForm">
+                <input type="hidden" id="bookId" />
+                <div class="pro-fgroup"><label for="bookTitle">Book title</label><input type="text" id="bookTitle" class="pro-field" required /></div>
+                <div class="pro-fgroup"><label for="bookBlurb">One-line blurb (optional)</label><input type="text" id="bookBlurb" class="pro-field" placeholder="A novel about..." /></div>
+                <div class="pro-fgroup"><label for="bookCover">Cover image (optional)</label><input type="file" id="bookCover" accept="image/*" class="pro-field" /><img id="bookCoverPreview" alt="" hidden style="max-height: 120px; margin-top: 0.5rem; border-radius: 8px;" /></div>
+                <div class="pro-fgroup">
+                    <label id="buyLinksLabel">Where to buy (add as many as you like)</label>
+                    <div id="linkRows" aria-labelledby="buyLinksLabel"></div>
+                    <button type="button" id="addLinkBtn" class="pro-mini-btn ghost">+ Add a store link</button>
+                </div>
+                <button type="submit" class="pro-btn pro-btn-amber">Save book</button>
+                <button type="button" id="cancelBookBtn" class="pro-btn pro-btn-ghost" hidden>Cancel</button>
+                <span id="bookStatus" class="pro-status"></span>
+            </form>
+        </div>
+
+        <div id="collectionForm" class="pro-card pro-panel" hidden>
+            <h3 id="collectionFormTitle" class="pro-panel-title">New Poetry Collection</h3>
+            <div class="pro-fgroup">
+                <label for="collectionName">Collection Name</label>
+                <input type="text" id="collectionName" class="pro-field" placeholder="e.g., Raindrops of Dostoevsky" />
+            </div>
+            <div class="pro-fgroup">
+                <label for="collectionDesc">Description (optional)</label>
+                <textarea id="collectionDesc" rows="2" class="pro-field" placeholder="A collection of poems about..."></textarea>
+            </div>
+            <div class="pro-fgroup">
+                <label for="collectionCover">Cover image (optional)</label>
+                <input type="file" id="collectionCover" accept="image/*" class="pro-field" />
+                <img id="collectionCoverPreview" alt="" hidden style="max-height: 120px; margin-top: 0.5rem; border-radius: 8px;" />
+            </div>
+            <button type="button" id="saveCollectionBtn" class="pro-btn pro-btn-amber">Save Collection</button>
+            <button type="button" id="cancelCollectionBtn" class="pro-btn pro-btn-ghost">Cancel</button>
+            <span id="collectionStatus" class="pro-status"></span>
+        </div>
+
+        <div id="authCheck" class="pro-empty-state">Checking login status...</div>
+        <div id="storiesList" class="pro-work-grid pro-stories-grid" hidden></div>
+
+        <div id="emptyState" hidden>
+            <div class="pro-card pro-dash-empty">
+                <p class="pro-dash-empty-title">You haven't written any stories yet.</p>
+                <p class="pro-dash-empty-sub">Every great author started with a blank page.</p>
+                <a href="/pro/submit" class="pro-btn pro-btn-amber">Write Your First Story</a>
+            </div>
+        </div>
+    </div>
+</ProLayout>
+
+<script>
+    // Writer's desk engine — faithful clone of classic /dashboard (links in-skin).
+    import { supabase } from '../../lib/supabase';
+    import { dvConfirm, dvToast, dvPick } from '../../lib/dialog';
+    import { iconSvg } from '../../lib/icons';
+    import { esc } from '../../lib/escape';
+
+    window.addEventListener('pageshow', (e) => {
+        if ((e as any).persisted) window.location.reload();
+    });
+
+    const authCheck = document.getElementById('authCheck')!;
+    const storiesList = document.getElementById('storiesList')!;
+    const emptyState = document.getElementById('emptyState')!;
+    const writeNewBtn = document.getElementById('writeNewBtn')!;
+    const show = (el: HTMLElement) => { el.hidden = false; };
+
+    async function initDashboard() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { window.location.href = '/login'; return; }
+
+        authCheck.hidden = true;
+        writeNewBtn.hidden = false;
+        const editProfileBtn = document.getElementById('editProfileBtn')!;
+        editProfileBtn.hidden = false;
+        editProfileBtn.addEventListener('click', () => {
+            show(document.getElementById('profileEditor')!);
+            editProfileBtn.hidden = true;
+        });
+
+        // --- Profile ---
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+        const penNameInput = document.getElementById('penNameInput') as HTMLInputElement;
+        const bioInput = document.getElementById('bioInput') as HTMLTextAreaElement;
+        const bookRecsInput = document.getElementById('bookRecsInput') as HTMLTextAreaElement;
+        if (bookRecsInput && profile?.book_recs) bookRecsInput.value = (profile.book_recs as string[]).join('\n');
+        const saveProfileBtn = document.getElementById('saveProfileBtn') as HTMLButtonElement;
+        const profileStatus = document.getElementById('profileStatus') as HTMLSpanElement;
+
+        const avatarInput = document.getElementById('avatarInput') as HTMLInputElement;
+        const avatarPreview = document.getElementById('avatarPreview') as HTMLImageElement;
+        const xUrlInput = document.getElementById('xUrlInput') as HTMLInputElement;
+        const instagramUrlInput = document.getElementById('instagramUrlInput') as HTMLInputElement;
+        const facebookUrlInput = document.getElementById('facebookUrlInput') as HTMLInputElement;
+        const publicEmailInput = document.getElementById('publicEmailInput') as HTMLInputElement;
+        const phoneInput = document.getElementById('phoneInput') as HTMLInputElement;
+
+        // Phone lives in private_profiles (owner-only)
+        let privatePhone = '';
+        const { data: priv } = await supabase.from('private_profiles').select('phone').eq('user_id', session.user.id).maybeSingle();
+        if (priv?.phone) privatePhone = priv.phone;
+        if (profile) {
+            penNameInput.value = profile.pen_name || '';
+            bioInput.value = profile.bio || '';
+            xUrlInput.value = profile.x_url || '';
+            instagramUrlInput.value = profile.instagram_url || '';
+            facebookUrlInput.value = profile.facebook_url || '';
+            publicEmailInput.value = profile.public_email || '';
+            phoneInput.value = privatePhone || (profile as any).phone || '';
+            if (profile.avatar_url) {
+                avatarPreview.src = profile.avatar_url;
+                avatarPreview.hidden = false;
+            }
+        } else {
+            phoneInput.value = privatePhone;
+        }
+
+        avatarInput.addEventListener('change', () => {
+            const file = avatarInput.files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    avatarPreview.src = e.target?.result as string;
+                    avatarPreview.hidden = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Identity preview card
+        const preview = document.getElementById('profilePreview')!;
+        show(preview);
+        const displayName = profile?.pen_name || (session.user.email ?? 'writer').split('@')[0];
+        (document.getElementById('previewName') as HTMLElement).innerHTML = esc(displayName) + ((profile as any)?.is_admin ? ' <span class="pro-admin-tag">Admin</span>' : '');
+        (document.getElementById('previewBio') as HTMLElement).textContent =
+            profile?.bio || 'No bio yet. Introduce yourself to your readers.';
+        (document.getElementById('viewPublicBtn') as HTMLAnchorElement).href =
+            '/pro/author/' + displayName.toLowerCase().replace(/\s+/g, '-');
+        const previewAvatar = document.getElementById('previewAvatar') as HTMLImageElement;
+        const previewInitials = document.getElementById('previewInitials') as HTMLElement;
+        if (profile?.avatar_url) {
+            previewAvatar.src = profile.avatar_url;
+            previewAvatar.hidden = false;
+            previewInitials.style.display = 'none';
+        } else {
+            previewInitials.textContent = displayName.substring(0, 2).toUpperCase();
+        }
+
+        saveProfileBtn.addEventListener('click', async () => {
+            saveProfileBtn.disabled = true;
+            profileStatus.textContent = 'Saving...';
+
+            let avatarUrl: string | undefined = undefined;
+            const avatarFile = avatarInput.files?.[0];
+            if (avatarFile) {
+                const ext = avatarFile.name.split('.').pop();
+                const path = `avatars/${session.user.id}-${Date.now()}.${ext}`;
+                const { data: up, error: upErr } = await supabase.storage.from('covers').upload(path, avatarFile);
+                if (upErr) {
+                    profileStatus.textContent = 'Error uploading avatar.';
+                    profileStatus.style.color = '#e05a3a';
+                    saveProfileBtn.disabled = false;
+                    return;
+                }
+                avatarUrl = supabase.storage.from('covers').getPublicUrl(up.path).data.publicUrl;
+            }
+
+            const payload: any = {
+                user_id: session.user.id,
+                pen_name: penNameInput.value.trim(),
+                bio: bioInput.value.trim(),
+                x_url: xUrlInput.value.trim(),
+                instagram_url: instagramUrlInput.value.trim(),
+                facebook_url: facebookUrlInput.value.trim(),
+                public_email: publicEmailInput.value.trim()
+            };
+            if (avatarUrl) payload.avatar_url = avatarUrl;
+
+            const { error } = await supabase.from('profiles').upsert(payload, { onConflict: 'user_id' });
+            const phoneVal = phoneInput.value.trim();
+            if (!error) {
+                const { error: phoneErr } = await supabase.from('private_profiles').upsert({ user_id: session.user.id, phone: phoneVal || null }, { onConflict: 'user_id' });
+                if (phoneErr) console.warn('phone save failed (private_profiles):', phoneErr.message);
+            }
+
+            if (error) {
+                profileStatus.textContent = 'Error saving profile.';
+                profileStatus.style.color = '#e05a3a';
+            } else {
+                // Keep every story's byline in sync with the pen name
+                const newName = penNameInput.value.trim();
+                if (newName) {
+                    await supabase.from('stories').update({ author_name: newName }).eq('author_id', session.user.id);
+                }
+                profileStatus.textContent = 'Profile saved.';
+                setTimeout(() => {
+                    document.getElementById('profileEditor')!.hidden = true;
+                    editProfileBtn.hidden = false;
+                    profileStatus.textContent = '';
+                }, 1200);
+            }
+            saveProfileBtn.disabled = false;
+        });
+
+        // --- Their stories ---
+        const { data: stories, error } = await supabase
+            .from('stories')
+            .select('*')
+            .eq('author_id', session.user.id)
+            .order('updated_at', { ascending: false });
+
+        if (error) {
+            authCheck.textContent = 'Error loading stories.';
+            authCheck.hidden = false;
+            return;
+        }
+
+        if (!stories || stories.length === 0) {
+            emptyState.hidden = false;
+        } else {
+            storiesList.hidden = false;
+            const tileBtns = (id: string, title: string, content: string, extra = '') => `
+                <a class="pro-dash-btn pro-dash-edit" href="/pro/submit?edit=${esc(id)}" title="Edit">${iconSvg('edit', 13)}</a>
+                ${extra}
+                <button class="pro-dash-btn pro-dash-export" data-id="${esc(id)}" data-title="${esc(title)}" data-content="${esc((content || '').replace(/"/g, '&quot;'))}" title="Download as .md">${iconSvg('download', 13)}</button>
+                <button class="pro-dash-btn pro-dash-del" data-id="${esc(id)}" title="Delete">${iconSvg('trash', 13)}</button>`;
+
+            const storyTiles = stories.filter((s: any) => s.kind !== 'poem').map((story, i) => `
+                <div class="pro-work-card pro-dash-tile" style="--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s">
+                    <a href="${story.status === 'published' ? `/pro/story/${esc(story.id)}` : `/pro/submit?edit=${esc(story.id)}`}" style="display: block; text-decoration: none; color: inherit;">
+                        ${story.cover_url
+                            ? `<div class="pro-work-cover"><img src="${esc(story.cover_url)}" alt="Cover of ${esc(story.title || 'draft')}" /></div>`
+                            : `<div class="pro-work-cover"><span class="pro-work-star" aria-hidden="true">${iconSvg('sparkle', 26)}</span></div>`}
+                        <div class="pro-work-body">
+                            <h3 class="pro-work-title">${esc(story.title || 'Untitled Draft')}</h3>
+                            <div class="pro-work-meta pro-dash-meta">
+                                <span class="pro-status-badge ${esc(story.status)}">${esc(story.status)}</span>
+                                <span>${new Date(story.updated_at).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    </a>
+                    ${tileBtns(story.id, story.title || 'untitled', story.content)}
+                </div>`).join('');
+
+            const poemTiles = stories.filter((s: any) => s.kind === 'poem' && !s.collection_id).map((story, i) => `
+                <div class="pro-work-card is-poem pro-dash-tile" style="--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s">
+                    <a href="${story.status === 'published' ? `/pro/story/${esc(story.id)}` : `/pro/submit?edit=${esc(story.id)}`}" style="display: block; text-decoration: none; color: inherit;">
+                        ${story.cover_url
+                            ? `<div class="pro-work-cover"><img src="${esc(story.cover_url)}" alt="Cover of ${esc(story.title || 'draft')}" /></div>`
+                            : `<div class="pro-work-cover"><span class="pro-work-quote">“${esc((story.content || '').replace(/<[^>]+>/g, ' ').trim().substring(0, 80))}”</span></div>`}
+                        <div class="pro-work-body">
+                            <h3 class="pro-work-title">${esc(story.title || 'Untitled Poem')}</h3>
+                            <div class="pro-work-meta pro-dash-meta">
+                                <span class="pro-status-badge ${esc(story.status)}">${esc(story.status)}</span>
+                                <span>${new Date(story.updated_at).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    </a>
+                    ${tileBtns(story.id, story.title || 'untitled', story.content, `<button class="pro-dash-btn pro-dash-move" data-id="${esc(story.id)}" title="Move to collection">${iconSvg('collection', 13)}</button>`)}
+                </div>`).join('');
+
+            // --- Poetry collections ---
+            const { data: collections } = await supabase
+                .from('poetry_collections')
+                .select('*')
+                .eq('owner_id', session.user.id)
+                .order('created_at', { ascending: false });
+
+            const counts: Record<string, number> = {};
+            stories.filter((s: any) => s.kind === 'poem' && s.collection_id).forEach((p: any) => {
+                counts[p.collection_id] = (counts[p.collection_id] || 0) + 1;
+            });
+
+            const collectionTiles = (collections || []).map((c: any, i: number) => `
+                <div class="pro-work-card is-poem pro-dash-tile" style="--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s">
+                    <a href="/pro/poetry/${esc(c.id)}" style="display: block; text-decoration: none; color: inherit;">
+                        ${c.cover_url
+                            ? `<div class="pro-work-cover"><img src="${esc(c.cover_url)}" alt="Cover of ${esc(c.name)}" /></div>`
+                            : `<div class="pro-work-cover"><span class="pro-work-star pro-dash-coll-cover">${iconSvg('collection', 30)}<span>${esc(c.name)}</span></span></div>`}
+                        <div class="pro-work-body">
+                            <h3 class="pro-work-title">${esc(c.name)}</h3>
+                            <div class="pro-work-meta"><span>${counts[c.id] || 0} poems</span></div>
+                        </div>
+                    </a>
+                    <a class="pro-dash-btn pro-dash-edit coll-edit-btn" href="#" data-id="${esc(c.id)}" title="Edit collection">${iconSvg('edit', 13)}</a>
+                    <button class="pro-dash-btn pro-dash-del coll-del-btn" data-id="${esc(c.id)}" title="Delete collection">${iconSvg('trash', 13)}</button>
+                </div>`).join('');
+
+            let html = storyTiles;
+            html += `
+                <div class="pro-dash-divider">
+                    <h2 class="pro-section-head" style="margin: 0;">Your Poetry Collections</h2>
+                    <button id="newCollectionBtn" class="pro-btn pro-btn-ghost">+ New Collection</button>
+                </div>`;
+            html += collectionTiles || '<p class="pro-empty-state">No collections yet. Create your first one.</p>';
+
+            if (poemTiles) {
+                html += `
+                    <div class="pro-dash-divider">
+                        <h2 class="pro-section-head" style="margin: 0;">Your Poetry</h2>
+                    </div>
+                    ${poemTiles}`;
+            }
+            storiesList.innerHTML = html;
+            storiesList.querySelectorAll('[data-pro-reveal], .pro-work-card').forEach(el => el.classList.add('pro-revealed'));
+
+            // Delete stories/poems
+            document.querySelectorAll('.pro-dash-del:not(.coll-del-btn)').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const storyId = (e.currentTarget as HTMLElement).getAttribute('data-id');
+                    if (!storyId) return;
+                    const confirmed = await dvConfirm({ title: 'Delete this story?', body: 'It will be removed permanently. This cannot be undone.', confirmLabel: 'Delete', danger: true });
+                    if (!confirmed) return;
+                    const { error } = await supabase.from('stories').delete().eq('id', storyId);
+                    if (error) {
+                        dvToast('Error deleting story: ' + error.message, 'err');
+                    } else {
+                        (e.currentTarget as HTMLElement).closest('.pro-dash-tile')?.remove();
+                        if (document.querySelectorAll('.pro-dash-tile').length === 0) {
+                            storiesList.hidden = true;
+                            emptyState.hidden = false;
+                        }
+                    }
+                });
+            });
+
+            // Export as .md
+            document.querySelectorAll('.pro-dash-export').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const el = btn as HTMLElement;
+                    const title = el.dataset.title || 'untitled';
+                    const rawHtml = el.dataset.content || '';
+                    const text = rawHtml
+                        .replace(/<br\s*\/?>/gi, '\n')
+                        .replace(/<\/p>/gi, '\n\n')
+                        .replace(/<[^>]+>/g, '')
+                        .replace(/&nbsp;/g, ' ')
+                        .replace(/&amp;/g, '&')
+                        .replace(/&lt;/g, '<')
+                        .replace(/&gt;/g, '>')
+                        .replace(/&quot;/g, '"')
+                        .replace(/&#39;/g, "'")
+                        .replace(/\n{3,}/g, '\n\n')
+                        .trim();
+                    const md = `# ${title}\n\n${text}\n\n---\nExported from Raconteur · raconteur.stories\n`;
+                    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.md`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            });
+
+            // Move to collection (styled list picker — no native prompt)
+            document.querySelectorAll('.pro-dash-move').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const storyId = (e.currentTarget as HTMLElement).getAttribute('data-id');
+                    if (!storyId) return;
+
+                    const { data: colls } = await supabase
+                        .from('poetry_collections')
+                        .select('id, name')
+                        .eq('owner_id', session.user.id);
+
+                    if (!colls || colls.length === 0) {
+                        dvToast('Create a collection first.', 'err');
+                        return;
+                    }
+
+                    const options = ['None (remove from collection)'].concat(colls.map((c: any) => c.name));
+                    const choice = await dvPick('Move this poem to:', options);
+                    if (choice === null) return;
+
+                    const collectionId = choice === 0 ? null : colls[choice - 1].id;
+                    const { error } = await supabase
+                        .from('stories')
+                        .update({ collection_id: collectionId })
+                        .eq('id', storyId);
+
+                    if (error) {
+                        dvToast('Error: ' + error.message, 'err');
+                    } else {
+                        dvToast(collectionId ? 'Moved to collection.' : 'Removed from collection.');
+                        window.location.reload();
+                    }
+                });
+            });
+
+            // Collection edit/delete
+            document.querySelectorAll('.coll-edit-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const id = (btn as HTMLElement).dataset.id!;
+                    const { data: coll } = await supabase.from('poetry_collections').select('*').eq('id', id).maybeSingle();
+                    if (!coll) return;
+                    editingCollectionId = id;
+                    collectionName.value = coll.name;
+                    collectionDesc.value = coll.description || '';
+                    if (coll.cover_url) { collectionCoverPreview.src = coll.cover_url; collectionCoverPreview.hidden = false; }
+                    collectionFormTitle.textContent = 'Edit Poetry Collection';
+                    show(collectionForm);
+                    collectionForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+            });
+
+            document.querySelectorAll('.coll-del-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const id = (btn as HTMLElement).dataset.id!;
+                    if (!(await dvConfirm({ title: 'Are you sure?', body: 'Its poems become singles. They are NOT deleted.', danger: true }))) return;
+                    await supabase.from('poetry_collections').delete().eq('id', id);
+                    window.location.reload();
+                });
+            });
+
+            // Collection form
+            const collectionForm = document.getElementById('collectionForm')!;
+            const collectionFormTitle = document.getElementById('collectionFormTitle')!;
+            const saveCollectionBtn = document.getElementById('saveCollectionBtn') as HTMLButtonElement;
+            const cancelCollectionBtn = document.getElementById('cancelCollectionBtn')!;
+            const collectionStatus = document.getElementById('collectionStatus')!;
+            const collectionName = document.getElementById('collectionName') as HTMLInputElement;
+            const collectionDesc = document.getElementById('collectionDesc') as HTMLTextAreaElement;
+            const collectionCover = document.getElementById('collectionCover') as HTMLInputElement;
+            const collectionCoverPreview = document.getElementById('collectionCoverPreview') as HTMLImageElement;
+            let editingCollectionId: string | null = null;
+
+            collectionCover.addEventListener('change', () => {
+                const f = collectionCover.files?.[0];
+                if (f) { const r = new FileReader(); r.onload = e => { collectionCoverPreview.src = e.target?.result as string; collectionCoverPreview.hidden = false; }; r.readAsDataURL(f); }
+            });
+
+            document.getElementById('newCollectionBtn')?.addEventListener('click', () => {
+                editingCollectionId = null;
+                collectionFormTitle.textContent = 'New Poetry Collection';
+                collectionName.value = '';
+                collectionDesc.value = '';
+                collectionCover.value = '';
+                collectionCoverPreview.hidden = true;
+                show(collectionForm);
+                collectionForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+
+            cancelCollectionBtn.addEventListener('click', () => {
+                collectionForm.hidden = true;
+                collectionName.value = '';
+                collectionDesc.value = '';
+                collectionCover.value = '';
+                collectionCoverPreview.hidden = true;
+                collectionStatus.textContent = '';
+            });
+
+            saveCollectionBtn.addEventListener('click', async () => {
+                const name = collectionName.value.trim();
+                if (!name) {
+                    collectionStatus.textContent = 'Collection name is required.';
+                    collectionStatus.style.color = '#e05a3a';
+                    return;
+                }
+                saveCollectionBtn.disabled = true;
+                collectionStatus.textContent = 'Saving...';
+
+                let coverUrl: string | undefined;
+                const coverFile = collectionCover.files?.[0];
+                if (coverFile) {
+                    const ext = coverFile.name.split('.').pop();
+                    const path = `collection-covers/${session.user.id}-${Date.now()}.${ext}`;
+                    const { data: up, error: upErr } = await supabase.storage.from('covers').upload(path, coverFile);
+                    if (upErr) { collectionStatus.textContent = 'Cover upload failed.'; collectionStatus.style.color = '#e05a3a'; saveCollectionBtn.disabled = false; return; }
+                    coverUrl = supabase.storage.from('covers').getPublicUrl(up.path).data.publicUrl;
+                }
+
+                const payload: any = { owner_id: session.user.id, name, description: collectionDesc.value.trim() || null };
+                if (coverUrl) payload.cover_url = coverUrl;
+
+                const { error } = editingCollectionId
+                    ? await supabase.from('poetry_collections').update(payload).eq('id', editingCollectionId)
+                    : await supabase.from('poetry_collections').insert(payload);
+
+                if (error) {
+                    collectionStatus.textContent = 'Error: ' + error.message;
+                    collectionStatus.style.color = '#e05a3a';
+                } else {
+                    collectionStatus.textContent = editingCollectionId ? 'Collection updated.' : 'Collection saved.';
+                    setTimeout(() => { window.location.reload(); }, 1200);
+                }
+                saveCollectionBtn.disabled = false;
+            });
+        }
+
+        // ===== My Books =====
+        const booksToggleBtn = document.getElementById('booksToggleBtn')!;
+        const booksPanel = document.getElementById('booksPanel')!;
+        const booksList = document.getElementById('booksList')!;
+        const bookForm = document.getElementById('bookForm') as HTMLFormElement;
+        const bookIdInput = document.getElementById('bookId') as HTMLInputElement;
+        const bookTitle = document.getElementById('bookTitle') as HTMLInputElement;
+        const bookBlurb = document.getElementById('bookBlurb') as HTMLInputElement;
+        const bookCover = document.getElementById('bookCover') as HTMLInputElement;
+        const bookCoverPreview = document.getElementById('bookCoverPreview') as HTMLImageElement;
+        const linkRows = document.getElementById('linkRows')!;
+        const addLinkBtn = document.getElementById('addLinkBtn')!;
+        const cancelBookBtn = document.getElementById('cancelBookBtn')!;
+        const bookStatus = document.getElementById('bookStatus')!;
+        booksToggleBtn.hidden = false;
+
+        // Saved link, always visible
+        const savedLink = document.getElementById('savedLink')!;
+        const { count: savedCount } = await supabase
+            .from('bookmarks')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', session.user.id);
+        savedLink.hidden = false;
+        savedLink.innerHTML = iconSvg('bookmark', 14) + (savedCount && savedCount > 0 ? ` Saved for Later (${savedCount})` : ' Saved for Later');
+
+        document.getElementById('removeAvatarBtn')?.addEventListener('click', async () => {
+            if (!(await dvConfirm({ title: 'Are you sure?', body: 'Remove your profile photo? Your initials will show instead.', danger: true }))) return;
+            await supabase.from('profiles').update({ avatar_url: null }).eq('user_id', session.user.id);
+            window.location.reload();
+        });
+
+        // Recommendations (skip your own work)
+        (async () => {
+            const widget = document.getElementById('recsWidget');
+            const list = document.getElementById('recsList');
+            if (!widget || !list) return;
+            const { data: rec } = await supabase.from('recommendations')
+                .select('admin_story_id, random_story_id').eq('user_id', session.user.id).maybeSingle();
+            if (!rec) return;
+            const { data: myProf } = await supabase.from('profiles')
+                .select('pen_name').eq('user_id', session.user.id).maybeSingle();
+            const ids = [rec.admin_story_id, rec.random_story_id].filter(Boolean);
+            if (ids.length === 0) return;
+            const { data: recStories } = await supabase.from('stories')
+                .select('id, title, author_name').in('id', ids).eq('status', 'published');
+            const filtered = (recStories || []).filter((s: any) => s.author_name !== myProf?.pen_name);
+            if (filtered.length === 0) return;
+            list.innerHTML = filtered.map((s: any) =>
+                `<a href="/pro/story/${esc(s.id)}" class="pro-recs-item"><span>${esc(s.title)}</span><span class="pro-recs-author">${esc(s.author_name)}</span></a>`
+            ).join('');
+            widget.hidden = false;
+        })();
+
+        document.getElementById('saveBookRecsBtn')?.addEventListener('click', async () => {
+            const raw = (document.getElementById('bookRecsInput') as HTMLTextAreaElement)?.value || '';
+            const recs = raw.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 5);
+            const { error } = await supabase.from('profiles').update({ book_recs: recs }).eq('user_id', session.user.id);
+            if (error) dvToast('Error saving book recs: ' + error.message, 'err');
+            else dvToast('Book recommendations saved.');
+        });
+
+        document.getElementById('changeEmailBtn')?.addEventListener('click', async () => {
+            const newEmail = (document.getElementById('changeEmailInput') as HTMLInputElement)?.value?.trim();
+            if (!newEmail) { dvToast('Enter a new email address.', 'err'); return; }
+            const { error } = await supabase.auth.updateUser({ email: newEmail });
+            if (error) dvToast('Error: ' + error.message, 'err');
+            else dvToast('Confirmation sent to ' + newEmail + '. Click the link in that email to confirm.');
+        });
+
+        // Delete account (server endpoint; shared API)
+        document.getElementById('deleteAccountBtn')?.addEventListener('click', async () => {
+            if (!(await dvConfirm({ title: 'Are you sure?', body: 'This permanently deletes your account, stories, bookmarks and follows.', danger: true }))) return;
+            if (!(await dvConfirm({ title: 'Are you sure?', body: 'Really? This cannot be undone.', danger: true }))) return;
+            const { data: { session: delSession } } = await supabase.auth.getSession();
+            if (!delSession) { window.location.href = '/login'; return; }
+            const res = await fetch('/api/delete-account', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${delSession.access_token}` },
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({} as any));
+                dvToast('Could not delete your account: ' + (body.error || res.status), 'err');
+                return;
+            }
+            await supabase.auth.signOut();
+            window.location.href = '/pro';
+        });
+
+        await supabase.rpc('refresh_work_counts');
+
+        booksToggleBtn.addEventListener('click', () => {
+            const open = !booksPanel.hidden;
+            booksPanel.hidden = open;
+            if (!open) loadBooks();
+        });
+
+        function addLinkRow(label = '', url = '') {
+            const row = document.createElement('div');
+            row.className = 'pro-link-row';
+            row.innerHTML = `
+                <input type="text" class="link-label pro-field" name="linkLabel" placeholder="Amazon" value="${label.replace(/"/g, '&quot;')}" />
+                <input type="url" class="link-url pro-field" name="linkUrl" placeholder="https://..." value="${url.replace(/"/g, '&quot;')}" />
+                <button type="button" class="link-remove pro-link-btn danger">${iconSvg('close', 13)}</button>`;
+            row.querySelector('.link-remove')!.addEventListener('click', () => row.remove());
+            linkRows.appendChild(row);
+        }
+        addLinkBtn.addEventListener('click', () => addLinkRow());
+
+        function collectLinks() {
+            return Array.from(linkRows.querySelectorAll('div')).map(r => ({
+                label: (r.querySelector('.link-label') as HTMLInputElement).value.trim(),
+                url: (r.querySelector('.link-url') as HTMLInputElement).value.trim(),
+            })).filter(l => l.label && l.url);
+        }
+
+        async function loadBooks() {
+            const { data: books } = await supabase.from('books').select('*').eq('owner_id', session!.user.id).order('created_at', { ascending: true });
+            const all = books || [];
+            booksList.innerHTML = all.length === 0
+                ? '<p class="pro-empty-state">No books yet. Add your first below.</p>'
+                : all.map((b: any) => `
+                    <div class="pro-book-row">
+                        ${b.cover_url ? `<img src="${esc(b.cover_url)}" class="pro-book-thumb" />` : `<div class="pro-book-thumb pro-book-thumb-empty">no cover</div>`}
+                        <div class="pro-book-info">
+                            <strong>${esc(b.title)}</strong>
+                            <div class="pro-book-sub">${(b.links || []).length} store link(s)${b.blurb ? ' · ' + esc(b.blurb) : ''}</div>
+                        </div>
+                        <button class="book-edit pro-mini-btn" data-id="${esc(b.id)}">Edit</button>
+                        <button class="book-del pro-dash-btn" data-id="${esc(b.id)}" title="Delete">${iconSvg('trash', 13)}</button>
+                    </div>`).join('');
+            booksList.querySelectorAll('.book-del').forEach(b => b.addEventListener('click', async () => {
+                if (!(await dvConfirm({ title: 'Are you sure?', body: 'Delete this book?', danger: true }))) return;
+                await supabase.from('books').delete().eq('id', (b as HTMLElement).dataset.id!);
+                loadBooks();
+            }));
+            booksList.querySelectorAll('.book-edit').forEach(b => b.addEventListener('click', async () => {
+                const id = (b as HTMLElement).dataset.id!;
+                const { data: book } = await supabase.from('books').select('*').eq('id', id).maybeSingle();
+                if (!book) return;
+                bookIdInput.value = book.id;
+                bookTitle.value = book.title;
+                bookBlurb.value = book.blurb || '';
+                linkRows.innerHTML = '';
+                (book.links || []).forEach((l: any) => addLinkRow(l.label, l.url));
+                if (linkRows.children.length === 0) addLinkRow();
+                if (book.cover_url) { bookCoverPreview.src = book.cover_url; bookCoverPreview.hidden = false; }
+                cancelBookBtn.hidden = false;
+                bookStatus.textContent = 'Editing. Change and save.';
+            }));
+        }
+
+        bookCover.addEventListener('change', () => {
+            const f = bookCover.files?.[0];
+            if (f) { const r = new FileReader(); r.onload = e => { bookCoverPreview.src = e.target?.result as string; bookCoverPreview.hidden = false; }; r.readAsDataURL(f); }
+        });
+
+        cancelBookBtn.addEventListener('click', () => {
+            bookForm.reset(); bookIdInput.value = ''; linkRows.innerHTML = ''; addLinkRow();
+            bookCoverPreview.hidden = true; cancelBookBtn.hidden = true; bookStatus.textContent = '';
+        });
+
+        bookForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            bookStatus.textContent = 'Saving...';
+            let coverUrl: string | undefined;
+            const coverFile = bookCover.files?.[0];
+            if (coverFile) {
+                const ext = coverFile.name.split('.').pop();
+                const path = `book-covers/${session.user.id}-${Date.now()}.${ext}`;
+                const { data: up, error: upErr } = await supabase.storage.from('covers').upload(path, coverFile);
+                if (upErr) { bookStatus.textContent = 'Cover upload failed.'; return; }
+                coverUrl = supabase.storage.from('covers').getPublicUrl(up.path).data.publicUrl;
+            }
+            const payload: any = {
+                owner_id: session.user.id,
+                title: bookTitle.value.trim(),
+                blurb: bookBlurb.value.trim(),
+                links: collectLinks(),
+            };
+            if (coverUrl) payload.cover_url = coverUrl;
+            const existingId = bookIdInput.value;
+            const { error } = existingId
+                ? await supabase.from('books').update(payload).eq('id', existingId)
+                : await supabase.from('books').insert(payload);
+            if (error) { bookStatus.textContent = 'Error: ' + error.message; return; }
+            bookForm.reset(); bookIdInput.value = ''; linkRows.innerHTML = ''; addLinkRow();
+            bookCoverPreview.hidden = true; cancelBookBtn.hidden = true;
+            bookStatus.textContent = 'Saved.';
+            loadBooks();
+            setTimeout(() => {
+                booksPanel.hidden = true;
+                bookStatus.textContent = '';
+            }, 1200);
+        });
+
+        addLinkRow();
+    }
+
+    initDashboard();
+</script>
+
+<style>
+    .pro-page {
+        position: relative;
+        z-index: 1;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 3.4rem 1.6rem 3rem;
+    }
+
+    .pro-page-head { text-align: center; margin-bottom: 2.2rem; }
+    .pro-dash-head { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+
+    .pro-page-title {
+        font-family: var(--pro-font);
+        font-size: clamp(2.2rem, 4.8vw, 3.4rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--pro-text);
+        margin: 0.6rem 0 0;
+    }
+
+    .pro-empty-state {
+        text-align: center;
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-3);
+        padding: 2rem 0;
+    }
+
+    .pro-badges-note {
+        text-align: center;
+        font-style: italic;
+        font-size: 0.82rem;
+        color: var(--pro-text-3);
+        margin: -1.2rem 0 1.6rem;
+    }
+
+    /* Panels */
+    .pro-panel { padding: 1.6rem 1.8rem; margin-bottom: 1.4rem; }
+
+    .pro-panel-title {
+        font-family: var(--pro-font);
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: var(--pro-text);
+        margin: 0 0 1rem;
+    }
+
+    /* Profile preview */
+    .pro-profile-preview { display: flex; align-items: center; gap: 1.2rem; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
+    .pro-dash-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; }
+    .pro-dash-initials {
+        width: 64px; height: 64px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.4rem; font-weight: 600;
+        background: linear-gradient(135deg, var(--pro-amber), var(--pro-honey));
+        color: #1a0d00;
+    }
+    .pro-preview-info { flex: 1; }
+    .pro-preview-name { font-family: var(--pro-font); font-size: 1.15rem; font-weight: 600; color: var(--pro-text); display: block; margin-bottom: 0.3rem; }
+    .pro-preview-bio { margin: 0; font-family: var(--pro-font-read); font-size: 0.9rem; font-style: italic; color: var(--pro-text-2); line-height: 1.5; }
+    .pro-view-public { white-space: nowrap; font-size: 0.88rem; font-weight: 600; }
+    .pro-admin-tag {
+        display: inline-block; margin-left: 0.5rem; padding: 0.12rem 0.55rem;
+        border-radius: 999px; background: var(--pro-amber); color: #1a0d00;
+        font-family: var(--pro-font); font-size: 0.62rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; vertical-align: middle;
+    }
+
+    /* Forms */
+    .pro-fgroup { margin-bottom: 1.1rem; }
+    .pro-fgroup > label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--pro-text-2); margin-bottom: 0.4rem; }
+    .pro-flabel { display: block; font-size: 0.8rem; font-weight: 600; color: var(--pro-text-3); margin: 1rem 0 0.4rem; }
+    .pro-field {
+        width: 100%;
+        padding: 0.65rem 0.8rem;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: 10px;
+        color: var(--pro-text);
+        font-family: var(--pro-font);
+        font-size: 0.93rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    select.pro-field option { background: #0b0e11; }
+    textarea.pro-field { resize: vertical; }
+    .pro-field:focus { border-color: var(--pro-amber); }
+    input.pro-field::placeholder, textarea.pro-field::placeholder { color: var(--pro-text-3); }
+
+    .pro-status { margin-left: 0.8rem; font-size: 0.85rem; font-style: italic; color: var(--pro-text-2); }
+    .pro-mini-btn {
+        margin-top: 0.4rem;
+        background: var(--pro-amber);
+        border: none;
+        color: #1a0d00;
+        cursor: pointer;
+        font-family: var(--pro-font);
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 0.45rem 0.95rem;
+        border-radius: 999px;
+        transition: transform 0.2s, background 0.2s;
+    }
+    .pro-mini-btn:hover { transform: translateY(-1px); background: var(--pro-mint); color: #04241a; }
+    .pro-mini-btn.ghost { background: transparent; border: 1px dashed var(--pro-line-hi); color: var(--pro-text-2); }
+    .pro-link-btn {
+        margin-top: 0.4rem;
+        display: inline-block;
+        background: transparent;
+        border: none;
+        color: var(--pro-text-2);
+        cursor: pointer;
+        font-family: var(--pro-font);
+        font-size: 0.82rem;
+        text-decoration: underline;
+    }
+    .pro-link-btn:hover { color: var(--pro-amber); }
+    .pro-link-btn.danger { color: #e05a3a; }
+    .pro-danger-zone { margin-top: 1.6rem; padding-top: 0.9rem; border-top: 1px solid var(--pro-line); }
+
+    .pro-dash-toggles { display: flex; gap: 0.7rem; margin: 0.4rem 0 1.6rem; }
+
+    /* Story tiles (JS-injected → :global) */
+    .pro-stories-grid { margin-top: 0.6rem; }
+    :global(.pro-dash-tile) { position: relative; }
+    :global(.pro-dash-meta) { flex-direction: row; align-items: center; gap: 0.6rem; }
+    :global(.pro-status-badge) {
+        font-size: 0.6rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+        padding: 0.18rem 0.55rem; border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08); color: var(--pro-text-2);
+    }
+    :global(.pro-status-badge.published) { background: var(--pro-mint-soft); color: var(--pro-mint); }
+
+    :global(.pro-dash-btn) {
+        position: absolute; top: 0.8rem; z-index: 5;
+        display: inline-flex; align-items: center; justify-content: center;
+        min-width: 1.9rem; height: 1.9rem; padding: 0 0.35rem;
+        background: rgba(6, 8, 10, 0.8);
+        border: 1px solid var(--pro-line-hi);
+        border-radius: 8px;
+        color: var(--pro-text-2);
+        cursor: pointer;
+        opacity: 0.85;
+        transition: opacity 0.2s, transform 0.2s, color 0.2s, border-color 0.2s;
+    }
+    :global(.pro-dash-btn:hover) { opacity: 1; transform: scale(1.1); color: var(--pro-amber); border-color: rgba(255, 106, 0, 0.45); }
+    :global(.pro-dash-edit) { right: 3rem; }
+    :global(.pro-dash-move) { right: 5.2rem; }
+    :global(.pro-dash-export) { right: 7.4rem; }
+    :global(.pro-dash-del) { right: 0.8rem; }
+
+    :global(.pro-dash-coll-cover) { flex-direction: column; gap: 0.5rem; padding: 1.2rem; }
+    :global(.pro-dash-coll-cover > span:last-child) {
+        font-family: var(--pro-font); font-weight: 600; font-size: 1rem;
+        color: var(--pro-text); text-align: center; line-height: 1.3; padding: 0 0.8rem;
+    }
+
+    :global(.pro-dash-divider) {
+        grid-column: 1 / -1;
+        display: flex; justify-content: space-between; align-items: center;
+        border-top: 1px solid var(--pro-line);
+        padding-top: 1.4rem; margin: 1.6rem 0 0.4rem;
+    }
+
+    .pro-section-head {
+        font-family: var(--pro-font);
+        font-size: 1.35rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--pro-text);
+    }
+
+    /* Recs */
+    :global(.pro-recs-item) {
+        display: flex; justify-content: space-between; gap: 1rem;
+        padding: 0.6rem 0; border-bottom: 1px solid var(--pro-line);
+        text-decoration: none; color: var(--pro-text);
+        font-family: var(--pro-font); font-weight: 600; font-size: 0.95rem;
+    }
+    :global(.pro-recs-item:hover) { color: var(--pro-amber); }
+    :global(.pro-recs-author) { font-family: var(--pro-font-read); font-style: italic; font-weight: 400; color: var(--pro-text-3); }
+
+    /* Books */
+    .pro-books-list { margin-bottom: 1.2rem; }
+    :global(.pro-book-row) { display: flex; gap: 1rem; align-items: center; padding: 0.7rem 0; border-bottom: 1px solid var(--pro-line); }
+    :global(.pro-book-thumb) { width: 50px; height: 70px; object-fit: cover; border-radius: 6px; }
+    :global(.pro-book-thumb-empty) {
+        background: #101418; display: flex; align-items: center; justify-content: center;
+        color: var(--pro-text-3); font-style: italic; font-size: 0.68rem;
+    }
+    :global(.pro-book-info) { flex: 1; color: var(--pro-text); font-size: 0.95rem; }
+    :global(.pro-book-sub) { font-size: 0.8rem; color: var(--pro-text-3); }
+    :global(.pro-link-row) { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+    :global(.pro-link-row .pro-field) { width: auto; }
+    :global(.pro-link-row .link-label) { flex: 0 0 140px; }
+    :global(.pro-link-row .link-url) { flex: 1; }
+    :global(.pro-link-row .pro-link-btn) { margin-top: 0; }
+
+    .pro-dash-empty {
+        max-width: 460px;
+        margin: 2rem auto 0;
+        padding: 3rem 2.2rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .pro-dash-empty-title { font-family: var(--pro-font); font-weight: 600; font-size: 1.3rem; color: var(--pro-text); margin: 0; }
+    .pro-dash-empty-sub { font-family: var(--pro-font-read); font-style: italic; color: var(--pro-text-2); margin: 0 0 1.2rem; }
+
+    @media (max-width: 640px) {
+        .pro-page { padding: 2.2rem 1rem 2.4rem; }
+    }
+</style>
