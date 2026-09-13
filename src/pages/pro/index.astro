@@ -458,6 +458,54 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
             <span class="pro-stat-label">stories yet to come</span>
         </div>
     </section>
+
+    {/* ===== FROM THE EDITOR'S DESK ===== */}
+    <section class="pro-desknote" data-pro-reveal>
+        <div class="pro-desknote-card">
+            <p class="pro-browser-kicker">From the editor's desk</p>
+            <p class="pro-desknote-body">
+                Raconteur began with a simple conviction: that a story deserves a quiet room. No
+                recommendation engines shouting over the prose, no infinite scroll pulling you away
+                from the last page. Just writing, typeset with care, waiting for the reader it was
+                written for. Arrive weekly or once a season; the shelf keeps.
+            </p>
+            <p class="pro-desknote-sign">The Editor · Kohima</p>
+        </div>
+    </section>
+
+    {/* ===== THE READING ROOM — whispers + notes, desk language ===== */}
+    <section class="pro-room" data-pro-reveal>
+        <header class="pro-browser-head" data-pro-reveal>
+            <div>
+                <p class="pro-browser-kicker">From the community</p>
+                <h2 class="pro-browser-title">The Reading Room</h2>
+            </div>
+        </header>
+        <div class="pro-room-split">
+            <div class="pro-room-half whispers">
+                <h3 class="pro-room-half-title">Whispers from the Shelf</h3>
+                <p class="pro-room-half-sub">Short thoughts, passing through. Gone in 7 days.</p>
+                <div id="whispersList" class="pro-notes-list"></div>
+                <form id="whisperForm" class="pro-note-form">
+                    <input type="text" id="whisperName" class="pro-field" placeholder="Your name (optional: leave blank for a random visitor name)" maxlength="40" />
+                    <textarea id="whisperInput" class="pro-field" rows="2" maxlength="140" placeholder="Share a whisper…"></textarea>
+                    <span id="whisperHint" class="pro-note-hint"></span>
+                    <button type="submit" class="pro-btn pro-btn-ghost pro-note-submit">Post Whisper</button>
+                </form>
+            </div>
+            <div class="pro-room-half notes">
+                <h3 class="pro-room-half-title mint">Notes Left Behind</h3>
+                <p class="pro-room-half-sub">Longer thoughts, gratitude, questions. Kept for 30 days.</p>
+                <div id="notesList" class="pro-notes-list"></div>
+                <form id="noteForm" class="pro-note-form">
+                    <input type="text" id="noteName" class="pro-field" placeholder="Your name (optional: leave blank for a random visitor name)" maxlength="40" />
+                    <textarea id="noteInput" class="pro-field" rows="3" maxlength="500" placeholder="Leave a note…"></textarea>
+                    <span id="noteHint" class="pro-note-hint"></span>
+                    <button type="submit" class="pro-btn pro-btn-ghost pro-note-submit">Post Note</button>
+                </form>
+            </div>
+        </div>
+    </section>
 </ProLayout>
 
 <script type="application/json" id="pro-giants-data" set:html={JSON.stringify(todaysGiants).replace(/</g, '\u003c')} />
@@ -554,6 +602,210 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
             });
         }, { threshold: 0.5 });
         statNums.forEach((el) => statsIO.observe(el));
+    }
+
+    // ===== The Reading Room — whispers + notes (faithful clone of classic) =====
+    import { supabase } from '../../lib/supabase';
+    import { dvToast } from '../../lib/dialog';
+    import { iconSvg } from '../../lib/icons';
+    import { esc } from '../../lib/escape';
+
+    function timeAgo(iso: string): string {
+        const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+        if (m < 1) return 'just now';
+        if (m < 60) return m + 'm ago';
+        const h = Math.floor(m / 60);
+        if (h < 24) return h + 'h ago';
+        return Math.floor(h / 24) + 'd ago';
+    }
+
+    const BLOCKED_WORDS = ['fuck','shit','ass','bitch','cunt','dick','pussy','nigger','faggot','retard'];
+    function isVulgar(text: string): boolean {
+        const words: string[] = (text.toLowerCase().match(/[a-z']+/g) || []);
+        return BLOCKED_WORDS.some(w => words.includes(w));
+    }
+
+    const VISITOR_NAMES = ['Wandering Reader','Quiet Guest','Night Owl','Book Wanderer','Shelf Browser','Page Turner','Ink Dreamer','Story Seeker'];
+
+    async function loadNotes(type: 'whisper' | 'note', listId: string) {
+        const { data: notes } = await supabase
+            .from('community_notes')
+            .select('*')
+            .eq('note_type', type)
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: true });
+        const list = document.getElementById(listId)!;
+        if (!notes || notes.length === 0) {
+            list.innerHTML = `<p class="pro-notes-empty">No ${type === 'whisper' ? 'whispers' : 'notes'} yet. Be the first.</p>`;
+            return;
+        }
+        const byParent: Record<string, any[]> = {};
+        notes.forEach(n => {
+            const key = n.parent_id || 'root';
+            (byParent[key] ||= []).push(n);
+        });
+        const renderNote = (n: any, isReply: boolean): string => {
+            const replies = (byParent[n.id] || []).map(r => renderNote(r, true)).join('');
+            const replyBtn = (!isReply && type === 'note')
+                ? `<button class="pro-note-reply" data-id="${esc(n.id)}" data-name="${esc(n.display_name)}">Reply</button>`
+                : '';
+            const reportBtn = `<button class="pro-note-report" data-id="${esc(n.id)}" data-type="${type}" aria-label="Report">${iconSvg('flag', 12)}</button>`;
+            return `
+                <div class="pro-note-card ${isReply ? 'reply' : ''}" data-id="${esc(n.id)}">
+                    <p class="pro-note-body">${esc(n.body)}</p>
+                    <div class="pro-note-meta">
+                        <span class="pro-note-author">— ${esc(n.display_name)}</span>
+                        <span class="pro-note-time">${timeAgo(n.created_at)}</span>
+                        ${replyBtn}${reportBtn}
+                    </div>
+                    ${replies ? `<div class="pro-note-replies">${replies}</div>` : ''}
+                </div>`;
+        };
+        const topLevel = (byParent['root'] || []).reverse();
+        list.innerHTML = topLevel.map(n => renderNote(n, false)).join('');
+        list.querySelectorAll('.pro-note-report').forEach(btn => {
+            btn.addEventListener('click', () => openReportModal((btn as HTMLElement).dataset.id!, (btn as HTMLElement).dataset.type!));
+        });
+        if (type === 'note') {
+            list.querySelectorAll('.pro-note-reply').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const input = document.getElementById('noteInput') as HTMLTextAreaElement;
+                    input.value = `@${(btn as HTMLElement).dataset.name} `;
+                    input.focus();
+                    input.dataset.replyTo = (btn as HTMLElement).dataset.id!;
+                    const hint = document.getElementById('noteHint');
+                    if (hint) hint.textContent = 'Replying. Post to send.';
+                });
+            });
+        }
+    }
+
+    async function postNote(type: 'whisper' | 'note', inputId: string, listId: string): Promise<boolean> {
+        const input = document.getElementById(inputId) as HTMLTextAreaElement;
+        const body = input.value.trim();
+        if (!body) return false;
+        if (isVulgar(body)) {
+            dvToast('Please keep it kind. Raconteur is a quiet place.');
+            return false;
+        }
+        const nameEl = document.getElementById(type === 'whisper' ? 'whisperName' : 'noteName') as HTMLInputElement;
+        const displayName = (nameEl && nameEl.value.trim()) ? nameEl.value.trim()
+            : (type === 'whisper' ? 'Anonymous' : VISITOR_NAMES[Math.floor(Math.random() * VISITOR_NAMES.length)]);
+        const days = type === 'whisper' ? 7 : 30;
+        const payload: any = {
+            note_type: type,
+            body,
+            display_name: displayName,
+            expires_at: new Date(Date.now() + days * 86400000).toISOString(),
+        };
+        const parentId = (input as any).dataset.replyTo || null;
+        if (parentId) payload.parent_id = parentId;
+        const { error } = await supabase.from('community_notes').insert(payload);
+        if (error) { console.error('postNote error:', error); dvToast('Something went wrong. Please try again.'); return false; }
+        delete (input as any).dataset.replyTo;
+        const hint = document.getElementById(type === 'whisper' ? 'whisperHint' : 'noteHint');
+        if (hint) hint.textContent = '';
+        input.value = '';
+        if (nameEl) nameEl.value = '';
+        loadNotes(type, listId);
+        return true;
+    }
+
+    loadNotes('whisper', 'whispersList');
+    loadNotes('note', 'notesList');
+
+    let lastWhisper = 0;
+    const WHISPER_COOLDOWN = 15000;
+    document.getElementById('whisperForm')!.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const now = Date.now();
+        const btn = document.querySelector('#whisperForm button[type="submit"]') as HTMLButtonElement;
+        const hint = document.getElementById('whisperHint');
+        if (now - lastWhisper < WHISPER_COOLDOWN) {
+            const wait = Math.ceil((WHISPER_COOLDOWN - (now - lastWhisper)) / 1000);
+            if (hint) hint.textContent = `Wait ${wait}s before another whisper.`;
+            return;
+        }
+        if (btn) { btn.disabled = true; btn.textContent = 'Wait a moment…'; }
+        const ok = await postNote('whisper', 'whisperInput', 'whispersList');
+        if (ok) {
+            lastWhisper = now;
+            setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = 'Post Whisper'; } if (hint) hint.textContent = ''; }, WHISPER_COOLDOWN);
+        } else {
+            if (btn) { btn.disabled = false; btn.textContent = 'Post Whisper'; }
+        }
+    });
+
+    let lastNote = 0;
+    const NOTE_COOLDOWN = 15000;
+    document.getElementById('noteForm')!.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const now = Date.now();
+        const btn = document.querySelector('#noteForm button[type="submit"]') as HTMLButtonElement;
+        const hint = document.getElementById('noteHint');
+        if (now - lastNote < NOTE_COOLDOWN) {
+            const wait = Math.ceil((NOTE_COOLDOWN - (now - lastNote)) / 1000);
+            if (hint) hint.textContent = `Wait ${wait}s before another note.`;
+            return;
+        }
+        if (btn) { btn.disabled = true; btn.textContent = 'Wait a moment…'; }
+        const ok = await postNote('note', 'noteInput', 'notesList');
+        if (ok) {
+            lastNote = now;
+            setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = 'Post Note'; } if (hint) hint.textContent = ''; }, NOTE_COOLDOWN);
+        } else {
+            if (btn) { btn.disabled = false; btn.textContent = 'Post Note'; }
+        }
+    });
+
+    // Report modal — dark glass
+    function openReportModal(targetId: string, targetType: string) {
+        let modal = document.getElementById('proRoomReportModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'proRoomReportModal';
+            modal.className = 'pro-modal';
+            modal.innerHTML = `
+                <div class="pro-modal-backdrop"></div>
+                <div class="pro-modal-card">
+                    <button class="pro-modal-close" aria-label="Close">×</button>
+                    <h3 class="pro-gm-name" style="font-size:1.2rem;">Report this ${targetType}</h3>
+                    <p class="pro-report-sub">Help keep Raconteur quiet and kind.</p>
+                    <select id="proReportReason" class="pro-field">
+                        <option value="spam">Spam or advertising</option>
+                        <option value="harassment">Harassment or abuse</option>
+                        <option value="other">Something else</option>
+                    </select>
+                    <div class="pro-report-actions">
+                        <button id="proReportCancel" class="pro-btn pro-btn-ghost">Cancel</button>
+                        <button id="proReportSubmit" class="pro-btn pro-btn-amber">Submit report</button>
+                    </div>
+                    <p id="proReportMsg" class="pro-report-msg"></p>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('.pro-modal-close')!.addEventListener('click', () => modal!.setAttribute('hidden', ''));
+            modal.querySelector('.pro-modal-backdrop')!.addEventListener('click', () => modal!.setAttribute('hidden', ''));
+        }
+        const reasonSel = document.getElementById('proReportReason') as HTMLSelectElement;
+        const msg = document.getElementById('proReportMsg')!;
+        const submitBtn = document.getElementById('proReportSubmit')!;
+        reasonSel.value = 'spam';
+        msg.textContent = '';
+        modal.removeAttribute('hidden');
+        submitBtn.onclick = async () => {
+            submitBtn.textContent = 'Sending...';
+            const { data: { session } } = await supabase.auth.getSession();
+            const { error } = await supabase.from('reports').insert({
+                reporter_id: session?.user.id || null,
+                target_type: targetType,
+                target_id: targetId,
+                reason: reasonSel.value,
+            });
+            if (error) { msg.textContent = 'Something went wrong.'; msg.style.color = '#ff6b6b'; }
+            else { msg.textContent = 'Thank you. We will look into it.'; msg.style.color = '#2ee6a8'; }
+            submitBtn.textContent = 'Submit report';
+            setTimeout(() => modal!.setAttribute('hidden', ''), 1400);
+        };
     }
 </script>
 
@@ -1204,6 +1456,146 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
         .pro-writer-card { flex-direction: column; }
         .pro-writer-portrait { width: 100%; height: 220px; }
         .pro-writer-card.lead .pro-writer-portrait { height: 260px; }
+    }
+
+    /* === FROM THE EDITOR'S DESK === */
+    .pro-desknote { max-width: 900px; margin: 0 auto; padding: 4rem 1.6rem 1rem; }
+
+    .pro-desknote-card {
+        background: #0b0e11;
+        border: 1px solid var(--pro-line);
+        border-left: 3px solid var(--pro-amber);
+        border-radius: 18px;
+        padding: 2.2rem 2.4rem;
+        text-align: center;
+    }
+
+    .pro-desknote-body {
+        font-family: var(--pro-font-read);
+        font-size: 1.08rem;
+        line-height: 1.8;
+        color: var(--pro-text-2);
+        margin: 1.1rem 0 1.2rem;
+    }
+
+    .pro-desknote-sign {
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--pro-amber);
+        margin: 0;
+    }
+
+    /* === THE READING ROOM — desk panels === */
+    .pro-room { max-width: 1320px; margin: 0 auto; padding: 3.5rem 1.6rem 4.5rem; }
+
+    .pro-room-split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+    .pro-room-half {
+        position: relative;
+        background: #0b0e11;
+        border: 1px solid var(--pro-line);
+        border-top: 2px solid var(--pro-amber);
+        border-radius: 18px;
+        padding: 1.8rem 1.6rem;
+        display: flex;
+        flex-direction: column;
+        transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .pro-room-half:hover { border-color: rgba(255, 106, 0, 0.3); box-shadow: 0 22px 55px rgba(0, 0, 0, 0.45); }
+
+    .pro-room-half.notes { border-top-color: var(--pro-mint); }
+    .pro-room-half.notes:hover { border-color: rgba(46, 230, 168, 0.3); }
+
+    .pro-room-half-title {
+        font-family: var(--pro-font);
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--pro-text);
+        margin: 0 0 0.3rem;
+    }
+
+    .pro-room-half-title.mint { color: var(--pro-mint); }
+
+    .pro-room-half-sub {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        font-size: 0.84rem;
+        color: var(--pro-text-3);
+        margin: 0 0 1.4rem;
+    }
+
+    .pro-notes-list { flex: 1; display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.4rem; max-height: 420px; overflow-y: auto; }
+
+    .pro-notes-empty { font-family: var(--pro-font-read); font-style: italic; color: var(--pro-text-3); font-size: 0.88rem; }
+
+    .pro-note-card {
+        background: #101418;
+        border: 1px solid var(--pro-line);
+        border-left: 2px solid var(--pro-amber);
+        border-radius: 10px;
+        padding: 0.9rem 1rem;
+    }
+
+    .pro-notes-list:nth-child(even) .pro-note-card { }
+
+    .pro-note-card.reply {
+        margin: 0.7rem 0 0 1.3rem;
+        border-left-color: var(--pro-mint);
+        background: #0d1114;
+    }
+
+    .pro-note-body { font-size: 0.9rem; line-height: 1.6; color: var(--pro-text); margin: 0 0 0.5rem; overflow-wrap: anywhere; }
+
+    .pro-note-meta { display: flex; align-items: center; gap: 0.6rem; font-size: 0.72rem; color: var(--pro-text-3); flex-wrap: wrap; }
+
+    .pro-note-author { font-weight: 600; color: var(--pro-honey); }
+
+    .pro-note-reply, .pro-note-report {
+        background: transparent;
+        border: none;
+        color: var(--pro-text-3);
+        font-family: var(--pro-font);
+        font-size: 0.72rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.1rem;
+        transition: color 0.2s;
+    }
+
+    .pro-note-reply:hover, .pro-note-report:hover { color: var(--pro-amber); }
+    .pro-note-replies { margin-top: 0.6rem; }
+
+    .pro-note-form { display: flex; flex-direction: column; gap: 0.6rem; }
+
+    .pro-note-form .pro-field {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--pro-line);
+        border-radius: 10px;
+        color: var(--pro-text);
+        font-family: var(--pro-font);
+        font-size: 0.9rem;
+        padding: 0.6rem 0.8rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .pro-note-form .pro-field:focus { border-color: var(--pro-amber); }
+    .pro-note-form textarea.pro-field { resize: vertical; }
+    .pro-note-hint { font-size: 0.74rem; color: var(--pro-text-3); min-height: 1rem; }
+    .pro-note-submit { align-self: flex-start; }
+
+    .pro-report-sub { font-size: 0.88rem; color: var(--pro-text-2); margin: 0 0 1rem; }
+    .pro-report-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1.2rem; }
+    .pro-report-msg { font-size: 0.85rem; margin: 0.8rem 0 0; min-height: 1.1rem; }
+
+    .pro-field { width: 100%; }
+
+    @media (max-width: 860px) {
+        .pro-room-split { grid-template-columns: 1fr; }
     }
 
     /* === QUOTE INTERLUDE === */
