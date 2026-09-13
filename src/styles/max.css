@@ -734,10 +734,10 @@ main.mx-main { flex: 1; }
     position: relative;
     z-index: 1;
     overflow: hidden;
-    margin-top: 4rem;
+    margin-top: 7rem;
     border-top: 1px solid var(--mx-line);
     background: var(--mx-paper-deep);
-    padding: 4.5rem 2rem 3rem;
+    padding: 5.5rem 2rem 3.5rem;
     text-align: center;
 }
 
