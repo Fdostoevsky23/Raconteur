@@ -79,6 +79,7 @@ const poemCount = (poems || []).length;
     // Owner-only poem management — faithful clone of classic (edit/export/delete).
     import { supabase } from '../../../lib/supabase';
     import { iconSvg } from '../../../lib/icons';
+    import { dvConfirm, dvToast } from '../../../lib/dialog';
 
     (async () => {
         const ownerId = document.getElementById('coll-owner')?.getAttribute('data-owner') || '';
@@ -135,10 +136,16 @@ const poemCount = (poems || []).length;
             del.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (!confirm('Permanently delete this poem? This cannot be undone.')) return;
+                const ok = await dvConfirm({
+                    title: 'Delete this poem?',
+                    body: 'It will be removed permanently. This cannot be undone.',
+                    confirmLabel: 'Delete',
+                    danger: true,
+                });
+                if (!ok) return;
                 const { error } = await supabase.from('stories').delete().eq('id', id);
-                if (error) alert('Error: ' + error.message);
-                else window.location.reload();
+                if (error) dvToast('Something went wrong — please try again.', 'err');
+                else { dvToast('Poem deleted.'); setTimeout(() => window.location.reload(), 700); }
             });
 
             el.appendChild(edit);
