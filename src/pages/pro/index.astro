@@ -198,7 +198,7 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
                 the craft.
             </p>
             <div class="pro-hero-actions">
-                <a href="/stories" class="pro-btn pro-btn-amber">Begin reading</a>
+                <a href="/pro/stories" class="pro-btn pro-btn-amber">Begin reading</a>
                 <a href="/submit" class="pro-btn pro-btn-ghost">Publish a story</a>
             </div>
             <p class="pro-hero-meta">
@@ -236,12 +236,12 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
                 <p class="pro-browser-kicker">From the desk</p>
                 <h2 class="pro-browser-title">Fresh from the desk</h2>
             </div>
-            <a href="/stories" class="pro-card-link">View the full shelf →</a>
+            <a href="/pro/stories" class="pro-card-link">View the full shelf →</a>
         </header>
         <div class="pro-work-grid">
             {deskShelf.map((story: any, i: number) => (
                 <a
-                    href={`/story/${story.slug}`}
+                    href={`/pro/story/${story.slug}`}
                     class="pro-work-card"
                     data-pro-reveal
                     style={`--pro-reveal-delay: ${Math.min(i * 0.06, 0.3)}s`}
@@ -277,12 +277,12 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
                     <p class="pro-browser-kicker">Verse</p>
                     <h2 class="pro-browser-title">Fresh poetry</h2>
                 </div>
-                <a href="/stories" class="pro-card-link">View the full shelf →</a>
+                <a href="/pro/stories" class="pro-card-link">View the full shelf →</a>
             </header>
             <div class="pro-work-grid">
                 {verseShelf.map((story: any, i: number) => (
                     <a
-                        href={`/story/${story.slug}`}
+                        href={`/pro/story/${story.slug}`}
                         class="pro-work-card is-poem"
                         data-pro-reveal
                         style={`--pro-reveal-delay: ${Math.min(i * 0.06, 0.3)}s`}
@@ -333,7 +333,7 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
                     <p class="pro-writer-line">“{adminAuthor.favoriteLine}”</p>
                     <div class="pro-writer-meta">
                         <span><Icon name="book" size={13} /> Favorite book: {adminAuthor.favoriteBook}</span>
-                        {adminAuthor.featuredStorySlug && <a href={`/story/${adminAuthor.featuredStorySlug}`} class="pro-card-link">Read their featured story →</a>}
+                        {adminAuthor.featuredStorySlug && <a href={`/pro/story/${adminAuthor.featuredStorySlug}`} class="pro-card-link">Read their featured story →</a>}
                     </div>
                 </div>
             </article>
@@ -354,7 +354,7 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
                         <div class="pro-writer-meta">
                             <span><Icon name="book" size={13} /> Favorite book: {w.favoriteBook}</span>
                             <span><Icon name="edit" size={13} /> {w.totalWords.toLocaleString()} words written</span>
-                            {w.featuredStorySlug && <a href={`/story/${w.featuredStorySlug}`} class="pro-card-link">Read their featured story →</a>}
+                            {w.featuredStorySlug && <a href={`/pro/story/${w.featuredStorySlug}`} class="pro-card-link">Read their featured story →</a>}
                         </div>
                     </div>
                 </article>

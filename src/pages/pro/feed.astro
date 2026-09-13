@@ -67,7 +67,7 @@ import ProLayout from '../../layouts/ProLayout.astro';
                     ? `<span class="pro-work-quote">“${esc(s.title)}”</span>`
                     : `<span class="pro-work-star" aria-hidden="true">${iconSvg('sparkle', 26)}</span>`}</div>`;
             return `
-                <a href="/story/${esc(s.id)}" class="pro-work-card ${isPoem ? 'is-poem' : ''}" data-pro-reveal style="--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s">
+                <a href="/pro/story/${esc(s.id)}" class="pro-work-card ${isPoem ? 'is-poem' : ''}" data-pro-reveal style="--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s">
                     ${cover}
                     <div class="pro-work-body">
                         <span class="pro-work-genre ${isPoem ? 'poem' : ''}">${isPoem ? 'Poem' : 'Story'}</span>

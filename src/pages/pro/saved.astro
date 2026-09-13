@@ -56,7 +56,7 @@ import ProLayout from '../../layouts/ProLayout.astro';
                 : `<div class="pro-work-cover"><span class="pro-work-star" aria-hidden="true">${iconSvg('bookmark', 26)}</span></div>`;
             return `
                 <div class="pro-work-card pro-saved-tile" data-pro-reveal style="--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s">
-                    <a href="/story/${esc(s.id)}" style="display: block; text-decoration: none; color: inherit;">
+                    <a href="/pro/story/${esc(s.id)}" style="display: block; text-decoration: none; color: inherit;">
                         ${cover}
                         <div class="pro-work-body">
                             <h3 class="pro-work-title">${esc(s.title)}</h3>

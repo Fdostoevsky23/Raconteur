@@ -62,7 +62,7 @@ const trending = (Object.entries(weekCounts)
             <div class="pro-trending" data-pro-reveal style="--pro-reveal-delay: 0.06s">
                 <span class="pro-trending-label">Trending this week</span>
                 {trending.map((t) => (
-                    <a href={`/story/${t.slug}`} class="pro-trending-item">
+                    <a href={`/pro/story/${t.slug}`} class="pro-trending-item">
                         <span class="pro-trending-title">{t.title}</span>
                         <span class="pro-trending-count">{t.n} {t.n === 1 ? 'reader' : 'readers'}</span>
                     </a>
@@ -110,7 +110,7 @@ const trending = (Object.entries(weekCounts)
         <div class="pro-work-grid" id="storyGrid">
             {proseStories.map((story: any, i: number) => (
                 <a
-                    href={`/story/${story.slug}`}
+                    href={`/pro/story/${story.slug}`}
                     class="pro-work-card"
                     data-genre={story.genre}
                     data-genretag={story.genreTag || ''}
@@ -153,7 +153,7 @@ const trending = (Object.entries(weekCounts)
         <div class="pro-work-grid" id="poemGrid">
             {poemStories.map((story: any, i: number) => (
                 <a
-                    href={`/story/${story.slug}`}
+                    href={`/pro/story/${story.slug}`}
                     class="pro-work-card is-poem"
                     data-genre={story.genre}
                     data-genretag={story.genreTag || ''}

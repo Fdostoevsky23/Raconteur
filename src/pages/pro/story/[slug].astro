@@ -1,0 +1,1380 @@
+---
+// src/pages/pro/story/[slug].astro — Raconteur Pro story reader ("the dark desk" edition).
+// Every feature of the classic reader, faithfully cloned; presented in Pro's
+// language: a dark reading sheet on the ledger night — the skin's one focal
+// surface — with amber applause, quiet chapter pager, three sheet themes.
+import ProLayout from '../../../layouts/ProLayout.astro';
+import Icon from '../../../components/Icon.astro';
+import { getAllStorySlugs, getStoryBySlug, getVisibleStories } from '../../../data/stories';
+import { supabase } from '../../../lib/supabase';
+import { buildStoryFromDB } from '../../../lib/storyLoader';
+import { esc } from '../../../lib/escape';
+import { iconSvg } from '../../../lib/icons';
+
+// (Server-rendered on every request — slugs are static names or DB uuids.)
+const { slug } = Astro.params;
+const slugValue = slug ?? '';
+
+// 1. Static file first
+let story = getStoryBySlug(slugValue);
+
+// 2. Database UUID?
+if (!story) {
+    const { data: dbRow } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('id', slugValue)
+        .eq('status', 'published')
+        .single();
+
+    if (dbRow) {
+        story = buildStoryFromDB(dbRow);
+        const { data: readRow } = await supabase
+            .from('reads_public')
+            .select('read_count')
+            .eq('story_id', slugValue)
+            .maybeSingle();
+        (story as any).readCount = readRow?.read_count ?? 0;
+    }
+}
+
+// All published DB stories for merge + keyboard nav
+const { data: dbRows } = await supabase
+    .from('stories')
+    .select('*')
+    .eq('status', 'published');
+const dbStories = (dbRows || []).map(buildStoryFromDB);
+
+const allStories = [...getVisibleStories(), ...dbStories];
+const allStorySlugs = getAllStorySlugs();
+const _allSlugsForNav = [...new Set([...allStorySlugs, ...dbStories.map(s => s.slug)])];
+const moreByAuthor = story ? allStories.filter((s) => s.author === story.author && s.slug !== story.slug).slice(0, 3) : [];
+
+if (!story) {
+    return Astro.redirect('/pro/stories');
+}
+
+// OpenGraph
+const siteOrigin = Astro.url.origin;
+const ogImage = story.cover
+    ? (story.cover.startsWith('http') ? story.cover : siteOrigin + story.cover)
+    : `${siteOrigin}/hero/1.jpg`;
+const rawFirst = ((story as any).content?.[0]?.text || story.title) || '';
+const firstLine = rawFirst.replace(/<[^>]*>/g, '').replace(/"/g, "'").replace(/\n/g, ' ').trim().slice(0, 150);
+const isPoem = (story as any).genre === 'Poetry' || (story as any).kind === 'poem';
+const poemLines = isPoem ? story.content.reduce((n: number, b: any) => n + ((b.text || '').split('<br>').length), 0) : 0;
+
+// Sanitizer — identical rules to the classic reader
+function renderText(t: string): string {
+    let out = t || '';
+    out = out.replace(/<(script|style)[\s\S]*?<\/\1>/gi, '');
+    out = out.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)([^>]*)>/g, (match, tagName, attrs) => {
+        const name = tagName.toLowerCase();
+        const ok = ['em', 'i', 'strong', 'b', 'u', 's', 'br', 'p', 'span', 'div'];
+        if (!ok.includes(name)) return '';
+        if (match.startsWith('</')) return `</${name}>`;
+        let cleanAttrs = '';
+        if (attrs) {
+            const styleMatch = attrs.match(/style\s*=\s*["']([^"']*)["']/i);
+            if (styleMatch) {
+                const align = styleMatch[1].match(/text-align\s*:\s*(left|center|right)/i);
+                if (align) cleanAttrs = ` style="text-align: ${align[1]}"`;
+            }
+        }
+        return `<${name}${cleanAttrs}>`;
+    });
+    out = out.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    return out;
+}
+
+function safeCover(c: any): string | null {
+    if (!c || typeof c !== 'string') return null;
+    if (!(c.startsWith('http') || c.startsWith('/'))) return null;
+    return c;
+}
+
+const coverUrl = safeCover(story.cover);
+const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
+---
+
+<ProLayout title={`${story.title} · ${story.author} · Raconteur Pro`} description={firstLine} ogImage={ogImage}>
+    <div class="pro-progress" id="progressBar"></div>
+
+    <article class={`pro-story ${isPoem ? 'poem-mode' : ''}`} id="storyContent">
+        <script type="application/json" id="story-slugs" set:html={JSON.stringify(_allSlugsForNav).replace(/</g, '\\u003c')} />
+        <script type="application/json" id="current-slug" set:html={JSON.stringify(slugValue).replace(/</g, '\\u003c')} />
+
+        {/* === THE READING SHEET — the desk's focal surface === */}
+        <div class="pro-sheet" data-pro-reveal="false">
+            {/* Controls — dark bar */}
+            <div class="pro-reader-controls">
+                <a href="/pro/stories" class="pro-back-link">← Library</a>
+                <div class="pro-controls-right">
+                    <div class="pro-font-control" title="Adjust text size">
+                        <span class="pro-font-label small">A</span>
+                        <input type="range" id="fontSlider" min="0.9" max="1.5" step="0.05" value="1.15" aria-label="Text size" />
+                        <span class="pro-font-label large">A</span>
+                    </div>
+                    <div class="pro-mode-switcher" role="group" aria-label="Reading mode">
+                        <button type="button" data-mode="light" title="Light mode" aria-label="Light mode"><Icon name="sun" size={15} /></button>
+                        <button type="button" data-mode="sepia" title="Sepia mode" aria-label="Sepia mode"><Icon name="book" size={15} /></button>
+                        <button type="button" data-mode="dark" title="Dark mode" aria-label="Dark mode"><Icon name="moon" size={15} /></button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Header */}
+            <header class="pro-story-header">
+                <span class={`pro-genre ${isPoem ? 'poem' : ''}`}>{story.genre}</span>
+                <h1 class="pro-title">{story.title}</h1>
+                <div class="pro-byline">
+                    <a href={`/pro/author/${authorSlug}`} class="pro-author-link">By {story.author}</a>
+                    <span class="dot">·</span>
+                    <span>{story.wordCount.toLocaleString()} words</span>
+                    <span class="dot">·</span>
+                    <span>{isPoem ? `${poemLines} lines` : story.readTime}</span>
+                    {((story as any).readCount || 0) > 0 && (
+                        <>
+                            <span class="dot">·</span>
+                            <span>✦ {(story as any).readCount} {(story as any).readCount === 1 ? 'reader' : 'readers'}</span>
+                        </>
+                    )}
+                </div>
+                {coverUrl && (
+                    <div class="pro-cover-frame">
+                        <img src={coverUrl} alt={`Cover of ${story.title}`} />
+                    </div>
+                )}
+            </header>
+
+            {/* Body — chapter pager */}
+            <div class="pro-story-body">
+                {(() => {
+                    const chapters = {} as any;
+                    story.content.forEach((block) => {
+                        const ch = block.chapter ?? 0;
+                        if (!chapters[ch]) chapters[ch] = [];
+                        chapters[ch].push(block);
+                    });
+                    const chapterKeys = Object.keys(chapters).sort((a, b) => Number(a) - Number(b));
+                    const chapterCount = chapterKeys.length;
+
+                    return chapterKeys.map((chKey, idx) => {
+                        const blocks = chapters[chKey];
+                        return (
+                            <section
+                                class={`pro-chapter ${idx === 0 ? 'active' : ''}`}
+                                data-chapter={chKey}
+                                style={idx === 0 ? '' : 'display: none;'}
+                            >
+                                {blocks.map((block: any) => {
+                                    if (block.type === 'heading') {
+                                        return <h2 class={`pro-heading ${block.text === '✦' ? 'divider' : ''}`}><Fragment set:html={renderText(block.text)} /></h2>;
+                                    } else if (block.type === 'quote') {
+                                        return <blockquote class="pro-quote"><p><Fragment set:html={renderText(block.text)} /></p></blockquote>;
+                                    } else {
+                                        return (
+                                            <p class={`pro-para ${block.dropcap ? 'dropcap' : ''} ${block.align ? `align-${block.align}` : ''}`}>
+                                                <Fragment set:html={renderText(block.text)} />
+                                            </p>
+                                        );
+                                    }
+                                })}
+
+                                {chapterCount > 1 && (
+                                    <div class="pro-chapter-nav">
+                                        {idx > 0 && (
+                                            <button class="pro-chapter-btn prev" data-target={idx - 1}>← Previous Chapter</button>
+                                        )}
+                                        {idx < chapterCount - 1 && (
+                                            <button class="pro-chapter-btn next" data-target={idx + 1}>Next Chapter →</button>
+                                        )}
+                                        {idx === chapterCount - 1 && chapterCount > 1 && (
+                                            <button class="pro-chapter-btn first" data-target={0}>↑ First Chapter</button>
+                                        )}
+                                    </div>
+                                )}
+                            </section>
+                        );
+                    });
+                })()}
+            </div>
+
+            {/* Quiet applause — like + bookmark */}
+            <div class="pro-like-row">
+                <button id="likeBtn" class="pro-like-btn" type="button" aria-label="Appreciate this story">
+                    <span id="likeHeart"><Icon name="heart" size={16} /></span>
+                    <span id="likeCount">0</span>
+                </button>
+                <button id="bookmarkBtn" class="pro-like-btn" type="button" aria-label="Save for later">
+                    <Icon name="bookmark" size={16} />
+                    <span id="bookmarkLabel">Save</span>
+                </button>
+                <span id="likeHint" class="pro-like-hint"></span>
+            </div>
+        </div>
+
+        {/* More by this author — dark cards */}
+        {moreByAuthor.length > 0 && (
+            <section class="pro-more-by">
+                <h3>More by {story.author}</h3>
+                <div class="pro-mba-grid">
+                    {moreByAuthor.map((s) => (
+                        <a href={`/pro/story/${s.slug}`} class="pro-card pro-mba-card">
+                            {s.cover && <img src={s.cover} alt={`Cover of ${s.title}`} loading="lazy" />}
+                            <div class="pro-mba-info">
+                                <span class="pro-mba-title">{s.title}</span>
+                                <span class="pro-mba-meta">{s.wordCount.toLocaleString()} words · {s.readTime}</span>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+                <a href={`/pro/author/${authorSlug}`} class="pro-card-link pro-mba-all">View all stories by {story.author} →</a>
+            </section>
+        )}
+
+        {/* Story footer — the end-mark the completion tracker observes */}
+        <footer class="pro-story-footer">
+            <div class="pro-end-mark">✦ ✦</div>
+            <p class="pro-end-note">Thank you for reading.</p>
+
+            <div class="pro-share-row">
+                <span class="pro-share-label">Share this story</span>
+                <button type="button" class="pro-share-btn" id="shareCopy" title="Copy link"><Icon name="link" size={14} /> Copy</button>
+                <a class="pro-share-btn" id="shareX" target="_blank" rel="noopener" title="Share on X" href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(Astro.url.href)}&text=${encodeURIComponent(story.title)}`}>𝕏</a>
+                <a class="pro-share-btn" id="shareFb" target="_blank" rel="noopener" title="Share on Facebook" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(Astro.url.href)}`}>f</a>
+                <a class="pro-share-btn" id="shareMail" target="_blank" rel="noopener" title="Share by email" href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(story.title)}&body=${encodeURIComponent('I thought you might enjoy this on Raconteur: ' + Astro.url.href)}`}><Icon name="mail" size={15} /></a>
+                <a class="pro-share-btn" id="shareWa" target="_blank" rel="noopener" title="Share on WhatsApp" href={`https://wa.me/?text=${encodeURIComponent(story.title + ' ' + Astro.url.href)}`}>WhatsApp</a>
+            </div>
+
+            <a href="/pro/stories" class="pro-btn pro-btn-amber pro-more-btn">← More stories</a>
+        </footer>
+
+        {/* Comments */}
+        <section id="commentsSection" class="pro-comments" style="display: none;">
+            <h2 class="pro-comments-title"><span id="commentCount">0</span> Comments</h2>
+            <form id="commentForm" class="pro-comment-form">
+                <textarea id="commentBody" class="pro-comment-input" rows="3" maxlength="2000" placeholder="Leave a comment…"></textarea>
+                <div class="pro-comment-form-row">
+                    <span id="commentHint" class="pro-comment-hint"></span>
+                    <button type="submit" class="pro-btn pro-btn-amber pro-comment-submit">Post Comment</button>
+                </div>
+            </form>
+            <div id="commentList" class="pro-comment-list"></div>
+        </section>
+    </article>
+
+    <button id="backToTop" class="pro-back-top" aria-label="Back to top" title="Back to top">↑</button>
+
+    {/* Recommendations widget (logged-in) */}
+    <div id="recsWidget" class="pro-recs" style="display:none;">
+        <h3 class="pro-recs-title">Recommended for you</h3>
+        <div id="recsList"></div>
+    </div>
+
+    <script type="application/ld+json" set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": story.title,
+        "author": { "@type": "Person", "name": story.author },
+        "datePublished": story.publishedDate,
+        "wordCount": story.wordCount,
+        "description": story.excerpt,
+        "image": story.cover || undefined,
+        "publisher": { "@type": "Organization", "name": "Raconteur", "url": Astro.url.origin }
+    })} />
+</ProLayout>
+
+<script>
+    // === Chapter pager — ebook-style, one chapter per page (classic clone) ===
+    (() => {
+        const chapters = Array.from(document.querySelectorAll('.pro-chapter')) as HTMLElement[];
+        if (chapters.length === 0) return;
+        const progressBar = document.getElementById('progressBar');
+
+        function topOf(el: HTMLElement) {
+            return el.getBoundingClientRect().top + window.scrollY;
+        }
+
+        function showChapter(target: number) {
+            const next = chapters[target];
+            if (!next) return;
+            chapters.forEach((ch) => {
+                ch.classList.toggle('active', ch === next);
+                ch.style.display = ch === next ? '' : 'none';
+            });
+            const header = document.querySelector('.pro-story-header') as HTMLElement | null;
+            if (header) {
+                window.scrollTo({ top: Math.max(0, topOf(header) - 80), behavior: 'auto' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'auto' });
+            }
+            if (progressBar) progressBar.style.width = '0%';
+        }
+
+        chapters.forEach((chapter) => {
+            chapter.querySelectorAll<HTMLButtonElement>('.pro-chapter-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const target = Number(btn.dataset.target);
+                    if (!Number.isNaN(target)) showChapter(target);
+                });
+            });
+        });
+    })();
+</script>
+
+<script>
+    // === Likes + bookmarks (classic clone) ===
+    import { supabase } from '../../../lib/supabase';
+    import { iconSvg } from '../../../lib/icons';
+
+    const likeBtn = document.getElementById('likeBtn')!;
+    const likeHeart = document.getElementById('likeHeart')!;
+    const likeCount = document.getElementById('likeCount')!;
+    const likeHint = document.getElementById('likeHint')!;
+    const slug = JSON.parse(document.getElementById('current-slug')?.textContent || '""');
+    const isDbStory = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+
+    async function initLikes() {
+        if (!isDbStory) { likeBtn.closest('.pro-like-row')?.remove(); return; }
+
+        const { count } = await supabase
+            .from('likes')
+            .select('id', { count: 'exact', head: true })
+            .eq('story_id', slug);
+        likeCount.textContent = String(count ?? 0);
+
+        const { data: { session } } = await supabase.auth.getSession();
+        let liked = false;
+        if (session) {
+            const { data: mine } = await supabase
+                .from('likes')
+                .select('id')
+                .eq('story_id', slug)
+                .eq('user_id', session.user.id)
+                .maybeSingle();
+            liked = !!mine;
+        }
+
+        const VISITOR_NAMES = ['Wandering Reader', 'Passing Stranger', 'Quiet Guest', 'Night Owl', 'Library Ghost'];
+        function guestKey() { return 'raconteur_guest_' + slug; }
+        function getGuest() {
+            try { return JSON.parse(localStorage.getItem(guestKey()) || 'null'); } catch { return null; }
+        }
+        function setGuest(name: string) {
+            localStorage.setItem(guestKey(), JSON.stringify({ name, liked: true }));
+        }
+        function clearGuest() { localStorage.removeItem(guestKey()); }
+
+        const guest = getGuest();
+        if (guest?.liked) { liked = true; }
+        paint(liked);
+
+        likeBtn.addEventListener('click', async () => {
+            const { data: { session: s } } = await supabase.auth.getSession();
+            if (s) {
+                if (liked) {
+                    await supabase.from('likes').delete().eq('story_id', slug).eq('user_id', s.user.id);
+                    liked = false;
+                    likeCount.textContent = String(Math.max(0, Number(likeCount.textContent) - 1));
+                } else {
+                    await supabase.from('likes').insert({ story_id: slug, user_id: s.user.id });
+                    liked = true;
+                    likeCount.textContent = String(Number(likeCount.textContent) + 1);
+                    const { data: storyRow } = await supabase
+                        .from('stories').select('author_id').eq('id', slug).maybeSingle();
+                    if (storyRow?.author_id && storyRow.author_id !== s.user.id) {
+                        await supabase.from('notifications').insert({
+                            user_id: storyRow.author_id, actor_id: s.user.id, type: 'like', story_id: slug,
+                        });
+                    }
+                }
+            } else {
+                if (liked) {
+                    clearGuest();
+                    liked = false;
+                    likeCount.textContent = String(Math.max(0, Number(likeCount.textContent) - 1));
+                } else {
+                    const name = VISITOR_NAMES[Math.floor(Math.random() * VISITOR_NAMES.length)];
+                    setGuest(name);
+                    liked = true;
+                    likeCount.textContent = String(Number(likeCount.textContent) + 1);
+                }
+            }
+            paint(liked);
+        });
+    }
+
+    function paint(liked: boolean) {
+        likeBtn.classList.toggle('liked', liked);
+        likeHeart.innerHTML = liked ? iconSvg('heart-filled', 16) : iconSvg('heart', 16);
+    }
+
+    initLikes();
+</script>
+
+<script>
+    // === Bookmarks + completion + read counter (classic clone) ===
+    import { supabase } from '../../../lib/supabase';
+
+    const slug2 = JSON.parse(document.getElementById('current-slug')?.textContent || '""');
+    const isDbStory2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug2);
+    const bookmarkBtn = document.getElementById('bookmarkBtn')!;
+    const bookmarkLabel = document.getElementById('bookmarkLabel')!;
+    const likeHint2 = document.getElementById('likeHint')!;
+
+    async function initBookmarks() {
+        if (!isDbStory2) { bookmarkBtn.remove(); return; }
+        const { data: { session: bSession } } = await supabase.auth.getSession();
+        if (!bSession) {
+            bookmarkBtn.addEventListener('click', () => { likeHint2.textContent = 'Log in to save stories for later.'; });
+            return;
+        }
+        let saved = false;
+        const check = async () => {
+            const { data } = await supabase.from('bookmarks').select('id')
+                .eq('user_id', bSession.user.id).eq('story_id', slug2).maybeSingle();
+            saved = !!data;
+            bookmarkBtn.classList.toggle('liked', saved);
+            bookmarkLabel.textContent = saved ? 'Saved' : 'Save';
+        };
+        await check();
+        bookmarkBtn.addEventListener('click', async () => {
+            if (saved) {
+                await supabase.from('bookmarks').delete().eq('user_id', bSession.user.id).eq('story_id', slug2);
+            } else {
+                await supabase.from('bookmarks').insert({ user_id: bSession.user.id, story_id: slug2 });
+            }
+            await check();
+        });
+    }
+    initBookmarks();
+
+    // === Completion rate — the reader reached the end ===
+    (async () => {
+        const storyEl = document.getElementById('storyContent');
+        if (!storyEl) return;
+        let marked = false;
+        const observer = new IntersectionObserver(async (entries) => {
+            for (const entry of entries) {
+                if (entry.isIntersecting && !marked) {
+                    marked = true;
+                    observer.disconnect();
+                    try {
+                        await supabase.from('reads').insert({ story_id: slug2, finished: true });
+                    } catch { /* silent */ }
+                }
+            }
+        }, { threshold: 0.9 });
+        const endMark = storyEl.querySelector('.pro-story-footer') || storyEl.querySelector('.pro-end-mark');
+        if (endMark) observer.observe(endMark);
+    })();
+
+    // === Read counter (one per visitor per story) ===
+    (async () => {
+        if (!isDbStory2) return;
+        const key = 'raconteur_read_' + slug2;
+        try { if (localStorage.getItem(key)) return; } catch { return; }
+        const { data: { session } } = await supabase.auth.getSession();
+        const payload: any = { story_id: slug2 };
+        if (session) {
+            payload.user_id = session.user.id;
+        } else {
+            let gid = localStorage.getItem('raconteur_guest_id');
+            if (!gid) {
+                gid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+                localStorage.setItem('raconteur_guest_id', gid);
+            }
+            payload.guest_key = gid;
+        }
+        const { error } = await supabase.from('reads').insert(payload);
+        if (!error) { try { localStorage.setItem(key, '1'); } catch {} }
+    })();
+</script>
+
+<script>
+    // === Comments with replies + reports (classic clone) ===
+    import { supabase } from '../../../lib/supabase';
+    import { esc } from '../../../lib/escape';
+    import { iconSvg } from '../../../lib/icons';
+
+    const slug = JSON.parse(document.getElementById('current-slug')?.textContent || '""');
+    const isDbStory = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+    const section = document.getElementById('commentsSection')!;
+    const list = document.getElementById('commentList')!;
+    const countEl = document.getElementById('commentCount')!;
+    const form = document.getElementById('commentForm') as HTMLFormElement;
+    const bodyInput = document.getElementById('commentBody') as HTMLTextAreaElement;
+    const hint = document.getElementById('commentHint')!;
+
+    let me: any = null;
+    let storyAuthorId: string | null = null;
+
+    function timeAgo(iso: string) {
+        const diff = Date.now() - new Date(iso).getTime();
+        const m = Math.floor(diff / 60000);
+        if (m < 1) return 'just now';
+        if (m < 60) return m + 'm ago';
+        const h = Math.floor(m / 60);
+        if (h < 24) return h + 'h ago';
+        const d = Math.floor(h / 24);
+        return d + 'd ago';
+    }
+
+    async function loadComments() {
+        const { data: rows } = await supabase
+            .from('comments')
+            .select('id, body, created_at, user_id, parent_id, display_name')
+            .eq('story_id', slug)
+            .order('created_at', { ascending: true });
+        const all = rows || [];
+        countEl.textContent = String(all.length);
+
+        const byParent: Record<string, any[]> = {};
+        all.forEach(c => { const k = c.parent_id || 'root'; (byParent[k] ||= []).push(c); });
+
+        const renderOne = (c: any, isReply: boolean): string => {
+            const name = c.display_name || 'reader';
+            const canDelete = me && (me.id === c.user_id || me.id === storyAuthorId);
+            const replyBtn = (!isReply)
+                ? `<button class="pro-c-reply" data-id="${c.id}" data-name="${esc(name)}">Reply</button>` : '';
+            const delBtn = canDelete
+                ? `<button class="pro-c-del" data-id="${c.id}">${iconSvg("trash", 14)}</button>` : '';
+            const reportBtn = `<button class="pro-c-report" data-id="${c.id}">${iconSvg("flag", 14)}</button>`;
+            const replies: string = (byParent[c.id] || []).map((r: any) => renderOne(r, true)).join('');
+
+            const isGuest = !c.user_id;
+            const avatarContent = isGuest
+                ? `<span class="pro-c-guest" style="filter:hue-rotate(${(Math.abs(c.id.charCodeAt(0)) % 5) * 47}deg)">${iconSvg("feather", 14)}</span>`
+                : name.substring(0, 2).toUpperCase();
+            const avatarClass = isGuest ? 'pro-c-avatar guest' : 'pro-c-avatar';
+
+            return `
+              <div class="pro-c-card ${isReply ? 'reply' : ''}" data-id="${c.id}">
+                <div class="pro-c-head">
+                  <div class="${avatarClass}">${avatarContent}</div>
+                  <div class="pro-c-meta">
+                    <span class="pro-c-author">${esc(name)}</span>
+                    <span class="pro-c-time">${timeAgo(c.created_at)}</span>
+                  </div>
+                </div>
+                <p class="pro-c-body">${esc(c.body)}</p>
+                <div class="pro-c-actions">${replyBtn}${delBtn}${reportBtn}</div>
+                ${replies ? `<div class="pro-c-replies">${replies}</div>` : ''}
+              </div>`;
+        };
+        list.innerHTML = (byParent['root'] || []).map(c => renderOne(c, false)).join('')
+            || '<p class="pro-c-none">No comments yet. Be the first to leave one.</p>';
+
+        list.querySelectorAll('.pro-c-del').forEach(b => b.addEventListener('click', async () => {
+            const id = (b as HTMLElement).dataset.id!;
+            await supabase.from('comments').delete().eq('id', id);
+            loadComments();
+        }));
+        list.querySelectorAll('.pro-c-report').forEach(b => b.addEventListener('click', () => {
+            const cid = (b as HTMLElement).dataset.id!;
+            openCommentReport(cid);
+        }));
+        list.querySelectorAll('.pro-c-reply').forEach(b => b.addEventListener('click', () => {
+            const name = (b as HTMLElement).dataset.name!;
+            bodyInput.value = `@${name} `;
+            bodyInput.focus();
+            bodyInput.dataset.replyTo = (b as HTMLElement).dataset.id!;
+            hint.textContent = 'Replying. Post to send.';
+        }));
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const body = bodyInput.value.trim();
+        if (!body) return;
+        const parentId = bodyInput.dataset.replyTo || null;
+
+        let userId: string | null = null;
+        const VISITOR_NAMES = ['Wandering Reader', 'Passing Stranger', 'Quiet Guest', 'Night Owl', 'Library Ghost'];
+        let displayName = VISITOR_NAMES[Math.floor(Math.random() * VISITOR_NAMES.length)];
+        if (me) {
+            userId = me.id;
+            const { data: prof } = await supabase
+                .from('profiles').select('pen_name').eq('user_id', me.id).maybeSingle();
+            displayName = prof?.pen_name || (me.email ?? 'reader').split('@')[0];
+        }
+
+        const { error, data: newComment } = await supabase.from('comments').insert({
+            story_id: slug, user_id: userId, body, parent_id: parentId, display_name: displayName,
+        }).select('id').single();
+        if (error) { hint.textContent = 'Could not post: ' + error.message; return; }
+
+        // Notify: reply → parent comment author; top-level → story author
+        let notifyUserId: string | null = null;
+        if (parentId) {
+            const { data: parent } = await supabase
+                .from('comments').select('user_id').eq('id', parentId).maybeSingle();
+            notifyUserId = parent?.user_id || null;
+        } else {
+            const { data: storyRow } = await supabase
+                .from('stories').select('author_id').eq('id', slug).maybeSingle();
+            notifyUserId = storyRow?.author_id || null;
+        }
+        if (notifyUserId && notifyUserId !== userId) {
+            await supabase.from('notifications').insert({
+                user_id: notifyUserId,
+                actor_id: userId,
+                type: parentId ? 'reply' : 'comment',
+                story_id: slug,
+                comment_id: newComment?.id || null,
+                body_preview: body.slice(0, 120),
+            });
+        }
+        bodyInput.value = '';
+        delete bodyInput.dataset.replyTo;
+        hint.textContent = '';
+        loadComments();
+    });
+
+    function openCommentReport(commentId: string) {
+        let modal = document.getElementById('commentReportModal') as HTMLDivElement | null;
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'commentReportModal';
+            modal.className = 'pro-report-modal';
+            modal.innerHTML = `
+                <div class="pro-report-backdrop"></div>
+                <div class="pro-report-card">
+                    <h3>Report this comment</h3>
+                    <p class="pro-report-sub">Help keep Raconteur quiet and kind.</p>
+                    <select id="commentReportReason" class="pro-report-select">
+                        <option value="spam">Spam or advertising</option>
+                        <option value="harassment">Harassment or abuse</option>
+                        <option value="other">Something else</option>
+                    </select>
+                    <textarea id="reportDetails" placeholder="Describe the issue…" style="display:none"></textarea>
+                    <div class="pro-report-actions">
+                        <button id="commentReportCancel" class="pro-btn pro-btn-ghost">Cancel</button>
+                        <button id="commentReportSubmit" class="pro-btn pro-btn-amber">Submit report</button>
+                    </div>
+                    <p id="commentReportMsg" class="pro-report-msg"></p>
+                </div>`;
+            document.body.appendChild(modal);
+            document.getElementById('commentReportCancel')!.addEventListener('click', () => modal!.classList.remove('open'));
+            modal.querySelector('.pro-report-backdrop')!.addEventListener('click', () => modal!.classList.remove('open'));
+            const reasonSelInit = document.getElementById('commentReportReason') as HTMLSelectElement;
+            reasonSelInit.addEventListener('change', (e) => {
+                const details = document.getElementById('reportDetails') as HTMLTextAreaElement;
+                if ((e.target as HTMLSelectElement).value === 'other') {
+                    details.style.display = 'block';
+                    details.required = true;
+                } else {
+                    details.style.display = 'none';
+                    details.required = false;
+                    details.value = '';
+                }
+            });
+        }
+        const reasonSel = document.getElementById('commentReportReason') as HTMLSelectElement;
+        const msg = document.getElementById('commentReportMsg')!;
+        const submitBtn = document.getElementById('commentReportSubmit')!;
+        reasonSel.value = 'spam';
+        msg.textContent = '';
+        modal.classList.add('open');
+        submitBtn.onclick = async () => {
+            submitBtn.textContent = 'Sending…';
+            const { data: { session } } = await supabase.auth.getSession();
+            const { error } = await supabase.from('reports').insert({
+                reporter_id: session?.user.id || null,
+                target_type: 'comment',
+                target_id: commentId,
+                reason: reasonSel.value === 'other' ? `Other: ${(document.getElementById('reportDetails') as HTMLTextAreaElement).value.trim()}` : reasonSel.value,
+            });
+            if (error) { msg.textContent = 'Something went wrong.'; msg.style.color = '#e05a3a'; }
+            else { msg.textContent = 'Thank you. We will look into it.'; msg.style.color = '#2ee6a8'; }
+            submitBtn.textContent = 'Submit report';
+            setTimeout(() => modal!.classList.remove('open'), 1400);
+        };
+    }
+
+    async function initComments() {
+        if (!isDbStory) return;
+        section.style.display = 'block';
+        const { data: { session } } = await supabase.auth.getSession();
+        me = session?.user || null;
+        const { data: storyRow } = await supabase.from('stories').select('author_id').eq('id', slug).maybeSingle();
+        storyAuthorId = storyRow?.author_id || null;
+        if (!me) hint.textContent = 'Commenting as a Wandering Reader.';
+        await loadComments();
+    }
+
+    initComments();
+</script>
+
+<script is:inline>
+    // === Reader controls: progress bar, font size, reading modes, keys (classic clone) ===
+    // Pro default is dark — the sheet matches the desk until the reader says otherwise.
+    const savedTheme = localStorage.getItem('Raconteur-theme') || 'dark';
+    document.body.dataset.theme = savedTheme;
+
+    const progressBar = document.getElementById('progressBar');
+    const storyEl = document.querySelector('.pro-story-body');
+    const fontSlider = document.getElementById('fontSlider');
+    const modeButtons = document.querySelectorAll('.pro-mode-switcher button');
+
+    let currentSize = parseFloat(localStorage.getItem('Raconteur-fontsize') || '1.15');
+    if (storyEl) storyEl.style.fontSize = `${currentSize}rem`;
+    if (fontSlider) fontSlider.value = String(currentSize);
+
+    window.addEventListener('scroll', () => {
+        if (!progressBar) return;
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+        progressBar.style.width = `${progress}%`;
+    });
+
+    let _fontRaf = null;
+    let _saveTimer = null;
+    const _applyFont = (v) => {
+        if (!storyEl) return;
+        currentSize = v;
+        if (_fontRaf) cancelAnimationFrame(_fontRaf);
+        _fontRaf = requestAnimationFrame(() => { storyEl.style.fontSize = `${v}rem`; });
+    };
+    fontSlider?.addEventListener('pointerdown', () => { document.body.classList.add('dragging'); document.documentElement.classList.add('dragging'); });
+    const _endDrag = () => {
+        document.body.classList.remove('dragging');
+        document.documentElement.classList.remove('dragging');
+        localStorage.setItem('Raconteur-fontsize', String(currentSize));
+    };
+    fontSlider?.addEventListener('pointerup', _endDrag);
+    fontSlider?.addEventListener('pointercancel', _endDrag);
+    fontSlider?.addEventListener('lostpointercapture', _endDrag);
+    fontSlider?.addEventListener('input', () => {
+        _applyFont(parseFloat(fontSlider.value));
+        if (_saveTimer) clearTimeout(_saveTimer);
+        _saveTimer = setTimeout(() => localStorage.setItem('Raconteur-fontsize', String(parseFloat(fontSlider.value))), 400);
+    });
+    fontSlider?.addEventListener('change', () => localStorage.setItem('Raconteur-fontsize', String(parseFloat(fontSlider.value))));
+
+    function setActiveModeButton(mode) {
+        modeButtons.forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+    }
+    setActiveModeButton(savedTheme);
+
+    modeButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const mode = btn.dataset.mode;
+            document.body.dataset.theme = mode;
+            localStorage.setItem('Raconteur-theme', mode);
+            setActiveModeButton(mode);
+        });
+    });
+
+    const backToTop = document.getElementById('backToTop');
+    window.addEventListener('scroll', () => {
+        if (!backToTop) return;
+        if (window.scrollY > 600) backToTop.classList.add('visible');
+        else backToTop.classList.remove('visible');
+    });
+    backToTop?.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    const modeOrder = ['light', 'sepia', 'dark'];
+    function cycleTheme() {
+        const current = document.body.dataset.theme || 'dark';
+        const idx = modeOrder.indexOf(current);
+        const next = modeOrder[(idx + 1) % modeOrder.length];
+        document.body.dataset.theme = next;
+        localStorage.setItem('Raconteur-theme', next);
+        setActiveModeButton(next);
+    }
+
+    const allSlugs = JSON.parse(document.getElementById('story-slugs')?.textContent || '[]');
+    const slugValue = JSON.parse(document.getElementById('current-slug')?.textContent || '""');
+    const currentSlug = allSlugs.indexOf(slugValue);
+
+    document.addEventListener('keydown', (e) => {
+        const target = e.target;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+        if (e.key === 'd' || e.key === 'D') {
+            e.preventDefault();
+            cycleTheme();
+        } else if (e.key === 'Escape') {
+            window.location.href = '/pro/stories';
+        } else if (e.key === 'ArrowLeft' && currentSlug > 0) {
+            window.location.href = `/pro/story/${allSlugs[currentSlug - 1]}`;
+        } else if (e.key === 'ArrowRight' && currentSlug < allSlugs.length - 1) {
+            window.location.href = `/pro/story/${allSlugs[currentSlug + 1]}`;
+        }
+    });
+</script>
+
+<script>
+    // === Recommendations widget (classic clone) ===
+    import { supabase } from '../../../lib/supabase';
+    import { esc } from '../../../lib/escape';
+    (async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const currentSlug = window.location.pathname.split('/').pop();
+        const { data: rec } = await supabase.from('recommendations')
+            .select('admin_story_id, random_story_id').eq('user_id', session.user.id).maybeSingle();
+        if (!rec) return;
+
+        const { data: myProf } = await supabase.from('profiles')
+            .select('pen_name').eq('user_id', session.user.id).maybeSingle();
+
+        const ids = [rec.admin_story_id, rec.random_story_id]
+            .filter(Boolean)
+            .filter((id: string) => id !== currentSlug);
+        if (ids.length === 0) return;
+
+        const { data: recStories } = await supabase.from('stories')
+            .select('id, title, author_name').in('id', ids).eq('status', 'published');
+
+        const filtered = (recStories || []).filter((s: any) => s.author_name !== myProf?.pen_name);
+        if (filtered.length === 0) return;
+
+        const widget = document.getElementById('recsWidget')!;
+        const list = document.getElementById('recsList')!;
+        list.innerHTML = filtered.map((s: any) =>
+            `<a href="/pro/story/${esc(s.id)}" class="pro-recs-item"><span class="pro-recs-item-title">${esc(s.title)}</span><span class="pro-recs-item-author">${esc(s.author_name)}</span></a>`
+        ).join('');
+        widget.style.display = 'block';
+    })();
+</script>
+
+<style>
+    /* === READING PROGRESS — amber thread === */
+    .pro-progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 3px;
+        width: 0%;
+        z-index: 1000;
+        background: linear-gradient(90deg, var(--pro-amber), var(--pro-honey));
+        transition: width 0.15s ease-out;
+        box-shadow: 0 0 10px rgba(255, 106, 0, 0.4);
+    }
+
+    /* === SHELL === */
+    .pro-story {
+        position: relative;
+        z-index: 1;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem 1.2rem 4rem;
+    }
+
+    /* === THE READING SHEET — the desk's focal surface === */
+    .pro-sheet {
+        background: #0b0e11;
+        border: 1px solid var(--pro-line);
+        border-radius: 24px;
+        padding: 0 0 3rem;
+        box-shadow: var(--pro-shadow-card), var(--pro-inner-glow);
+    }
+
+    /* === READER CONTROLS — dark bar inside the sheet === */
+    .pro-reader-controls {
+        position: sticky;
+        top: 12px;
+        z-index: 60;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin: 1rem 1.2rem 0;
+        padding: 0.65rem 1.1rem;
+        background: rgba(6, 8, 10, 0.85);
+        border: 1px solid var(--pro-line-hi);
+        border-radius: 999px;
+        backdrop-filter: blur(16px) saturate(1.2);
+        -webkit-backdrop-filter: blur(16px) saturate(1.2);
+        box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+    }
+
+    .pro-back-link {
+        color: var(--pro-text-2);
+        text-decoration: none;
+        font-size: 0.86rem;
+        font-weight: 600;
+        white-space: nowrap;
+        transition: color 0.2s;
+    }
+    .pro-back-link:hover { color: var(--pro-amber); }
+
+    .pro-controls-right { display: flex; align-items: center; gap: 1rem; }
+
+    .pro-font-control { display: flex; align-items: center; gap: 0.45rem; }
+    .pro-font-label { color: var(--pro-text-3); font-weight: 700; }
+    .pro-font-label.small { font-size: 0.75rem; }
+    .pro-font-label.large { font-size: 1.05rem; }
+
+    #fontSlider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 84px;
+        height: 3px;
+        background: var(--pro-line-hi);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+    }
+    #fontSlider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px; height: 14px;
+        border-radius: 50%;
+        background: var(--pro-amber);
+        cursor: pointer;
+        transition: transform 0.15s;
+    }
+    #fontSlider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    #fontSlider::-moz-range-thumb {
+        width: 14px; height: 14px;
+        border-radius: 50%;
+        background: var(--pro-amber);
+        border: none;
+        cursor: pointer;
+    }
+
+    .pro-mode-switcher {
+        display: flex;
+        border: 1px solid var(--pro-line-hi);
+        border-radius: 999px;
+        overflow: hidden;
+    }
+    .pro-mode-switcher button {
+        background: transparent;
+        border: none;
+        padding: 0.36rem 0.6rem;
+        cursor: pointer;
+        font-size: 0.85rem;
+        color: var(--pro-text-2);
+        opacity: 0.55;
+        transition: opacity 0.2s, background 0.2s;
+    }
+    .pro-mode-switcher button.active {
+        background: var(--pro-amber);
+        color: #1a0d00;
+        opacity: 1;
+    }
+
+    /* === STORY HEADER === */
+    .pro-story-header {
+        text-align: center;
+        padding: 3.2rem 1.4rem 0;
+        margin-bottom: 3rem;
+    }
+
+    .pro-genre {
+        display: inline-block;
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--pro-amber);
+        border: 1px solid rgba(255, 106, 0, 0.3);
+        border-radius: 999px;
+        padding: 0.24rem 0.8rem;
+        background: rgba(255, 255, 255, 0.04);
+        margin-bottom: 1.6rem;
+    }
+
+    .pro-genre.poem { color: var(--pro-mint); border-color: rgba(46, 230, 168, 0.3); }
+
+    .pro-title {
+        font-family: var(--pro-font);
+        font-size: clamp(2.1rem, 5vw, 3.6rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.08;
+        color: var(--pro-text);
+        margin: 0 0 1.2rem;
+        text-wrap: balance;
+    }
+
+    .pro-byline {
+        display: flex;
+        justify-content: center;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        color: var(--pro-text-2);
+        font-size: 0.9rem;
+    }
+    .pro-byline .dot { opacity: 0.4; }
+    .pro-author-link {
+        color: var(--pro-text);
+        font-weight: 600;
+        text-decoration: none;
+        border-bottom: 1px dotted var(--pro-amber);
+    }
+    .pro-author-link:hover { color: var(--pro-amber); }
+
+    .pro-cover-frame {
+        margin: 2.2rem auto 0;
+        width: min(100%, 380px);
+        border: 1px solid var(--pro-line-hi);
+        padding: 0.7rem;
+        background: #101418;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    }
+    .pro-cover-frame img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 4 / 5;
+        object-fit: cover;
+    }
+
+    /* === PROSE BODY === */
+    .pro-story-body {
+        padding: 0 clamp(1.4rem, 6vw, 5rem);
+        font-family: var(--pro-font-read);
+        font-size: 1.15rem;
+        line-height: 1.85;
+        color: var(--pro-text);
+        contain: layout paint;
+        will-change: font-size;
+        transform: translateZ(0);
+    }
+
+    .pro-para {
+        margin: 0 0 1.6rem;
+        text-align: justify;
+        text-align-last: left;
+        hyphens: none;
+        overflow-wrap: break-word;
+    }
+
+    /* The amber dropcap — the desk lamp opens every piece */
+    .pro-para.dropcap::first-letter {
+        float: left;
+        font-family: var(--pro-font);
+        font-weight: 700;
+        font-size: 3.4em;
+        line-height: 0.82;
+        padding: 0.08em 0.12em 0 0;
+        margin-right: 0.08em;
+        color: var(--pro-amber);
+    }
+
+    .pro-heading {
+        font-family: var(--pro-font);
+        font-size: clamp(1.4rem, 3vw, 1.9rem);
+        font-weight: 700;
+        text-align: center;
+        letter-spacing: 0.01em;
+        margin: 3rem 0 2rem;
+        text-wrap: balance;
+        color: var(--pro-text);
+    }
+
+    .pro-heading.divider {
+        font-size: 1.1rem;
+        font-weight: 400;
+        color: var(--pro-amber);
+        letter-spacing: 0.9rem;
+        padding-left: 0.9rem;
+    }
+
+    .pro-quote {
+        margin: 2.6rem auto;
+        padding: 1.4rem 1.8rem;
+        border-left: 3px solid var(--pro-amber);
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 0 14px 14px 0;
+    }
+    .pro-quote p {
+        font-style: italic;
+        font-size: 1.2em;
+        line-height: 1.6;
+        text-align: center;
+        margin: 0;
+        color: var(--pro-text);
+    }
+
+    /* Alignment support from the sanitizer */
+    .pro-story-body :global(p[style*="text-align: center"]) { text-align: center !important; }
+    .pro-story-body :global(p[style*="text-align: right"]) { text-align: right !important; }
+    .pro-story-body :global(p[style*="text-align: left"]) { text-align: left !important; }
+
+    /* === CHAPTER NAV === */
+    .pro-chapter-nav {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        margin: 3rem 0 1rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--pro-line);
+    }
+
+    .pro-chapter-btn {
+        font-family: var(--pro-font);
+        font-size: 0.88rem;
+        font-weight: 600;
+        padding: 0.7rem 1.6rem;
+        border-radius: 999px;
+        border: 1px solid var(--pro-line-hi);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--pro-text);
+        cursor: pointer;
+        transition: background 0.25s, color 0.25s, border-color 0.25s, transform 0.25s var(--pro-ease, ease);
+    }
+    .pro-chapter-btn:hover { transform: translateY(-2px); border-color: var(--pro-amber); color: var(--pro-amber); }
+    .pro-chapter-btn.next { background: var(--pro-amber); color: #1a0d00; border-color: var(--pro-amber); }
+    .pro-chapter-btn.next:hover { background: var(--pro-honey); border-color: var(--pro-honey); color: #1a0d00; }
+
+    .pro-chapter { animation: pro-fade-in 0.35s ease-in; }
+    @keyframes pro-fade-in {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === POEM MODE === */
+    .pro-story.poem-mode .pro-story-body { text-align: center; }
+    .pro-story.poem-mode .pro-para { text-align: inherit; margin-bottom: 1.8rem; line-height: 1.9; }
+    .pro-story.poem-mode .pro-para.dropcap::first-letter {
+        float: none; font-size: inherit; line-height: inherit; padding: 0;
+        color: inherit; font-weight: inherit; font-family: inherit; margin: 0;
+    }
+    .pro-story.poem-mode .pro-title { font-size: clamp(1.8rem, 4vw, 2.6rem); }
+
+    /* Font-drag flicker isolation */
+    body.dragging .pro-reader-controls,
+    body.dragging .pro-sheet {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        transition: none !important;
+    }
+    body.dragging, body.dragging .pro-story, body.dragging .pro-story * {
+        transition: none !important;
+        animation: none !important;
+    }
+
+    /* === READING THEME MODES — tint the sheet, not the world === */
+    :global(body[data-theme='light']) .pro-sheet { background: #f7f5f0; border-color: rgba(0, 0, 0, 0.12); }
+    :global(body[data-theme='light']) .pro-story-body, :global(body[data-theme='light']) .pro-title,
+    :global(body[data-theme='light']) .pro-heading { color: #23201a; }
+    :global(body[data-theme='light']) .pro-byline, :global(body[data-theme='light']) .pro-back-link { color: #6d675c; }
+    :global(body[data-theme='light']) .pro-quote { background: rgba(0, 0, 0, 0.045); }
+    :global(body[data-theme='light']) .pro-chapter-btn { background: rgba(0, 0, 0, 0.05); color: #23201a; }
+    :global(body[data-theme='light']) .pro-cover-frame { background: #ece8df; }
+
+    :global(body[data-theme='sepia']) .pro-sheet { background: #f0e6d0; border-color: rgba(0, 0, 0, 0.12); }
+    :global(body[data-theme='sepia']) .pro-story-body, :global(body[data-theme='sepia']) .pro-title,
+    :global(body[data-theme='sepia']) .pro-heading { color: #3a2f1e; }
+    :global(body[data-theme='sepia']) .pro-byline, :global(body[data-theme='sepia']) .pro-back-link { color: #7a6d55; }
+    :global(body[data-theme='sepia']) .pro-quote { background: rgba(0, 0, 0, 0.05); }
+    :global(body[data-theme='sepia']) .pro-chapter-btn { background: rgba(0, 0, 0, 0.06); color: #3a2f1e; }
+    :global(body[data-theme='sepia']) .pro-cover-frame { background: #e2d5b8; }
+
+    :global(body[data-theme='dark']) .pro-sheet { background: #05070a; border-color: rgba(255, 255, 255, 0.12); }
+
+    /* === QUIET APPLAUSE === */
+    .pro-like-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.7rem;
+        margin: 0 auto;
+        padding-top: 2.4rem;
+    }
+    .pro-like-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--pro-line-hi);
+        border-radius: 999px;
+        padding: 0.55rem 1.2rem;
+        font-family: var(--pro-font);
+        font-size: 0.9rem;
+        color: var(--pro-text);
+        cursor: pointer;
+        transition: transform 0.25s var(--pro-ease, ease), border-color 0.25s, box-shadow 0.25s, color 0.25s;
+    }
+    .pro-like-btn:hover { transform: translateY(-2px); border-color: var(--pro-amber); box-shadow: 0 10px 26px rgba(255, 106, 0, 0.12); }
+    .pro-like-btn.liked { color: var(--pro-amber); border-color: rgba(255, 106, 0, 0.5); }
+    .pro-like-hint { font-size: 0.78rem; color: var(--pro-text-3); font-style: italic; }
+
+    /* === MORE BY THIS AUTHOR === */
+    .pro-more-by { margin-top: 2.4rem; }
+    .pro-more-by h3 {
+        font-family: var(--pro-font);
+        font-size: 1.3rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 1.3rem;
+        color: var(--pro-text);
+    }
+    .pro-mba-grid { display: flex; gap: 0.9rem; overflow-x: auto; padding-bottom: 0.5rem; scroll-snap-type: x proximity; }
+    .pro-mba-card {
+        flex: 0 0 250px;
+        scroll-snap-align: start;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 0.8rem;
+        text-decoration: none;
+        color: var(--pro-text);
+    }
+    .pro-mba-card img { width: 50px; height: 70px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+    .pro-mba-info { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+    .pro-mba-title { font-family: var(--pro-font); font-weight: 600; font-size: 0.95rem; line-height: 1.25; }
+    .pro-mba-meta { font-size: 0.72rem; color: var(--pro-text-3); }
+    .pro-mba-all { display: block; text-align: center; margin-top: 1.2rem; font-size: 0.88rem; font-weight: 600; }
+
+    /* === STORY FOOTER === */
+    .pro-story-footer {
+        text-align: center;
+        margin-top: 2.6rem;
+        padding-top: 2.4rem;
+        border-top: 1px solid var(--pro-line);
+    }
+    .pro-end-mark { font-size: 1.2rem; color: var(--pro-amber); letter-spacing: 1.2rem; padding-left: 1.2rem; margin-bottom: 0.8rem; }
+    .pro-end-note { font-family: var(--pro-font-read); font-style: italic; color: var(--pro-text-2); margin: 0 0 2rem; }
+
+    .pro-share-row { display: flex; align-items: center; justify-content: center; gap: 0.55rem; flex-wrap: wrap; }
+    .pro-share-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--pro-text-3); margin-right: 0.3rem; }
+    .pro-share-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--pro-line);
+        border-radius: 999px;
+        padding: 0.38rem 0.9rem;
+        color: var(--pro-text-2);
+        font-family: var(--pro-font);
+        font-size: 0.82rem;
+        text-decoration: none;
+        cursor: pointer;
+        transition: color 0.2s, border-color 0.2s, transform 0.2s;
+    }
+    .pro-share-btn:hover { color: var(--pro-amber); border-color: rgba(255, 106, 0, 0.4); transform: translateY(-2px); }
+    .pro-more-btn { margin-top: 2rem; }
+
+    /* === COMMENTS — dark cards === */
+    .pro-comments { margin-top: 3rem; padding-top: 2.4rem; border-top: 1px solid var(--pro-line); }
+    .pro-comments-title { font-family: var(--pro-font); font-size: 1.4rem; font-weight: 700; margin-bottom: 1.4rem; color: var(--pro-text); }
+    .pro-comment-form { margin-bottom: 2rem; }
+    .pro-comment-input {
+        width: 100%;
+        padding: 0.9rem 1.1rem;
+        font-family: var(--pro-font);
+        font-size: 0.92rem;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: 14px;
+        color: var(--pro-text);
+        outline: none;
+        resize: vertical;
+    }
+    .pro-comment-input:focus { border-color: var(--pro-amber); }
+    .pro-comment-form-row { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; margin-top: 0.7rem; flex-wrap: wrap; }
+    .pro-comment-hint { font-size: 0.78rem; color: var(--pro-text-3); font-style: italic; }
+    .pro-comment-submit { padding: 0.55rem 1.4rem; font-size: 0.85rem; }
+
+    :global(.pro-c-card) {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: 14px;
+        padding: 1rem 1.2rem;
+        margin-bottom: 1rem;
+    }
+    :global(.pro-c-card.reply) { margin-left: 2.4rem; background: rgba(255, 255, 255, 0.03); }
+    :global(.pro-c-replies) { margin-top: 0.8rem; margin-left: 1.4rem; padding-left: 1rem; border-left: 2px dashed rgba(255, 106, 0, 0.3); }
+    :global(.pro-c-head) { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.5rem; }
+    :global(.pro-c-avatar) {
+        width: 36px; height: 36px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--pro-amber), var(--pro-honey));
+        color: #1a0d00;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 0.82rem; flex-shrink: 0;
+    }
+    :global(.pro-c-avatar.guest) { background: linear-gradient(135deg, var(--pro-mint), #7df0c9); color: #04241a; font-size: 1.05rem; }
+    :global(.pro-c-meta) { display: flex; flex-direction: column; gap: 0.05rem; }
+    :global(.pro-c-author) { font-weight: 600; font-size: 0.88rem; color: var(--pro-text); }
+    :global(.pro-c-time) { font-size: 0.72rem; color: var(--pro-text-3); }
+    :global(.pro-c-body) { font-size: 0.92rem; line-height: 1.6; color: var(--pro-text-2); margin: 0 0 0.5rem; white-space: pre-wrap; }
+    :global(.pro-c-actions) { display: flex; gap: 1rem; }
+    :global(.pro-c-reply), :global(.pro-c-del), :global(.pro-c-report) {
+        background: none; border: none; color: var(--pro-text-3);
+        font-family: inherit; font-size: 0.78rem; cursor: pointer; padding: 0;
+    }
+    :global(.pro-c-reply:hover) { color: var(--pro-amber); }
+    :global(.pro-c-del:hover) { color: #e05a3a; }
+    :global(.pro-c-report:hover) { color: var(--pro-honey); }
+    :global(.pro-c-none) { text-align: center; font-style: italic; color: var(--pro-text-3); padding: 1.6rem; }
+
+    /* === REPORT MODAL — dark === */
+    :global(.pro-report-modal) { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; }
+    :global(.pro-report-modal.open) { display: flex; }
+    :global(.pro-report-backdrop) { position: absolute; inset: 0; background: rgba(4, 6, 8, 0.75); backdrop-filter: blur(4px); }
+    :global(.pro-report-card) {
+        position: relative; width: 90%; max-width: 400px;
+        background: rgba(11, 14, 17, 0.98);
+        padding: 2rem 2.2rem;
+        border-radius: 18px;
+        border: 1px solid var(--pro-line-hi);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+    }
+    :global(.pro-report-card h3) { font-family: var(--pro-font); font-weight: 700; font-size: 1.3rem; margin-bottom: 0.3rem; color: var(--pro-text); }
+    :global(.pro-report-sub) { font-size: 0.85rem; color: var(--pro-text-2); font-style: italic; margin-bottom: 1.2rem; }
+    :global(.pro-report-select), :global(#reportDetails) {
+        width: 100%; padding: 0.65rem 0.8rem; margin-bottom: 1.1rem;
+        border: 1px solid var(--pro-line); border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04); font-family: inherit; font-size: 0.9rem; color: var(--pro-text);
+    }
+    :global(#reportDetails) { resize: vertical; min-height: 80px; }
+    :global(.pro-report-actions) { display: flex; gap: 0.7rem; justify-content: flex-end; }
+    :global(.pro-report-msg) { margin-top: 0.8rem; font-size: 0.85rem; min-height: 1rem; text-align: center; }
+
+    /* === RECS + BACK-TOP === */
+    .pro-recs {
+        max-width: 720px;
+        margin: 2.5rem auto 0;
+        padding: 1.4rem 1.6rem;
+        background: var(--pro-card);
+        border: 1px solid var(--pro-line);
+        border-radius: var(--pro-r-lg);
+    }
+    :global(.pro-recs-title) { font-family: var(--pro-font); font-weight: 700; font-size: 1.05rem; margin-bottom: 0.8rem; color: var(--pro-text); }
+    :global(.pro-recs-item) { display: flex; justify-content: space-between; gap: 1rem; padding: 0.55rem 0; border-bottom: 1px solid var(--pro-line); text-decoration: none; }
+    :global(.pro-recs-item-title) { font-weight: 600; color: var(--pro-text); }
+    :global(.pro-recs-item-author) { font-size: 0.82rem; color: var(--pro-text-3); font-style: italic; }
+
+    .pro-back-top {
+        position: fixed;
+        bottom: 2rem; right: 2rem;
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        border: 1px solid var(--pro-line-hi);
+        background: rgba(6, 8, 10, 0.85);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        color: var(--pro-amber);
+        font-size: 1.15rem;
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(10px);
+        transition: all 0.3s var(--pro-ease, ease);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        z-index: 90;
+    }
+    .pro-back-top.visible { opacity: 1; pointer-events: auto; transform: none; }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 640px) {
+        .pro-story { padding: 1rem 0.6rem 3rem; }
+        .pro-reader-controls { flex-wrap: wrap; justify-content: center; border-radius: 20px; }
+        .pro-story-body { padding: 0 1.1rem; font-size: 1.05rem; }
+        .pro-story-header { padding: 2.4rem 1rem 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .pro-chapter { animation: none; }
+        .pro-like-btn:hover, .pro-chapter-btn:hover, .pro-share-btn:hover { transform: none; }
+    }
+</style>

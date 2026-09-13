@@ -42,7 +42,7 @@ const stories = storyIds.map((id: string) => storiesMap.get(id)).filter(Boolean)
         <div class="pro-work-grid">
             {stories.map((story: any, i: number) => (
                 <a
-                    href={`/story/${story.slug}`}
+                    href={`/pro/story/${story.slug}`}
                     class="pro-work-card"
                     data-pro-reveal
                     style={`--pro-reveal-delay: ${Math.min(i * 0.06, 0.4)}s`}

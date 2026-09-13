@@ -307,7 +307,7 @@ if (isDbAuthor && author.userId) {
                 <div class="pro-work-grid">
                     {authorProse.map((story: any, i: number) => (
                         <a
-                            href={`/story/${story.slug}`}
+                            href={`/pro/story/${story.slug}`}
                             class="pro-work-card"
                             data-pro-reveal
                             style={`--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}
@@ -342,7 +342,7 @@ if (isDbAuthor && author.userId) {
                 <h2 class="pro-section-head">Poetry Collections by {author.name}</h2>
                 <div class="pro-work-grid">
                     {authorCollections.map((c: any, i: number) => (
-                        <a href={`/poetry/${c.id}`} class="pro-work-card is-poem" data-pro-reveal style={`--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}>
+                        <a href={`/pro/poetry/${c.id}`} class="pro-work-card is-poem" data-pro-reveal style={`--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}>
                             {c.cover_url ? (
                                 <div class="pro-work-cover"><img src={c.cover_url} alt={`Cover of ${c.name}`} loading="lazy" /></div>
                             ) : (
@@ -367,7 +367,7 @@ if (isDbAuthor && author.userId) {
                 <h2 class="pro-section-head">Poetry by {author.name}</h2>
                 <div class="pro-work-grid">
                     {authorPoemSingles.map((story: any, i: number) => (
-                        <a href={`/story/${story.slug}`} class="pro-work-card is-poem" data-pro-reveal style={`--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}>
+                        <a href={`/pro/story/${story.slug}`} class="pro-work-card is-poem" data-pro-reveal style={`--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}>
                             <div class="pro-work-cover">
                                 {story.cover ? (
                                     <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />

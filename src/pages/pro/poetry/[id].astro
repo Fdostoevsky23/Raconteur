@@ -52,7 +52,7 @@ const poemCount = (poems || []).length;
         <div class="pro-work-grid pro-poem-grid">
             {(poems || []).map((p: any, i: number) => (
                 <div class="pro-work-card is-poem pro-poem-tile" style={`--pro-reveal-delay: ${Math.min(i * 0.06, 0.4)}s`} data-pro-reveal data-id={p.id} data-title={p.title} data-content={p.content || ''}>
-                    <a href={`/story/${p.id}`} class="pro-poem-link">
+                    <a href={`/pro/story/${p.id}`} class="pro-poem-link">
                         {p.cover_url ? (
                             <img src={p.cover_url} alt={`Cover of ${p.title}`} class="pro-poem-cover" loading="lazy" />
                         ) : (
