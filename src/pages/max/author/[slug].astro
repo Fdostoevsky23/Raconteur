@@ -1,0 +1,869 @@
+---
+// src/pages/max/author/[slug].astro — Raconteur Max writer page (bright glassmorphism).
+// Server logic is a faithful copy of classic /author/[slug] (feature parity):
+// static JSON authors + live DB writers, books, collections, poetry, follow graph.
+import MaxLayout from '../../../layouts/MaxLayout.astro';
+import authors from '../../../data/authors.json';
+import { getVisibleStories } from '../../../data/stories';
+import type { Story } from '../../../data/stories';
+import { supabase } from '../../../lib/supabase';
+import { buildStoryFromDB } from '../../../lib/storyLoader';
+
+const { slug } = Astro.params;
+
+let author: any = null;
+let authorStories: Story[] = [];
+let isDbAuthor = false;
+
+// 1. Static author
+const staticAuthor = authors.find((a) => a.name.toLowerCase().replace(/\s+/g, '-') === slug);
+if (staticAuthor) {
+    author = { ...staticAuthor };
+    const allStories = getVisibleStories();
+    authorStories = allStories.filter((s) => s.author.toLowerCase() === author.name.toLowerCase());
+    // Also pull DB-published stories by the same name
+    const { data: dbRowsStatic } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('status', 'published')
+        .ilike('author_name', author.name);
+    if (dbRowsStatic && dbRowsStatic.length > 0) {
+        authorStories = [...dbRowsStatic.map(buildStoryFromDB), ...authorStories];
+    }
+    author.storyCount = authorStories.length;
+    author.totalWords = authorStories.reduce((sum: number, s: any) => sum + s.wordCount, 0);
+}
+// 2. Database writer
+else if (slug) {
+    const { data: dbRows } = await supabase
+        .from('stories')
+        .select('*')
+        .eq('status', 'published')
+        .ilike('author_name', slug.replace(/-/g, ' '))
+        .order('created_at', { ascending: false });
+
+    if (dbRows && dbRows.length > 0) {
+        isDbAuthor = true;
+        authorStories = dbRows.map(buildStoryFromDB);
+        const totalWords = authorStories.reduce((sum: number, s: any) => sum + s.wordCount, 0);
+        const displayName = dbRows[0].author_name || slug;
+
+        // Explicit columns (never select *) — RLS-hardened table
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('pen_name, bio, avatar_url, x_url, instagram_url, facebook_url, public_email, is_admin, verified, work_count, prose_count, poetry_count, book_recs')
+            .eq('user_id', dbRows[0].author_id)
+            .maybeSingle();
+
+        author = {
+            name: displayName,
+            bio: profile?.bio || `${displayName} is a writer sharing their voice on Raconteur.`,
+            avatarInitials: displayName.substring(0, 2).toUpperCase(),
+            avatarGradient: ['#4a5d4e', '#2c3e2d'],
+            avatarUrl: profile?.avatar_url || '',
+            userId: dbRows[0].author_id,
+            isAdmin: !!(profile as any)?.is_admin,
+            verified: !!(profile as any)?.verified,
+            workCount: (profile as any)?.work_count || 0,
+            proseCount: (profile as any)?.prose_count || 0,
+            poetryCount: (profile as any)?.poetry_count || 0,
+            bookRecs: (profile as any)?.book_recs || [],
+            xUrl: profile?.x_url || '',
+            instagramUrl: profile?.instagram_url || '',
+            facebookUrl: profile?.facebook_url || '',
+            publicEmail: profile?.public_email || '',
+            joinedDate: new Date(dbRows[0].created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+            storyCount: dbRows.length,
+            totalWords,
+            favoriteLine: '',
+            books: []
+        } as any;
+    }
+}
+
+// 3. Nothing found — home safely (in-skin)
+if (!author) {
+    return Astro.redirect('/max');
+}
+
+const authorSlug = author.name.toLowerCase().replace(/\s+/g, '-');
+
+// Books (DB authors only)
+let authorBooks: any[] = [];
+if (isDbAuthor && author.userId) {
+    const { data: books } = await supabase
+        .from('books')
+        .select('*')
+        .eq('owner_id', author.userId)
+        .order('created_at', { ascending: true });
+    authorBooks = books || [];
+}
+
+const authorPoems = authorStories.filter((s: any) => s.kind === 'poem');
+const authorProse = authorStories.filter((s: any) => s.kind !== 'poem');
+
+// Poetry collections (DB authors only) + singles = poems not in a collection
+let authorCollections: any[] = [];
+let collectionCounts: Record<string, number> = {};
+let authorPoemSingles = authorPoems;
+if (isDbAuthor && author.userId) {
+    const { data: colls } = await supabase
+        .from('poetry_collections')
+        .select('*')
+        .eq('owner_id', author.userId)
+        .order('created_at', { ascending: false });
+    authorCollections = colls || [];
+
+    const { data: poemRows } = await supabase
+        .from('stories')
+        .select('id, collection_id')
+        .eq('author_id', author.userId)
+        .eq('kind', 'poem')
+        .eq('status', 'published');
+    (poemRows || []).forEach((p: any) => {
+        if (p.collection_id) collectionCounts[p.collection_id] = (collectionCounts[p.collection_id] || 0) + 1;
+    });
+
+    authorPoemSingles = authorPoems.filter((s: any) => !s.collection_id);
+}
+---
+
+<MaxLayout title={`${author.name} — Raconteur Max`} description={author.bio}>
+    <div class="mx-page mx-author">
+        {/* ===== Hero — one big glass plate ===== */}
+        <header class="mx-glass mx-author-hero" data-mx-reveal>
+            <div
+                class="mx-avatar mx-avatar-lg"
+                style={author.avatarUrl ? '' : `background: linear-gradient(135deg, ${author.avatarGradient?.[0] || '#4a5d4e'}, ${author.avatarGradient?.[1] || '#2c3e2d'});`}
+            >
+                {author.avatarUrl ? <img src={author.avatarUrl} alt={`Portrait of ${author.name}`} /> : author.avatarInitials}
+            </div>
+            <h1 class="mx-author-name">
+                {author.name}
+                {(author as any).verified && <span class="mx-verified" title="Verified writer">✦</span>}
+            </h1>
+            {(author as any).isAdmin && <p class="mx-admin-line">Admin's Account</p>}
+
+            {(author.xUrl || author.instagramUrl || author.facebookUrl || author.publicEmail) && (
+                <div class="mx-socials">
+                    {author.xUrl && (
+                        <a href={author.xUrl} target="_blank" rel="noopener" title="X" aria-label="X">
+                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644z"/></svg>
+                        </a>
+                    )}
+                    {author.instagramUrl && (
+                        <a href={author.instagramUrl} target="_blank" rel="noopener" title="Instagram" aria-label="Instagram">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <rect x="2.5" y="2.5" width="19" height="19" rx="5"/>
+                                <circle cx="12" cy="12" r="4.5"/>
+                                <circle cx="17.3" cy="6.7" r="1.4" fill="currentColor" stroke="none"/>
+                            </svg>
+                        </a>
+                    )}
+                    {author.facebookUrl && (
+                        <a href={author.facebookUrl} target="_blank" rel="noopener" title="Facebook" aria-label="Facebook">
+                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073C24 5.446 18.627.073 12 .073S0 5.446 0 12.073c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                        </a>
+                    )}
+                    {author.publicEmail && (
+                        <button class="mx-socials-btn" data-email={author.publicEmail} id="copyEmailBtn" title="Copy email address">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="m3 6 9 7 9-7"/></svg>
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {author.userId && (
+                <div class="mx-hero-actions">
+                    <button id="followBtn" class="mx-btn mx-btn-ghost" type="button">Follow</button>
+                    <a id="messageBtn" class="mx-btn mx-btn-ghost" href={`/messages?with=${author.userId}`} style="display: none;">✉ Message</a>
+                </div>
+            )}
+        </header>
+
+        {/* ===== Bio ===== */}
+        <section class="mx-author-bio" data-mx-reveal style="--mx-reveal-delay: 0.08s">
+            <p>{author.bio}</p>
+        </section>
+
+        {/* ===== Book recs ===== */}
+        {(author as any).bookRecs && (author as any).bookRecs.length > 0 && (
+            <section class="mx-author-recs" data-mx-reveal style="--mx-reveal-delay: 0.12s">
+                <h2 class="mx-section-head">Top 5 Books Recommended by {author.name}</h2>
+                <ol class="mx-recs-list">
+                    {(author as any).bookRecs.map((b: string) => <li>{b}</li>)}
+                </ol>
+            </section>
+        )}
+
+        {/* ===== Stats strip ===== */}
+        <div class="mx-glass mx-statstrip" data-mx-reveal style="--mx-reveal-delay: 0.1s">
+            <div class="mx-stat">
+                <span class="mx-stat-num">{authorProse.length}</span>
+                <span class="mx-stat-lbl">{authorProse.length === 1 ? 'Story' : 'Stories'}</span>
+            </div>
+            <div class="mx-statdiv"></div>
+            <div class="mx-stat">
+                <span class="mx-stat-num">{authorPoems.length}</span>
+                <span class="mx-stat-lbl">{authorPoems.length === 1 ? 'Poem' : 'Poems'}</span>
+            </div>
+            <div class="mx-statdiv"></div>
+            <div class="mx-stat">
+                <span class="mx-stat-num">{author.totalWords.toLocaleString()}</span>
+                <span class="mx-stat-lbl">Words</span>
+            </div>
+            <div class="mx-statdiv"></div>
+            <div class="mx-stat">
+                <span class="mx-stat-num">{author.joinedDate || '—'}</span>
+                <span class="mx-stat-lbl">Joined</span>
+            </div>
+            {author.userId && (
+                <>
+                    <div class="mx-statdiv"></div>
+                    <div class="mx-stat mx-stat-click" id="followersStat" role="button" tabindex="0">
+                        <span class="mx-stat-num" id="followerCount">–</span>
+                        <span class="mx-stat-lbl">Followers</span>
+                    </div>
+                    <div class="mx-statdiv"></div>
+                    <div class="mx-stat mx-stat-click" id="followingStat" role="button" tabindex="0">
+                        <span class="mx-stat-num" id="followingCount">–</span>
+                        <span class="mx-stat-lbl">Following</span>
+                    </div>
+                </>
+            )}
+        </div>
+
+        {/* ===== Share this writer ===== */}
+        <div class="mx-share-row" data-mx-reveal style="--mx-reveal-delay: 0.14s">
+            <span class="mx-share-label">Share {author.name}'s shelf</span>
+            <button type="button" class="mx-share-pill" id="shareWriterCopy" title="Copy link">🔗 Copy</button>
+            <a class="mx-share-pill" id="shareWriterX" target="_blank" rel="noopener" title="Share on X">𝕏</a>
+            <a class="mx-share-pill" id="shareWriterFb" target="_blank" rel="noopener" title="Share on Facebook">f</a>
+            <a class="mx-share-pill" id="shareWriterWa" target="_blank" rel="noopener" title="Share on WhatsApp">WhatsApp</a>
+            <a class="mx-share-pill" id="shareWriterTg" target="_blank" rel="noopener" title="Share on Telegram">Telegram</a>
+        </div>
+
+        {/* ===== Favorite line ===== */}
+        {author.favoriteLine && (
+            <blockquote class="mx-favline" data-mx-reveal>
+                <p>"{author.favoriteLine}"</p>
+            </blockquote>
+        )}
+
+        {/* ===== Books ===== */}
+        {authorBooks.length > 0 && (
+            <section data-mx-reveal>
+                <h2 class="mx-section-head">Books authored by {author.name}</h2>
+                <div class="mx-books-shelf">
+                    {authorBooks.map((book: any) => (
+                        <div class="mx-glass mx-book-tile">
+                            {book.blurb && (
+                                <button class="mx-blurb-btn" data-title={book.title} data-blurb={book.blurb}>Read the Blurb</button>
+                            )}
+                            {book.cover_url ? (
+                                <img src={book.cover_url} alt={`Cover of ${book.title}`} class="mx-book-cover" />
+                            ) : (
+                                <div class="mx-book-cover mx-book-cover-empty">No cover</div>
+                            )}
+                            <h3 class="mx-book-title">{book.title}</h3>
+                            {(book.links && book.links.length > 0) && (
+                                <div class="mx-book-links">
+                                    {book.links.map((l: any) => (
+                                        <a href={l.url} target="_blank" rel="noopener" class="mx-book-link">{l.label}</a>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </section>
+        )}
+
+        {/* ===== Prose ===== */}
+        <section>
+            <h2 class="mx-section-head">Stories by {author.name}</h2>
+            {authorProse.length > 0 ? (
+                <div class="mx-grid">
+                    {authorProse.map((story: any, i: number) => (
+                        <a
+                            href={`/max/story/${story.slug}`}
+                            class="mx-glass mx-card"
+                            data-mx-reveal
+                            style={`--mx-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}
+                        >
+                            <div class="mx-card-cover">
+                                {story.cover ? (
+                                    <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />
+                                ) : (
+                                    <span class="mx-card-star" aria-hidden="true">✦</span>
+                                )}
+                            </div>
+                            <div class="mx-card-body">
+                                <span class="mx-card-genre">{story.genre}</span>
+                                <h3 class="mx-card-title">{story.title}</h3>
+                                <p class="mx-card-excerpt">{story.excerpt}</p>
+                                <div class="mx-card-meta">
+                                    <span>{story.wordCount.toLocaleString()} words</span>
+                                    <span>{story.readTime}</span>
+                                </div>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            ) : (
+                <p class="mx-empty">No stories published yet — check back soon.</p>
+            )}
+        </section>
+
+        {/* ===== Poetry collections ===== */}
+        {authorCollections.length > 0 && (
+            <section>
+                <h2 class="mx-section-head">Poetry Collections by {author.name}</h2>
+                <div class="mx-grid">
+                    {authorCollections.map((c: any, i: number) => (
+                        <a href={`/poetry/${c.id}`} class="mx-glass mx-card" data-mx-reveal style={`--mx-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}>
+                            {c.cover_url ? (
+                                <div class="mx-card-cover"><img src={c.cover_url} alt={`Cover of ${c.name}`} loading="lazy" /></div>
+                            ) : (
+                                <div class="mx-card-cover"><span class="mx-card-star mx-collection-cover"><span class="mx-collection-emoji">📚</span><span class="mx-collection-name">{c.name}</span></span></div>
+                            )}
+                            <div class="mx-card-body">
+                                <span class="mx-card-genre poem">Collection</span>
+                                <h3 class="mx-card-title">{c.name}</h3>
+                                <div class="mx-card-meta">
+                                    <span>{collectionCounts[c.id] || 0} {collectionCounts[c.id] === 1 ? 'poem' : 'poems'}</span>
+                                </div>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            </section>
+        )}
+
+        {/* ===== Poetry singles ===== */}
+        {authorPoemSingles.length > 0 && (
+            <section>
+                <h2 class="mx-section-head">Poetry by {author.name}</h2>
+                <div class="mx-grid">
+                    {authorPoemSingles.map((story: any, i: number) => (
+                        <a href={`/max/story/${story.slug}`} class="mx-glass mx-card mx-card-poem" data-mx-reveal style={`--mx-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}>
+                            <div class="mx-card-cover">
+                                {story.cover ? (
+                                    <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />
+                                ) : (
+                                    <span class="mx-card-quote">“{(story.content[0]?.text || '').replace(/<[^>]+>/g, ' ').substring(0, 90)}…”</span>
+                                )}
+                            </div>
+                            <div class="mx-card-body">
+                                <span class="mx-card-genre poem">Poem</span>
+                                <h3 class="mx-card-title">{story.title}</h3>
+                                <div class="mx-card-meta">
+                                    <span>{story.wordCount.toLocaleString()} words</span>
+                                </div>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            </section>
+        )}
+
+        <div class="mx-back">
+            <a href="/max" class="mx-ulink">← Back to the Max edition</a>
+        </div>
+
+        <div id="author-meta" data-userid={author.userId || ''} hidden></div>
+    </div>
+
+    {/* ===== Follow modal (followers / following) ===== */}
+    <div id="followModal" class="mx-modal" hidden>
+        <div class="mx-modal-backdrop"></div>
+        <div class="mx-modal-card">
+            <button class="mx-modal-close" aria-label="Close">×</button>
+            <h3 id="followModalTitle" class="mx-modal-title"></h3>
+            <div id="followModalList" class="mx-follow-list"></div>
+        </div>
+    </div>
+
+    {/* ===== Blurb modal ===== */}
+    <div id="blurbModal" class="mx-modal" hidden>
+        <div class="mx-modal-backdrop"></div>
+        <div class="mx-modal-card">
+            <button class="mx-modal-close" aria-label="Close">×</button>
+            <h3 id="blurbModalTitle" class="mx-modal-title"></h3>
+            <p id="blurbModalBody" class="mx-blurb-body"></p>
+        </div>
+    </div>
+</MaxLayout>
+
+<script>
+    // === Follow graph + share + modals — faithful clone of classic author page ===
+    import { supabase } from '../../../lib/supabase';
+
+    const meta = { userId: document.getElementById('author-meta')?.getAttribute('data-userid') || null };
+    const followBtn = document.getElementById('followBtn') as HTMLButtonElement | null;
+    const followerCount = document.getElementById('followerCount') as HTMLElement | null;
+
+    function paint(following: boolean) {
+        if (!followBtn) return;
+        followBtn.classList.toggle('following', following);
+        followBtn.textContent = following ? 'Following ✓' : 'Follow';
+    }
+
+    async function initFollow() {
+        if (!meta.userId || !followBtn || !followerCount) return;
+
+        const { count } = await supabase
+            .from('follows')
+            .select('id', { count: 'exact', head: true })
+            .eq('followed_id', meta.userId);
+        followerCount.textContent = String(count ?? 0);
+
+        const { count: followingCount } = await supabase
+            .from('follows')
+            .select('id', { count: 'exact', head: true })
+            .eq('follower_id', meta.userId);
+        const followingEl = document.getElementById('followingCount');
+        if (followingEl) followingEl.textContent = String(followingCount ?? 0);
+
+        const { data: { session } } = await supabase.auth.getSession();
+        let following = false;
+        if (session) {
+            if (session.user.id === meta.userId) {
+                followBtn.style.display = 'none'; // no following yourself
+            } else {
+                const msgBtn = document.getElementById('messageBtn');
+                if (msgBtn) msgBtn.style.display = 'inline-flex';
+                const { data: row } = await supabase
+                    .from('follows')
+                    .select('id')
+                    .eq('follower_id', session.user.id)
+                    .eq('followed_id', meta.userId)
+                    .maybeSingle();
+                following = !!row;
+            }
+        }
+        paint(following);
+
+        followBtn.addEventListener('click', async () => {
+            const { data: { session: s } } = await supabase.auth.getSession();
+            if (!s) { window.location.href = '/login'; return; }
+            if (following) {
+                await supabase.from('follows').delete()
+                    .eq('follower_id', s.user.id)
+                    .eq('followed_id', meta.userId);
+                following = false;
+                followerCount.textContent = String(Math.max(0, Number(followerCount.textContent) - 1));
+            } else {
+                await supabase.from('follows').insert({ follower_id: s.user.id, followed_id: meta.userId });
+                following = true;
+                followerCount.textContent = String(Number(followerCount.textContent) + 1);
+                // Notify the followed writer
+                await supabase.from('notifications').insert({
+                    user_id: meta.userId,
+                    actor_id: s.user.id,
+                    type: 'follow',
+                });
+            }
+            paint(following);
+        });
+    }
+    initFollow();
+
+    // === Share this writer ===
+    const swUrl = window.location.href;
+    const swName = document.querySelector('.mx-author-name')?.textContent?.replace('✦', '').trim() || 'this writer';
+    const swText = `Read ${swName}'s stories on Raconteur`;
+    const enc = encodeURIComponent;
+    const setHref = (id: string, href: string) => document.getElementById(id)?.setAttribute('href', href);
+    setHref('shareWriterX', `https://twitter.com/intent/tweet?url=${enc(swUrl)}&text=${enc(swText)}`);
+    setHref('shareWriterFb', `https://www.facebook.com/sharer/sharer.php?u=${enc(swUrl)}`);
+    setHref('shareWriterWa', `https://wa.me/?text=${enc(swText + ' ' + swUrl)}`);
+    setHref('shareWriterTg', `https://t.me/share/url?url=${enc(swUrl)}&text=${enc(swText)}`);
+    document.getElementById('shareWriterCopy')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget as HTMLButtonElement;
+        try {
+            await navigator.clipboard.writeText(swUrl);
+            btn.textContent = '✓ Copied';
+            setTimeout(() => { btn.textContent = '🔗 Copy'; }, 1800);
+        } catch {
+            btn.textContent = 'Copy failed';
+        }
+    });
+
+    // === Copy email ===
+    document.getElementById('copyEmailBtn')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget as HTMLButtonElement;
+        try {
+            await navigator.clipboard.writeText(btn.dataset.email || '');
+            btn.style.color = 'var(--mx-vermilion)';
+            setTimeout(() => { btn.style.color = ''; }, 1200);
+        } catch { /* clipboard unavailable */ }
+    });
+
+    // === Clickable followers / following ===
+    const followModal = document.getElementById('followModal')!;
+    const fmTitle = document.getElementById('followModalTitle')!;
+    const fmList = document.getElementById('followModalList')!;
+    followModal.querySelector('.mx-modal-close')!.addEventListener('click', () => followModal.hidden = true);
+    followModal.querySelector('.mx-modal-backdrop')!.addEventListener('click', () => followModal.hidden = true);
+
+    async function openFollowList(kind: 'followers' | 'following') {
+        if (!meta.userId) return;
+        const { data } = await supabase.from('follows')
+            .select(kind === 'followers' ? 'follower_id' : 'followed_id')
+            .eq(kind === 'followers' ? 'followed_id' : 'follower_id', meta.userId);
+        const ids = (data || []).map((r: any) => kind === 'followers' ? r.follower_id : r.followed_id);
+        fmTitle.textContent = kind === 'followers' ? 'Followers' : 'Following';
+        if (!ids.length) {
+            fmList.innerHTML = '<p class="mx-follow-empty">Nobody yet — quiet shelves fill slowly.</p>';
+        } else {
+            const { data: profs } = await supabase.from('profiles').select('user_id, pen_name, avatar_url').in('user_id', ids);
+            fmList.innerHTML = ids.map((id: string) => {
+                const p = (profs || []).find((x: any) => x.user_id === id);
+                const n = p?.pen_name || 'A Raconteur writer';
+                const initials = n.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+                const av = p?.avatar_url
+                    ? `<img src="${p.avatar_url}" alt="${n}" />`
+                    : `<span>${initials}</span>`;
+                return `<a class="mx-follow-row" href="/max/author/${n.toLowerCase().replace(/\s+/g, '-')}"><span class="mx-avatar">${av}</span>${n}</a>`;
+            }).join('');
+        }
+        followModal.hidden = false;
+    }
+    document.getElementById('followersStat')?.addEventListener('click', () => openFollowList('followers'));
+    document.getElementById('followingStat')?.addEventListener('click', () => openFollowList('following'));
+
+    // === Blurb modal ===
+    const blurbModal = document.getElementById('blurbModal')!;
+    blurbModal.querySelector('.mx-modal-close')!.addEventListener('click', () => blurbModal.hidden = true);
+    blurbModal.querySelector('.mx-modal-backdrop')!.addEventListener('click', () => blurbModal.hidden = true);
+    document.querySelectorAll('.mx-blurb-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('blurbModalTitle')!.textContent = (btn as HTMLElement).dataset.title || '';
+            document.getElementById('blurbModalBody')!.textContent = (btn as HTMLElement).dataset.blurb || '';
+            blurbModal.hidden = false;
+        });
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { followModal.hidden = true; blurbModal.hidden = true; }
+    });
+</script>
+
+<style>
+    /* === HERO — one glass plate, centred === */
+    .mx-author-hero {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 3rem 2rem 2.4rem;
+        border-radius: 28px;
+        margin-bottom: 2.4rem;
+    }
+
+    .mx-author-hero .mx-avatar-lg { margin-bottom: 1.4rem; }
+
+    .mx-author-name {
+        font-family: var(--mx-font-display);
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        color: var(--mx-ink);
+        margin: 0;
+    }
+
+    .mx-verified {
+        color: var(--mx-vermilion);
+        font-size: 0.6em;
+        vertical-align: super;
+        margin-left: 0.35rem;
+        text-shadow: 0 0 14px rgba(216, 52, 28, 0.45);
+    }
+
+    .mx-admin-line {
+        margin: 0.4rem 0 0;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--mx-brass);
+    }
+
+    /* Socials — glass circles */
+    .mx-socials {
+        display: flex;
+        justify-content: center;
+        gap: 0.9rem;
+        margin-top: 1.1rem;
+    }
+
+    .mx-socials a,
+    .mx-socials button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.45);
+        border: 1px solid var(--mx-glass-line);
+        color: var(--mx-ink-soft);
+        cursor: pointer;
+        transition: transform 0.25s var(--mx-ease), background 0.25s, color 0.25s;
+    }
+
+    .mx-socials a:hover,
+    .mx-socials button:hover {
+        transform: translateY(-3px);
+        background: rgba(255, 255, 255, 0.7);
+        color: var(--mx-vermilion);
+    }
+
+    .mx-socials svg { width: 18px; height: 18px; }
+
+    .mx-hero-actions { display: flex; gap: 0.8rem; justify-content: center; margin-top: 1.4rem; }
+
+    .mx-hero-actions #followBtn.following {
+        background: var(--mx-vermilion);
+        border-color: var(--mx-vermilion);
+        color: var(--mx-paper);
+    }
+
+    /* Bio */
+    .mx-author-bio {
+        max-width: 660px;
+        margin: 0 auto 2.4rem;
+        text-align: center;
+    }
+
+    .mx-author-bio p {
+        font-family: var(--mx-font-read);
+        font-size: 1.12rem;
+        line-height: 1.85;
+        color: var(--mx-ink-soft);
+        overflow-wrap: break-word;
+    }
+
+    /* Book recs */
+    .mx-author-recs { max-width: 640px; margin: 0 auto; }
+
+    .mx-recs-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        counter-reset: rec;
+    }
+
+    .mx-recs-list li {
+        counter-increment: rec;
+        padding: 0.6rem 0.2rem;
+        border-bottom: 1px solid var(--mx-line);
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        font-size: 1rem;
+        color: var(--mx-ink-soft);
+    }
+
+    .mx-recs-list li::before {
+        content: counter(rec) '. ';
+        font-family: var(--mx-font-display);
+        font-style: normal;
+        font-weight: 900;
+        color: var(--mx-vermilion);
+        margin-right: 0.5rem;
+    }
+
+    /* Share row */
+    .mx-share-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.7rem;
+        margin: 2.2rem auto 0;
+        max-width: 640px;
+    }
+
+    .mx-share-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--mx-ink-faint);
+        margin-right: 0.3rem;
+    }
+
+    .mx-share-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.45rem 1rem;
+        border-radius: 999px;
+        background: var(--mx-glass-bg);
+        border: 1px solid var(--mx-glass-line);
+        color: var(--mx-ink-soft);
+        font-family: var(--mx-font-body);
+        font-size: 0.82rem;
+        text-decoration: none;
+        cursor: pointer;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: color 0.25s, border-color 0.25s, transform 0.25s var(--mx-ease);
+    }
+
+    .mx-share-pill:hover {
+        color: var(--mx-vermilion);
+        border-color: rgba(216, 52, 28, 0.4);
+        transform: translateY(-2px);
+    }
+
+    /* Favorite line */
+    .mx-favline {
+        max-width: 600px;
+        margin: 2.8rem auto 0;
+        padding: 1.5rem 2rem;
+        border-left: 3px solid var(--mx-vermilion);
+        background: rgba(255, 255, 255, 0.35);
+        border-radius: 0 18px 18px 0;
+    }
+
+    .mx-favline p {
+        font-family: var(--mx-font-display);
+        font-style: italic;
+        font-size: 1.2rem;
+        line-height: 1.6;
+        color: var(--mx-ink);
+        margin: 0;
+    }
+
+    /* Books shelf */
+    .mx-books-shelf {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1.6rem;
+    }
+
+    .mx-book-tile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        max-width: 210px;
+        padding: 1.3rem 1.1rem;
+    }
+
+    .mx-book-tile:hover { transform: translateY(-6px); }
+
+    .mx-book-cover {
+        width: 150px;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 10px 28px rgba(84, 62, 40, 0.25);
+        margin-bottom: 0.9rem;
+    }
+
+    .mx-book-cover-empty {
+        height: 210px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--mx-paper-deep);
+        color: var(--mx-ink-faint);
+        font-style: italic;
+        font-size: 0.8rem;
+    }
+
+    .mx-book-title {
+        font-family: var(--mx-font-display);
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--mx-ink);
+        margin: 0 0 0.5rem;
+    }
+
+    .mx-blurb-btn {
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--mx-vermilion);
+        background: transparent;
+        border: 1px solid rgba(216, 52, 28, 0.35);
+        border-radius: 999px;
+        padding: 0.3rem 0.85rem;
+        cursor: pointer;
+        font-family: var(--mx-font-body);
+        margin-bottom: 0.85rem;
+        transition: background 0.2s, color 0.2s;
+    }
+
+    .mx-blurb-btn:hover { background: rgba(216, 52, 28, 0.08); }
+
+    .mx-book-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+
+    .mx-book-link {
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--mx-ink-soft);
+        text-decoration: none;
+        border: 1px solid var(--mx-glass-line);
+        border-radius: 999px;
+        padding: 0.3rem 0.85rem;
+        transition: color 0.2s, border-color 0.2s;
+    }
+
+    .mx-book-link:hover { color: var(--mx-vermilion); border-color: rgba(216, 52, 28, 0.4); }
+
+    /* Collection text covers */
+    .mx-collection-cover {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1.2rem;
+    }
+
+    .mx-collection-emoji { font-size: 2.2rem; }
+
+    .mx-collection-name {
+        font-family: var(--mx-font-display);
+        font-weight: 600;
+        font-size: 1.02rem;
+        color: var(--mx-ink);
+        text-align: center;
+        line-height: 1.3;
+    }
+
+    /* Modals */
+    .mx-blurb-body {
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        font-size: 0.98rem;
+        line-height: 1.75;
+        color: var(--mx-ink-soft);
+        margin: 0;
+    }
+
+    .mx-follow-list { display: flex; flex-direction: column; }
+
+    .mx-follow-row {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        text-decoration: none;
+        color: var(--mx-ink);
+        font-family: var(--mx-font-display);
+        font-weight: 600;
+        padding: 0.65rem 0.4rem;
+        border-bottom: 1px solid var(--mx-line);
+        transition: background 0.2s;
+    }
+
+    .mx-follow-row:hover { background: rgba(255, 255, 255, 0.45); }
+
+    .mx-follow-empty { font-family: var(--mx-font-read); font-style: italic; color: var(--mx-ink-faint); }
+
+    @media (max-width: 640px) {
+        .mx-author-hero { padding: 2.2rem 1.2rem 1.8rem; }
+    }
+</style>

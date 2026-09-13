@@ -276,7 +276,7 @@ const navHref = {
                 const profileSlug = esc(name.toLowerCase().replace(/\s+/g, '-'));
                 authArea.innerHTML = `
                     <a href="/dashboard" class="mx-auth-link">My Shelf</a>
-                    <a href="/author/${profileSlug}" class="mx-hello" title="Your public writer page">Hello, ${safeName}</a>
+                    <a href="/max/author/${profileSlug}" class="mx-hello" title="Your public writer page">Hello, ${safeName}</a>
                     <span class="mx-notif-wrap">
                         <button id="notifBell" class="mx-notif-bell" type="button" aria-label="Notifications">🔔<span id="notifDot" class="mx-notif-dot" hidden></span></button>
                         <div id="notifPanel" class="mx-notif-panel" hidden>
@@ -311,7 +311,7 @@ const navHref = {
                 if (n.type === 'message') return `${actorLabel(n)} messaged you: “${(n.body_preview || '').slice(0, 60)}”`;
                 return `${actorLabel(n)} commented: “${(n.body_preview || '').slice(0, 60)}”`;
             };
-            const href = (n: any) => n.type === 'message' ? '/messages' : (n.story_id ? `/story/${n.story_id}` : '#');
+            const href = (n: any) => n.type === 'message' ? '/messages' : (n.story_id ? `/max/story/${n.story_id}` : '#');
 
             async function load() {
                 const { data: all } = await supabase
@@ -428,7 +428,7 @@ const navHref = {
                 .filter(([, name]) => name.toLowerCase().includes(query))
                 .slice(0, 3)
                 .map(([slug, name]) => `
-                    <a href="/author/${esc(slug)}" class="mx-search-item mx-search-writer">
+                    <a href="/max/author/${esc(slug)}" class="mx-search-item mx-search-writer">
                       <h4>👤 ${esc(name)}</h4>
                       <p>View writer page</p>
                     </a>
@@ -438,7 +438,7 @@ const navHref = {
                 s.title.toLowerCase().includes(query) ||
                 (s.author && s.author.toLowerCase().includes(query))
             ).slice(0, 6).map(s => `
-                <a href="/story/${esc(s.slug)}" class="mx-search-item">
+                <a href="/max/story/${esc(s.slug)}" class="mx-search-item">
                   <h4>${esc(s.title)}</h4>
                   <p>By ${esc(s.author || 'Anonymous')} · ${esc(s.genre || 'Story')}</p>
                 </a>
