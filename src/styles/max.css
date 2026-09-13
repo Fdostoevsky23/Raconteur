@@ -17,7 +17,7 @@
     --mx-paper-deep: #f2ecdf;
     --mx-ink: #1c1917;
     --mx-ink-soft: #57504a;
-    --mx-ink-faint: #9a918a;
+    --mx-ink-faint: #6f675f; /* >=4.5:1 on paper (de-vibe DR5) */
     --mx-line: rgba(28, 25, 23, 0.16);
     --mx-line-strong: rgba(28, 25, 23, 0.34);
 

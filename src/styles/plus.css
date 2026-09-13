@@ -15,7 +15,7 @@ body.plus-skin {
     --ph-bone: #f2eee3;                /* primary text */
     --ph-bone-70: rgba(242, 238, 227, 0.7);
     --ph-bone-55: rgba(242, 238, 227, 0.55);
-    --ph-bone-40: rgba(242, 238, 227, 0.4);
+    --ph-bone-40: rgba(242, 238, 227, 0.52); /* >=4.5:1 (de-vibe DR5) */
     --ph-brass: #c9a24b;               /* accent */
     --ph-brass-bright: #d4af5f;        /* accent hover */
     --ph-brass-soft: rgba(201, 162, 75, 0.35);

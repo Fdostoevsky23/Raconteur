@@ -237,7 +237,7 @@ if (isDbAuthor && author.userId) {
         {/* ===== Share this writer ===== */}
         <div class="mx-share-row" data-mx-reveal style="--mx-reveal-delay: 0.14s">
             <span class="mx-share-label">Share {author.name}'s shelf</span>
-            <button type="button" class="mx-share-pill" id="shareWriterCopy" title="Copy link">🔗 Copy</button>
+            <button type="button" class="mx-share-pill" id="shareWriterCopy" title="Copy link"><Icon name="link" size={14} /> Copy</button>
             <a class="mx-share-pill" id="shareWriterX" target="_blank" rel="noopener" title="Share on X">𝕏</a>
             <a class="mx-share-pill" id="shareWriterFb" target="_blank" rel="noopener" title="Share on Facebook">f</a>
             <a class="mx-share-pill" id="shareWriterWa" target="_blank" rel="noopener" title="Share on WhatsApp">WhatsApp</a>
@@ -399,6 +399,7 @@ if (isDbAuthor && author.userId) {
 <script>
     // === Follow graph + share + modals — faithful clone of classic author page ===
     import { supabase } from '../../../lib/supabase';
+    import { iconSvg } from '../../../lib/icons';
 
     const meta = { userId: document.getElementById('author-meta')?.getAttribute('data-userid') || null };
     const followBtn = document.getElementById('followBtn') as HTMLButtonElement | null;
@@ -485,7 +486,7 @@ if (isDbAuthor && author.userId) {
         try {
             await navigator.clipboard.writeText(swUrl);
             btn.textContent = 'Copied';
-            setTimeout(() => { btn.textContent = '🔗 Copy'; }, 1800);
+            setTimeout(() => { btn.innerHTML = iconSvg('link', 14) + ' Copy'; }, 1800);
         } catch {
             btn.textContent = 'Copy failed';
         }

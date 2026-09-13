@@ -4,6 +4,7 @@
 // dark-fintech-dashboard genre; every card, label, chart and composition
 // is original Raconteur expression built on the shared data layer.
 import ProLayout from '../../layouts/ProLayout.astro';
+import Icon from '../../components/Icon.astro';
 import { getVisibleStories } from '../../data/stories';
 import { supabase } from '../../lib/supabase';
 import { buildStoryFromDB } from '../../lib/storyLoader';
@@ -83,12 +84,12 @@ const greeting = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
 // Moods — deep-link into archive search
 const moods = [
-    { emoji: '🌧', name: 'Melancholy', query: 'rain' },
-    { emoji: '🌙', name: 'Nocturnal', query: 'night' },
-    { emoji: '❤', name: 'Tender', query: 'love' },
-    { emoji: '🕯', name: 'Still', query: 'silence' },
-    { emoji: '🏠', name: 'Homeward', query: 'home' },
-    { emoji: '✨', name: 'Wonder', query: 'light' },
+    { icon: 'cloud-rain', name: 'Melancholy', query: 'rain' },
+    { icon: 'moon', name: 'Nocturnal', query: 'night' },
+    { icon: 'heart', name: 'Tender', query: 'love' },
+    { icon: 'feather', name: 'Still', query: 'silence' },
+    { icon: 'home', name: 'Homeward', query: 'home' },
+    { icon: 'sparkle', name: 'Wonder', query: 'light' },
 ];
 ---
 
@@ -199,7 +200,7 @@ const moods = [
                 <div class="pro-moods-grid">
                     {moods.map(m => (
                         <a href={`/stories?q=${m.query}`} class="pro-mood">
-                            <span class="pro-mood-emoji">{m.emoji}</span>
+                            <span class="pro-mood-emoji"><Icon name={m.icon} size={22} /></span>
                             <span class="pro-mood-name">{m.name}</span>
                         </a>
                     ))}

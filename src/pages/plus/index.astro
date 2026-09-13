@@ -3,6 +3,7 @@
 // Data layer is a faithful copy of classic index.astro (same queries, same shape).
 // Chunks 3–5 build the full homepage design on this skeleton.
 import PlusLayout from '../../layouts/PlusLayout.astro';
+import Icon from '../../components/Icon.astro';
 import { getVisibleStories, getStoryBySlug } from '../../data/stories';
 import authors from '../../data/authors.json';
 import { supabase } from '../../lib/supabase';
@@ -64,12 +65,12 @@ const motes = [
 // --- Chunk 5A: moods explorer (plus-exclusive resurrection) ---
 // Each mood deep-links into /plus/stories search via ?q= — feelings become real finds.
 const moods = [
-    { emoji: '🌧', name: 'Melancholy', query: 'rain',  teaser: 'For grey evenings and rain on glass.' },
-    { emoji: '🌙', name: 'Nocturnal',  query: 'night', teaser: 'For when the world goes quiet.' },
-    { emoji: '❤', name: 'Tender',     query: 'love',  teaser: 'For soft hearts and open hands.' },
-    { emoji: '🕯', name: 'Still',      query: 'silence', teaser: 'For the space between words.' },
-    { emoji: '🏠', name: 'Homeward',  query: 'home',  teaser: 'For letters that never got sent.' },
-    { emoji: '✨', name: 'Wonder',     query: 'light', teaser: 'For skies worth staring at.' },
+    { icon: 'cloud-rain', name: 'Melancholy', query: 'rain',  teaser: 'For grey evenings and rain on glass.' },
+    { icon: 'moon', name: 'Nocturnal',  query: 'night', teaser: 'For when the world goes quiet.' },
+    { icon: 'heart', name: 'Tender',     query: 'love',  teaser: 'For soft hearts and open hands.' },
+    { icon: 'feather', name: 'Still',      query: 'silence', teaser: 'For the space between words.' },
+    { icon: 'home', name: 'Homeward',  query: 'home',  teaser: 'For letters that never got sent.' },
+    { icon: 'sparkle', name: 'Wonder',     query: 'light', teaser: 'For skies worth staring at.' },
 ];
 
 // --- Chunk 5A: the editor's desk note (plus-exclusive resurrection) ---
@@ -301,7 +302,7 @@ const deskNote = {
                         data-reveal
                         style={`--reveal-delay: ${Math.min(i * 0.06, 0.36)}s`}
                     >
-                        <span class="ph-mood-emoji" aria-hidden="true">{m.emoji}</span>
+                        <span class="ph-mood-emoji" aria-hidden="true"><Icon name={m.icon} size={22} /></span>
                         <span class="ph-mood-name">{m.name}</span>
                         <span class="ph-mood-teaser">{m.teaser}</span>
                     </a>

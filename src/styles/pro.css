@@ -19,7 +19,7 @@
     /* Text */
     --pro-text: #f4f6f7;
     --pro-text-2: #a8b4bc;
-    --pro-text-3: #6d7a84;
+    --pro-text-3: #7d8a94; /* >=4.5:1 (de-vibe DR5) */
 
     /* Accents — original values, warm caramel + cool mint + honey */
     --pro-amber: #ff6a00;       /* primary CTA */

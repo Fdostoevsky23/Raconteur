@@ -118,8 +118,8 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
                     </div>
                     <div class="mx-mode-switcher" role="group" aria-label="Reading mode">
                         <button type="button" data-mode="light" title="Light mode" aria-label="Light mode"><Icon name="sun" size={15} /></button>
-                        <button type="button" data-mode="sepia" title="Sepia mode" aria-label="Sepia mode"><Icon name="moon" size={15} /></button>
-                        <button type="button" data-mode="dark" title="Dark mode">🌑</button>
+                        <button type="button" data-mode="sepia" title="Sepia mode" aria-label="Sepia mode"><Icon name="book" size={15} /></button>
+                        <button type="button" data-mode="dark" title="Dark mode" aria-label="Dark mode"><Icon name="moon" size={15} /></button>
                     </div>
                 </div>
             </div>
@@ -241,7 +241,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
 
             <div class="mx-share-row">
                 <span class="mx-share-label">Share this story</span>
-                <button type="button" class="mx-share-btn" id="shareCopy" title="Copy link">🔗 Copy</button>
+                <button type="button" class="mx-share-btn" id="shareCopy" title="Copy link"><Icon name="link" size={14} /> Copy</button>
                 <a class="mx-share-btn" id="shareX" target="_blank" rel="noopener" title="Share on X" href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(Astro.url.href)}&text=${encodeURIComponent(story.title)}`}>𝕏</a>
                 <a class="mx-share-btn" id="shareFb" target="_blank" rel="noopener" title="Share on Facebook" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(Astro.url.href)}`}>f</a>
                 <a class="mx-share-btn" id="shareMail" target="_blank" rel="noopener" title="Share by email" href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(story.title)}&body=${encodeURIComponent('I thought you might enjoy this on Raconteur: ' + Astro.url.href)}`}><Icon name="mail" size={15} /></a>
