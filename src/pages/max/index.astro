@@ -58,7 +58,7 @@ const heroHeadlines = [
     ['A warm shelf for', 'unforgettable literature.'],
     ['Settle in.', 'Stay a while.'],
     ['Every story here was written', 'to be remembered.'],
-    ['Every poem here was written', 'to be loved.'],
+    ['Every poetry here was written', 'to be loved.'],
 ];
 
 // Featured writers of the day (admin spotlight + two rotating writers)
@@ -333,39 +333,6 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
             </div>
         </section>
     )}
-
-    {/* ===== EDITOR'S LETTER — desk note split ===== */}
-    <section class="mx-letter" data-mx-reveal>
-        <hr class="mx-rule-strong" data-mx-reveal="rule" />
-        <div class="mx-letter-inner">
-            <p class="mx-eyebrow">From the editor's desk</p>
-            <p class="mx-letter-body">
-                Raconteur began with a simple conviction: that a story deserves a quiet room.
-                No recommendation engines shouting over the prose, no infinite scroll
-                pulling you away from the last page. Just writing, typeset with care,
-                waiting for the reader it was written for. Arrive weekly or once a
-                season; the shelf keeps.
-            </p>
-            <p class="mx-letter-sign">The Editor · Kohima</p>
-        </div>
-    </section>
-
-    {/* ===== STATS BAND — the colophon ===== */}
-    <section class="mx-stats-band">
-        <div class="mx-stat" data-mx-reveal>
-            <span class="mx-stat-num" data-target={stories.length}>{stories.length}</span>
-            <span class="mx-stat-label">works published</span>
-        </div>
-        <div class="mx-stat" data-mx-reveal style="--mx-reveal-delay: 0.08s">
-            <span class="mx-stat-num" data-target={totalWords}>{totalWords.toLocaleString()}</span>
-            <span class="mx-stat-label">words written</span>
-        </div>
-        <div class="mx-stat" data-mx-reveal style="--mx-reveal-delay: 0.16s">
-            <span class="mx-stat-num">∞</span>
-            <span class="mx-stat-label">stories yet to come</span>
-        </div>
-    </section>
-
 
     {/* ===== FEATURED WRITERS OF THE DAY — magazine profile rows ===== */}
     <section class="mx-featured" data-mx-reveal>
@@ -870,29 +837,28 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     .mx-hero-type { padding-top: 5rem; padding-bottom: 5rem; }
 
     .mx-hero-headline {
-        position: relative;
-        font-size: clamp(2.8rem, 6.4vw, 5.4rem);
+        display: grid;
+        font-size: clamp(2.4rem, 5vw, 4.2rem);
         margin: 1.1rem 0 1.4rem;
-        min-height: 2.3em;
     }
 
+    /* every line lives in the same grid cell — the block sizes to the tallest,
+       so nothing ever overlaps the eyebrow or the lede */
     .mx-hero-line {
-        position: absolute;
-        inset: 0;
+        grid-area: 1 / 1;
         display: flex;
         flex-direction: column;
         justify-content: center;
         opacity: 0;
         transform: translateY(14px);
+        pointer-events: none;
         transition: opacity 0.8s ease, transform 0.8s ease;
     }
 
-    .mx-hero-line.active { opacity: 1; transform: none; }
-
-    .mx-hero-line em { font-style: normal; }
+    .mx-hero-line.active { opacity: 1; transform: none; pointer-events: auto; }
 
     @media (prefers-reduced-motion: reduce) {
-        .mx-hero-line { position: static; opacity: 1; transform: none; transition: none; }
+        .mx-hero-line { opacity: 1; transform: none; transition: none; }
         .mx-hero-line:not(:first-child) { display: none; }
     }
 
@@ -1352,18 +1318,17 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     }
 
     .mx-spine {
-        writing-mode: vertical-rl;
-        width: 52px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 56px;
         height: var(--spine-h, 210px);
         background: #fffdf9;
         border: 1px solid var(--mx-line-strong);
         border-radius: 3px 3px 0 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
         text-decoration: none;
         color: var(--mx-ink);
-        padding: 0.5rem 0 0.7rem;
+        padding: 0 0 0.7rem;
         box-shadow: 0 10px 26px rgba(28, 25, 23, 0.12);
         transition: transform 0.35s var(--mx-ease), box-shadow 0.35s var(--mx-ease);
     }
@@ -1378,29 +1343,40 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         height: 12px;
         flex-shrink: 0;
         background: var(--band, var(--mx-vermilion));
-        margin-bottom: 0.7rem;
+        margin-bottom: 0.6rem;
     }
 
     .mx-spine-title {
+        flex: 1;
+        min-height: 0;
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
         font-family: var(--mx-font-display);
         font-weight: 700;
-        font-size: 0.78rem;
-        letter-spacing: 0.04em;
+        font-size: 0.74rem;
+        letter-spacing: 0.05em;
+        color: var(--mx-ink);
         overflow: hidden;
-        text-overflow: ellipsis;
-        max-height: 100%;
+        white-space: nowrap;
     }
 
     .mx-spine-author {
-        margin-top: auto;
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
         font-family: var(--mx-font-body);
-        font-size: 0.56rem;
+        font-size: 0.54rem;
         letter-spacing: 0.1em;
         text-transform: uppercase;
         color: var(--mx-ink-faint);
+        margin-top: 0.5rem;
+        max-height: 8em;
+        overflow: hidden;
     }
 
-    .mx-spine-base {
+        .mx-spine-base {
         max-width: 940px;
         margin: 0 auto;
         height: 7px;
@@ -1512,10 +1488,35 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     .mx-room-title { font-size: clamp(2rem, 4vw, 3rem); margin: 0.9rem 0 0; }
     .mx-room-split { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 1100px; margin: 0 auto; }
     .mx-room-half {
-        border: 1px solid var(--mx-line); background: #fffdf9;
-        padding: 1.8rem 1.6rem; display: flex; flex-direction: column;
+        position: relative;
+        background:
+            repeating-linear-gradient(to bottom, transparent 0 27px, rgba(28, 25, 23, 0.055) 27px 28px),
+            #fffdf9;
+        padding: 1.8rem 1.6rem 1.8rem 2.2rem;
+        display: flex; flex-direction: column;
+        border-radius: 4px;
     }
-    .mx-room-half-title { font-family: var(--mx-font-display); font-weight: 900; font-size: 1.2rem; color: var(--mx-ink); margin: 0 0 0.3rem; }
+
+    /* the notebook's red margin line */
+    .mx-room-half::before {
+        content: '';
+        position: absolute;
+        top: 0; bottom: 0; left: 1.4rem;
+        width: 1px;
+        background: rgba(216, 52, 28, 0.25);
+    }
+    .mx-room-half-title {
+        font-family: var(--mx-font-display);
+        font-style: italic;
+        font-weight: 900;
+        font-size: 1.3rem;
+        color: var(--mx-ink);
+        margin: 0 0 0.3rem;
+        padding-bottom: 0.35rem;
+        display: inline-block;
+        border-bottom: 2px solid var(--mx-vermilion);
+        width: fit-content;
+    }
     .mx-room-half-sub { font-family: var(--mx-font-read); font-style: italic; font-size: 0.84rem; color: var(--mx-ink-faint); margin: 0 0 1.4rem; }
     .mx-notes-list { flex: 1; display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.4rem; max-height: 420px; overflow-y: auto; }
     :global(.mx-notes-empty) { font-family: var(--mx-font-read); font-style: italic; color: var(--mx-ink-faint); font-size: 0.88rem; }
@@ -1555,6 +1556,24 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     :global(.mx-note-reply:hover), :global(.mx-note-report:hover) { color: var(--mx-vermilion); }
     :global(.mx-note-replies) { margin-top: 0.6rem; }
     .mx-note-form { display: flex; flex-direction: column; gap: 0.6rem; }
+
+    /* handwriting on the ruled page: no boxes, just the line */
+    .mx-note-form .mx-field {
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid var(--mx-line-strong);
+        border-radius: 0;
+        padding: 0.45rem 0.1rem;
+        font-family: var(--mx-font-read);
+        font-style: italic;
+    }
+
+    .mx-note-form .mx-field:focus {
+        border-bottom-color: var(--mx-vermilion);
+        box-shadow: none;
+    }
+
+    .mx-note-form textarea.mx-field { resize: vertical; line-height: 28px; }
     .mx-note-hint { font-size: 0.74rem; color: var(--mx-ink-faint); min-height: 1rem; }
     .mx-note-submit { align-self: flex-start; }
 
