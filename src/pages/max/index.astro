@@ -1244,16 +1244,6 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         .mx-profile-row.lead .mx-profile-bio { columns: 1; }
     }
 
-    /* === ALTAR REMOVED — replaced by spines + canon === */
-    /* === ALTAR: BOOKSHELF + GIANTS === */
-    .mx-altar {
-        display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem;
-        padding: 4rem clamp(1.4rem, 5vw, 5rem);
-        border-top: 1px solid var(--mx-line);
-        background: var(--mx-paper-deep);
-    }
-    .mx-altar-title { font-size: clamp(1.8rem, 3.4vw, 2.6rem); margin: 0.9rem 0 1.8rem; }
-    .mx-altar-shelf { display: flex; gap: 1.4rem; flex-wrap: wrap; }
     .mx-altar-book {
         display: flex; flex-direction: column; gap: 0.45rem; width: 132px;
         text-decoration: none; color: var(--mx-ink);
@@ -1583,8 +1573,6 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     .mx-report-msg { font-size: 0.85rem; margin: 0.8rem 0 0; min-height: 1.1rem; }
 
     @media (max-width: 860px) {
-        .mx-altar { grid-template-columns: 1fr; }
-        .mx-altar-giants { border-left: none; padding-left: 0; }
         .mx-room-split { grid-template-columns: 1fr; }
     }
 </style>
