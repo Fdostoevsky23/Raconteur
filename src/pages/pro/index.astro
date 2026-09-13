@@ -605,6 +605,7 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
     }
 
     // ===== The Reading Room — whispers + notes (faithful clone of classic) =====
+    const DAY_MS = 86400000;
     import { supabase } from '../../lib/supabase';
     import { dvToast } from '../../lib/dialog';
     import { iconSvg } from '../../lib/icons';
