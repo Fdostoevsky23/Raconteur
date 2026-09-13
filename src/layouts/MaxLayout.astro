@@ -343,7 +343,7 @@ import { iconSvg } from '../lib/icons';
                 if (n.type === 'message') return `${actorLabel(n)} messaged you: “${(n.body_preview || '').slice(0, 60)}”`;
                 return `${actorLabel(n)} commented: “${(n.body_preview || '').slice(0, 60)}”`;
             };
-            const href = (n: any) => n.type === 'message' ? '/messages' : (n.story_id ? `/max/story/${n.story_id}` : '#');
+            const href = (n: any) => n.type === 'message' ? '/max/messages' : (n.story_id ? `/max/story/${n.story_id}` : '#');
 
             async function load() {
                 const { data: all } = await supabase

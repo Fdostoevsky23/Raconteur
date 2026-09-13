@@ -1,0 +1,331 @@
+---
+// src/pages/max/messages.astro — quiet private messaging (bright glassmorphism).
+// Client logic is a faithful copy of classic /messages (feature parity):
+// conversation grouping, unread dots, ?with= seeding, polling, notifications.
+import MaxLayout from '../../layouts/MaxLayout.astro';
+---
+
+<MaxLayout title="Messages · Raconteur Max" description="Quiet private messaging between writers.">
+    <div class="mx-page mx-msg-page">
+        <header class="mx-page-head" data-mx-reveal>
+            <p class="mx-eyebrow">Letters between writers</p>
+            <h1 class="mx-display mx-page-title">Messages</h1>
+        </header>
+
+        <div id="authGate" class="mx-empty">Checking login status...</div>
+
+        <div id="messagesApp" hidden>
+            <div class="mx-msg-layout">
+                <aside class="mx-glass mx-conv-list" id="convList" data-mx-reveal>
+                    <p class="mx-conv-empty">No conversations yet. Visit a writer's page and hit the Message button to start one.</p>
+                </aside>
+
+                <section class="mx-glass mx-thread" id="threadPane" data-mx-reveal style="--mx-reveal-delay: 0.08s">
+                    <div class="mx-thread-empty" id="threadEmpty">
+                        <p>Select a conversation to begin.</p>
+                    </div>
+                    <div id="threadActive" hidden>
+                        <div class="mx-thread-head">
+                            <span id="threadName" class="mx-thread-name"></span>
+                        </div>
+                        <div class="mx-thread-body" id="threadBody"></div>
+                        <form id="msgForm" class="mx-msg-form">
+                            <textarea id="msgInput" class="mx-msg-input" rows="2" maxlength="2000"
+                                placeholder="Write a message..."></textarea>
+                            <button type="submit" class="mx-msg-send">Send</button>
+                        </form>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</MaxLayout>
+
+<script>
+    // Messaging engine — faithful clone of classic /messages (login path until Phase 6).
+    import { supabase } from '../../lib/supabase';
+    import { dvToast } from '../../lib/dialog';
+
+    const authGate = document.getElementById('authGate')!;
+    const app = document.getElementById('messagesApp')!;
+    const convList = document.getElementById('convList')!;
+    const threadEmpty = document.getElementById('threadEmpty')!;
+    const threadActive = document.getElementById('threadActive')!;
+    const threadName = document.getElementById('threadName')!;
+    const threadBody = document.getElementById('threadBody')!;
+    const msgForm = document.getElementById('msgForm') as HTMLFormElement;
+    const msgInput = document.getElementById('msgInput') as HTMLTextAreaElement;
+
+    let me: any = null;
+    let activeWith: string | null = null;
+    let nameMap: Record<string, string> = {};
+
+    function esc(s: string) {
+        return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]!));
+    }
+    function timeAgo(iso: string) {
+        const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+        if (m < 1) return 'now'; if (m < 60) return m + 'm'; const h = Math.floor(m / 60);
+        if (h < 24) return h + 'h'; return Math.floor(h / 24) + 'd';
+    }
+
+    async function resolveNames(ids: string[]) {
+        const missing = ids.filter(id => !nameMap[id]);
+        if (missing.length) {
+            const { data } = await supabase.from('profiles').select('user_id, pen_name').in('user_id', missing);
+            (data || []).forEach((p: any) => { nameMap[p.user_id] = p.pen_name; });
+        }
+    }
+    const nameOf = (id: string) => nameMap[id] || 'Writer';
+
+    async function loadConversations() {
+        const { data: rows } = await supabase
+            .from('messages')
+            .select('id, sender_id, recipient_id, body, created_at, read')
+            .or(`sender_id.eq.${me.id},recipient_id.eq.${me.id}`)
+            .order('created_at', { ascending: false })
+            .limit(200);
+        const all = rows || [];
+
+        // Group by counterpart
+        const convs: Record<string, { last: any; unread: number }> = {};
+        all.forEach(m => {
+            const other = m.sender_id === me.id ? m.recipient_id : m.sender_id;
+            if (!convs[other]) convs[other] = { last: m, unread: 0 };
+            if (m.recipient_id === me.id && !m.read) convs[other].unread++;
+        });
+
+        const ids = Object.keys(convs);
+        await resolveNames(ids);
+
+        // If URL has ?with= and no conversation exists yet, seed it
+        const params = new URLSearchParams(window.location.search);
+        const withId = params.get('with');
+        if (withId && withId !== me.id && !convs[withId]) {
+            convs[withId] = { last: { created_at: new Date().toISOString(), body: '' }, unread: 0 };
+            ids.push(withId);
+            await resolveNames([withId]);
+        }
+
+        if (ids.length === 0) {
+            convList.innerHTML = '<p class="mx-conv-empty">No conversations yet. Visit a writer\'s page and hit the Message button to start one.</p>';
+        } else {
+            const sorted = ids.sort((a, b) =>
+                new Date(convs[b].last.created_at).getTime() - new Date(convs[a].last.created_at).getTime());
+            convList.innerHTML = sorted.map(id => {
+                const c = convs[id];
+                const preview = c.last.body ? esc(c.last.body.slice(0, 50)) : '<i>No messages yet</i>';
+                const dot = c.unread > 0 ? `<span class="mx-conv-dot">${c.unread}</span>` : '';
+                return `<button class="mx-conv-item ${id === activeWith ? 'active' : ''}" data-id="${id}">
+                    <span class="mx-conv-name">${esc(nameOf(id))}</span>
+                    <span class="mx-conv-preview">${preview}</span>
+                    ${dot}
+                </button>`;
+            }).join('');
+            convList.querySelectorAll('.mx-conv-item').forEach(el => el.addEventListener('click', async () => {
+                openThread((el as HTMLElement).dataset.id!);
+            }));
+        }
+
+        // Auto-open the ?with= thread
+        if (withId && withId !== me.id && !activeWith) openThread(withId);
+    }
+
+    async function openThread(userId: string) {
+        activeWith = userId;
+        threadEmpty.hidden = true;
+        threadActive.hidden = false;
+        threadName.textContent = nameOf(userId);
+        convList.querySelectorAll('.mx-conv-item').forEach(el =>
+            el.classList.toggle('active', (el as HTMLElement).dataset.id === userId));
+        await loadThread();
+        // Mark incoming as read
+        await supabase.from('messages').update({ read: true })
+            .eq('sender_id', userId).eq('recipient_id', me.id).eq('read', false);
+        msgInput.focus();
+    }
+
+    async function loadThread() {
+        if (!activeWith) return;
+        const { data: rows } = await supabase
+            .from('messages')
+            .select('id, sender_id, body, created_at')
+            .or(`and(sender_id.eq.${me.id},recipient_id.eq.${activeWith}),and(sender_id.eq.${activeWith},recipient_id.eq.${me.id})`)
+            .order('created_at', { ascending: true });
+        const all = rows || [];
+        threadBody.innerHTML = all.length === 0
+            ? '<p class="mx-thread-start">Say hello. This conversation is private. Only the two of you can see it.</p>'
+            : all.map(m => `
+                <div class="mx-bubble ${m.sender_id === me.id ? 'mine' : 'theirs'}">
+                    <p>${esc(m.body)}</p>
+                    <span class="mx-bubble-time">${timeAgo(m.created_at)}</span>
+                </div>`).join('');
+        threadBody.scrollTop = threadBody.scrollHeight;
+    }
+
+    msgForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const body = msgInput.value.trim();
+        if (!body || !activeWith) return;
+        const { error: sendErr } = await supabase.from('messages').insert({
+            sender_id: me.id, recipient_id: activeWith, body,
+        });
+        if (sendErr) { dvToast('Could not send: ' + sendErr.message, 'err'); return; }
+        await supabase.from('notifications').insert({
+            user_id: activeWith, actor_id: me.id, type: 'message', body_preview: body.slice(0, 60),
+        });
+        msgInput.value = '';
+        await loadThread();
+        await loadConversations();
+    });
+
+    async function init() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { window.location.href = '/login'; return; }
+        me = session.user;
+        authGate.hidden = true;
+        app.hidden = false;
+        await loadConversations();
+        setInterval(async () => {
+            await loadConversations();
+            if (activeWith) await loadThread();
+        }, 8000);
+    }
+
+    init();
+</script>
+
+<style>
+    .mx-msg-page { max-width: 1100px; }
+
+    .mx-msg-layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1.4rem;
+        min-height: 520px;
+        align-items: stretch;
+    }
+
+    /* Conversation list */
+    .mx-conv-list {
+        padding: 1rem 0.8rem;
+        max-height: 70vh;
+        overflow-y: auto;
+        align-self: start;
+    }
+
+    .mx-conv-empty {
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        color: var(--mx-ink-faint);
+        font-size: 0.9rem;
+        padding: 0.6rem;
+    }
+
+    .mx-conv-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid var(--mx-line);
+        padding: 0.8rem 0.6rem;
+        cursor: pointer;
+        position: relative;
+        color: inherit;
+        font-family: inherit;
+        border-radius: 10px;
+        transition: background 0.2s;
+    }
+
+    .mx-conv-item:hover { background: rgba(255, 255, 255, 0.45); }
+    .mx-conv-item.active { background: rgba(216, 52, 28, 0.07); }
+
+    .mx-conv-name { font-family: var(--mx-font-display); font-weight: 600; color: var(--mx-ink); font-size: 0.95rem; }
+    .mx-conv-preview { font-size: 0.8rem; color: var(--mx-ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+
+    .mx-conv-dot {
+        position: absolute;
+        top: 0.7rem;
+        right: 0.5rem;
+        background: var(--mx-vermilion);
+        color: var(--mx-paper);
+        font-size: 0.68rem;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: 0.1rem 0.45rem;
+    }
+
+    /* Thread */
+    .mx-thread { display: flex; flex-direction: column; overflow: hidden; }
+    .mx-thread-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--mx-ink-faint); font-family: var(--mx-font-read); font-style: italic; }
+    #threadActive { flex: 1; display: flex; flex-direction: column; min-height: 520px; }
+
+    .mx-thread-head { padding: 1rem 1.3rem; border-bottom: 1px solid var(--mx-line); }
+    .mx-thread-name { font-family: var(--mx-font-display); font-weight: 900; font-size: 1.15rem; color: var(--mx-ink); }
+
+    .mx-thread-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+        max-height: 55vh;
+    }
+
+    .mx-thread-start {
+        text-align: center;
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        color: var(--mx-ink-faint);
+        margin: auto;
+        max-width: 320px;
+    }
+
+    .mx-bubble { max-width: 75%; padding: 0.7rem 1rem; border-radius: 14px; font-size: 0.93rem; line-height: 1.5; }
+    .mx-bubble p { margin: 0 0 0.3rem; white-space: pre-wrap; word-break: break-word; }
+    .mx-bubble-time { font-size: 0.68rem; opacity: 0.6; }
+    .mx-bubble.mine { align-self: flex-end; background: var(--mx-ink); color: var(--mx-paper); border-bottom-right-radius: 4px; }
+    .mx-bubble.theirs { align-self: flex-start; background: rgba(255, 255, 255, 0.6); color: var(--mx-ink); border: 1px solid var(--mx-glass-line); border-bottom-left-radius: 4px; }
+
+    .mx-msg-form { display: flex; gap: 0.6rem; padding: 1rem 1.2rem; border-top: 1px solid var(--mx-line); }
+
+    .mx-msg-input {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.55);
+        border: 1px solid var(--mx-glass-line);
+        border-radius: 12px;
+        padding: 0.7rem 0.9rem;
+        color: var(--mx-ink);
+        font-family: var(--mx-font-body);
+        font-size: 0.93rem;
+        resize: vertical;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .mx-msg-input:focus { border-color: var(--mx-vermilion); }
+
+    .mx-msg-send {
+        background: var(--mx-vermilion);
+        color: var(--mx-paper);
+        border: none;
+        border-radius: 999px;
+        padding: 0 1.5rem;
+        font-family: var(--mx-font-body);
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.88rem;
+        transition: background 0.2s, transform 0.2s;
+    }
+
+    .mx-msg-send:hover { background: var(--mx-vermilion-deep); transform: translateY(-1px); }
+
+    @media (max-width: 700px) {
+        .mx-msg-layout { grid-template-columns: 1fr; }
+        .mx-conv-list { max-height: 40vh; }
+    }
+</style>
