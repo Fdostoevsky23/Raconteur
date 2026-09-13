@@ -1,0 +1,91 @@
+---
+// src/pages/max/collection/[slug].astro — one curated collection (bright glassmorphism).
+// Server logic is a faithful copy of classic /collection/[slug] (feature parity):
+// ordered story ids from collection_stories, published-only, sort_order preserved.
+import MaxLayout from '../../../layouts/MaxLayout.astro';
+import { supabase } from '../../../lib/supabase';
+import { buildStoryFromDB } from '../../../lib/storyLoader';
+
+const { slug } = Astro.params;
+const { data: collection } = await supabase
+    .from('collections')
+    .select('*, collection_stories(story_id, sort_order)')
+    .eq('slug', slug)
+    .single();
+
+if (!collection) {
+    return Astro.redirect('/max/collections');
+}
+
+const storyIds = (collection.collection_stories || [])
+    .sort((a: any, b: any) => a.sort_order - b.sort_order)
+    .map((cs: any) => cs.story_id);
+
+const { data: storyRows } = storyIds.length > 0
+    ? await supabase.from('stories').select('*').in('id', storyIds).eq('status', 'published')
+    : { data: [] };
+
+const storiesMap = new Map((storyRows || []).map((r: any) => [r.id, buildStoryFromDB(r)]));
+const stories = storyIds.map((id: string) => storiesMap.get(id)).filter(Boolean);
+---
+
+<MaxLayout title={`${collection.title} — Raconteur Max`} description={collection.curator_note || 'A curated collection on Raconteur.'}>
+    <div class="mx-page">
+        <header class="mx-page-head" data-mx-reveal>
+            <p class="mx-eyebrow">Curated shelf</p>
+            <h1 class="mx-display mx-page-title">{collection.title}</h1>
+            {collection.curator_note && <p class="mx-page-sub mx-coll-note">{collection.curator_note}</p>}
+            <p class="mx-coll-signature">✦ Curated by Admin</p>
+        </header>
+
+        <div class="mx-grid">
+            {stories.map((story: any, i: number) => (
+                <a
+                    href={`/max/story/${story.slug}`}
+                    class="mx-glass mx-card"
+                    data-mx-reveal
+                    style={`--mx-reveal-delay: ${Math.min(i * 0.06, 0.4)}s`}
+                >
+                    <div class="mx-card-cover">
+                        {story.cover ? (
+                            <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />
+                        ) : (
+                            <span class="mx-card-star" aria-hidden="true">✦</span>
+                        )}
+                    </div>
+                    <div class="mx-card-body">
+                        <span class="mx-card-genre">{story.genre}</span>
+                        <h3 class="mx-card-title">{story.title}</h3>
+                        <p class="mx-card-excerpt">{story.excerpt}</p>
+                        <div class="mx-card-meta">
+                            <span>By {story.author}</span>
+                            <span>{story.wordCount.toLocaleString()} words · {story.readTime}</span>
+                        </div>
+                    </div>
+                </a>
+            ))}
+            {stories.length === 0 && (
+                <p class="mx-empty">This collection is being arranged — check back soon.</p>
+            )}
+        </div>
+
+        <div class="mx-back">
+            <a href="/max/collections" class="mx-ulink">← All collections</a>
+        </div>
+    </div>
+</MaxLayout>
+
+<style>
+    .mx-coll-note { max-width: 620px; margin: 0 auto 1.2rem; }
+
+    .mx-coll-signature {
+        font-size: 0.74rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--mx-brass);
+        margin-top: 0.4rem;
+    }
+
+    .mx-empty { grid-column: 1 / -1; }
+</style>

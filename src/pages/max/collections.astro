@@ -1,0 +1,77 @@
+---
+// src/pages/max/collections.astro — curated collections index (bright glassmorphism).
+// Server logic is a faithful copy of classic /collections (feature parity).
+import MaxLayout from '../../layouts/MaxLayout.astro';
+import { supabase } from '../../lib/supabase';
+
+const { data: collections } = await supabase
+    .from('collections')
+    .select('*, collection_stories(count)')
+    .order('created_at', { ascending: false });
+---
+
+<MaxLayout title="Collections — Raconteur Max" description="Curated reading bundles, hand-picked by the editor.">
+    <div class="mx-page">
+        <header class="mx-page-head" data-mx-reveal>
+            <p class="mx-eyebrow">Curated shelves</p>
+            <h1 class="mx-display mx-page-title">Collections</h1>
+            <p class="mx-page-sub">Themed bundles of stories, placed side by side because they speak to each other.</p>
+        </header>
+
+        <div class="mx-grid mx-coll-grid">
+            {(collections || []).map((c: any, i: number) => (
+                <a href={`/max/collection/${c.slug}`} class="mx-glass mx-coll-card" data-mx-reveal style={`--mx-reveal-delay: ${Math.min(i * 0.06, 0.4)}s`}>
+                    <h2 class="mx-coll-title">{c.title}</h2>
+                    {c.curator_note && <p class="mx-coll-note">{c.curator_note}</p>}
+                    <p class="mx-coll-count">✦ {c.collection_stories?.[0]?.count || 0} stories</p>
+                </a>
+            ))}
+            {(!collections || collections.length === 0) && (
+                <p class="mx-empty">No collections yet — the curator is still arranging the shelves.</p>
+            )}
+        </div>
+
+        <div class="mx-back">
+            <a href="/max" class="mx-ulink">← Back to the Max edition</a>
+        </div>
+    </div>
+</MaxLayout>
+
+<style>
+    .mx-coll-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+
+    .mx-coll-card {
+        padding: 2.4rem 2rem;
+        display: block;
+        text-decoration: none;
+    }
+
+    .mx-coll-card:hover { transform: translateY(-6px) rotate(-0.2deg); }
+
+    .mx-coll-title {
+        font-family: var(--mx-font-display);
+        font-size: 1.55rem;
+        font-weight: 900;
+        color: var(--mx-ink);
+        margin: 0 0 0.8rem;
+    }
+
+    .mx-coll-note {
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        font-size: 0.94rem;
+        line-height: 1.65;
+        color: var(--mx-ink-soft);
+        margin: 0 0 1.2rem;
+    }
+
+    .mx-coll-count {
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: var(--mx-vermilion);
+        margin: 0;
+    }
+
+    .mx-empty { grid-column: 1 / -1; }
+</style>

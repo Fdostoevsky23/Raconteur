@@ -321,7 +321,7 @@ if (isDbAuthor && author.userId) {
                 <h2 class="mx-section-head">Poetry Collections by {author.name}</h2>
                 <div class="mx-grid">
                     {authorCollections.map((c: any, i: number) => (
-                        <a href={`/poetry/${c.id}`} class="mx-glass mx-card" data-mx-reveal style={`--mx-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}>
+                        <a href={`/max/poetry/${c.id}`} class="mx-glass mx-card" data-mx-reveal style={`--mx-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}>
                             {c.cover_url ? (
                                 <div class="mx-card-cover"><img src={c.cover_url} alt={`Cover of ${c.name}`} loading="lazy" /></div>
                             ) : (

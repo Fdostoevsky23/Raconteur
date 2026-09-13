@@ -1,0 +1,245 @@
+---
+// src/pages/max/poetry/[id].astro — a poetry collection's own page (bright glassmorphism).
+// Server logic is a faithful copy of classic /poetry/[id] (feature parity):
+// collection header, poem tiles, owner-only edit/export/delete buttons.
+import MaxLayout from '../../../layouts/MaxLayout.astro';
+import { supabase } from '../../../lib/supabase';
+
+const id = Astro.params.id ?? '';
+
+const { data: collection } = await supabase
+    .from('poetry_collections')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+if (!collection) return Astro.redirect('/max');
+
+const { data: poems } = await supabase
+    .from('stories')
+    .select('*')
+    .eq('collection_id', id)
+    .eq('status', 'published')
+    .order('created_at', { ascending: true });
+
+const { data: owner } = await supabase
+    .from('profiles')
+    .select('pen_name')
+    .eq('user_id', collection.owner_id)
+    .maybeSingle();
+
+const authorName = owner?.pen_name || 'A Raconteur writer';
+const authorSlug = String(authorName).toLowerCase().replace(/\s+/g, '-');
+const poemCount = (poems || []).length;
+---
+
+<MaxLayout title={`${collection.name} — ${authorName} · Raconteur Max`} description={collection.description || `A poetry collection by ${authorName}.`}>
+    <div class="mx-page">
+        <div id="coll-owner" data-owner={collection.owner_id} hidden></div>
+
+        <header class="mx-page-head" data-mx-reveal>
+            {collection.cover_url && <img src={collection.cover_url} alt={`Cover of ${collection.name}`} class="mx-coll-cover" />}
+            <p class="mx-eyebrow">A Poetry Collection</p>
+            <h1 class="mx-display mx-page-title">{collection.name}</h1>
+            {collection.description && (
+                <div class="mx-coll-desc">
+                    {String(collection.description).split(/\n+/).filter((s: string) => s.trim()).map((para: string) => <p>{para}</p>)}
+                </div>
+            )}
+            <p class="mx-page-sub">{poemCount} {poemCount === 1 ? 'poem' : 'poems'}</p>
+        </header>
+
+        <div class="mx-grid mx-poem-grid">
+            {(poems || []).map((p: any, i: number) => (
+                <div class="mx-glass mx-poem-tile" style={`--mx-reveal-delay: ${Math.min(i * 0.06, 0.4)}s`} data-id={p.id} data-title={p.title} data-content={p.content || ''}>
+                    <a href={`/max/story/${p.id}`} class="mx-poem-link" data-mx-reveal>
+                        {p.cover_url ? (
+                            <img src={p.cover_url} alt={`Cover of ${p.title}`} class="mx-poem-cover" loading="lazy" />
+                        ) : (
+                            <div class="mx-card-quote"><p class="mx-poem-preview">{(p.content || '').replace(/<[^>]+>/g, ' ').trim().slice(0, 60)}</p></div>
+                        )}
+                        <div class="mx-poem-body">
+                            <h3 class="mx-poem-title">{p.title}</h3>
+                        </div>
+                    </a>
+                </div>
+            ))}
+            {poemCount === 0 && (
+                <p class="mx-empty">No poems in this collection yet.</p>
+            )}
+        </div>
+
+        <div class="mx-back">
+            <a href={`/max/author/${authorSlug}`} class="mx-ulink">← {authorName}</a>
+        </div>
+    </div>
+</MaxLayout>
+
+<script>
+    // Owner-only poem management — faithful clone of classic (edit/export/delete).
+    import { supabase } from '../../../lib/supabase';
+
+    (async () => {
+        const ownerId = document.getElementById('coll-owner')?.getAttribute('data-owner') || '';
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || session.user.id !== ownerId) return;
+
+        document.querySelectorAll('.mx-poem-tile').forEach(tile => {
+            const el = tile as HTMLElement;
+            const id = el.dataset.id!;
+            const title = el.dataset.title || 'untitled';
+            const content = el.dataset.content || '';
+
+            const edit = document.createElement('a');
+            edit.className = 'mx-poem-btn mx-poem-edit';
+            edit.href = `/submit?edit=${id}`;
+            edit.title = 'Edit';
+            edit.textContent = '✎';
+
+            const exp = document.createElement('button');
+            exp.className = 'mx-poem-btn mx-poem-export';
+            exp.title = 'Download as .md';
+            exp.textContent = '⬇';
+            exp.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const text = content
+                    .replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/<\/p>/gi, '\n\n')
+                    .replace(/<[^>]+>/g, '')
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#39;/g, "'")
+                    .replace(/\n{3,}/g, '\n\n')
+                    .trim();
+                const md = `# ${title}\n\n${text}\n\n---\nExported from Raconteur · raconteur.stories\n`;
+                const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.md`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            const del = document.createElement('button');
+            del.className = 'mx-poem-btn mx-poem-delete';
+            del.title = 'Delete';
+            del.textContent = '🗑️';
+            del.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!confirm('Permanently delete this poem? This cannot be undone.')) return;
+                const { error } = await supabase.from('stories').delete().eq('id', id);
+                if (error) alert('Error: ' + error.message);
+                else window.location.reload();
+            });
+
+            el.appendChild(edit);
+            el.appendChild(exp);
+            el.appendChild(del);
+        });
+    })();
+</script>
+
+<style>
+    /* Cover + description */
+    .mx-coll-cover {
+        width: 170px;
+        height: 250px;
+        object-fit: cover;
+        border-radius: 12px;
+        box-shadow: 0 16px 44px rgba(84, 62, 40, 0.25), 0 0 0 4px rgba(255, 255, 255, 0.5);
+        margin-bottom: 1.4rem;
+    }
+
+    .mx-coll-desc { max-width: 720px; margin: 0 auto 1.2rem; }
+
+    .mx-coll-desc p {
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        color: var(--mx-ink-soft);
+        line-height: 1.8;
+        margin-bottom: 1rem;
+    }
+
+    /* Poem tiles — glass, cover or first-line preview */
+    .mx-poem-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+
+    .mx-poem-tile { position: relative; }
+    .mx-poem-tile:hover { transform: translateY(-6px) rotate(-0.3deg); }
+
+    .mx-poem-link { display: block; text-decoration: none; color: inherit; }
+
+    .mx-poem-cover {
+        width: 100%;
+        height: 210px;
+        object-fit: cover;
+        object-position: top;
+        display: block;
+        transition: transform 0.6s var(--mx-ease);
+    }
+
+    .mx-poem-tile:hover .mx-poem-cover { transform: scale(1.06); }
+
+    .mx-poem-preview {
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        font-size: 0.88rem;
+        color: var(--mx-ink-soft);
+        text-align: center;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    .mx-poem-body { padding: 1rem 1.1rem 1.1rem; }
+
+    .mx-poem-title {
+        font-family: var(--mx-font-display);
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--mx-ink);
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+    /* Owner buttons — glass mini-pills, top-right */
+    .mx-poem-btn {
+        position: absolute;
+        top: 0.8rem;
+        z-index: 10;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2rem;
+        height: 2rem;
+        padding: 0 0.4rem;
+        background: rgba(255, 255, 255, 0.65);
+        border: 1px solid var(--mx-glass-line);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        text-decoration: none;
+        color: var(--mx-ink-soft);
+        cursor: pointer;
+        opacity: 0.85;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        transition: opacity 0.2s, transform 0.2s, color 0.2s;
+    }
+
+    .mx-poem-btn:hover { opacity: 1; transform: scale(1.1); color: var(--mx-vermilion); }
+    .mx-poem-edit { right: 3.4rem; }
+    .mx-poem-export { right: 5.8rem; }
+    .mx-poem-delete { right: 1rem; }
+
+    .mx-empty { grid-column: 1 / -1; }
+
+    @media (max-width: 640px) {
+        .mx-poem-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+    }
+</style>
