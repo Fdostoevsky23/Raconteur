@@ -46,7 +46,7 @@ const trending = (Object.entries(weekCounts)
     .filter(Boolean) as { title: string; slug: string; n: number }[]).slice(0, 3);
 ---
 
-<MaxLayout title="The Library — Raconteur Max" description="Browse the full Raconteur shelf — flash fiction, novellas, poetry, and everything between.">
+<MaxLayout title="The Library · Raconteur Max" description="Browse the full Raconteur shelf: flash fiction, novellas, poetry, and everything between.">
     <div class="mx-archive">
         {/* ===== Header ===== */}
         <header class="mx-archive-head" data-mx-reveal>
@@ -188,7 +188,7 @@ const trending = (Object.entries(weekCounts)
 
         {/* ===== Empty state ===== */}
         <p class="mx-empty" id="emptyState" hidden>
-            No stories match that search — try another word or feeling.
+            No stories match that search. Try another word or feeling.
         </p>
 
         <div class="mx-back">

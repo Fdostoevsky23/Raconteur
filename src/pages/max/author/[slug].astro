@@ -129,7 +129,7 @@ if (isDbAuthor && author.userId) {
 }
 ---
 
-<MaxLayout title={`${author.name} — Raconteur Max`} description={author.bio}>
+<MaxLayout title={`${author.name} · Raconteur Max`} description={author.bio}>
     <div class="mx-page mx-author">
         {/* ===== Hero — one big glass plate ===== */}
         <header class="mx-glass mx-author-hero" data-mx-reveal>
@@ -312,7 +312,7 @@ if (isDbAuthor && author.userId) {
                     ))}
                 </div>
             ) : (
-                <p class="mx-empty">No stories published yet — check back soon.</p>
+                <p class="mx-empty">No stories published yet. Check back soon.</p>
             )}
         </section>
 
@@ -517,7 +517,7 @@ if (isDbAuthor && author.userId) {
         const ids = (data || []).map((r: any) => kind === 'followers' ? r.follower_id : r.followed_id);
         fmTitle.textContent = kind === 'followers' ? 'Followers' : 'Following';
         if (!ids.length) {
-            fmList.innerHTML = '<p class="mx-follow-empty">Nobody yet — quiet shelves fill slowly.</p>';
+            fmList.innerHTML = '<p class="mx-follow-empty">Nobody yet. Quiet shelves fill slowly.</p>';
         } else {
             const { data: profs } = await supabase.from('profiles').select('user_id, pen_name, avatar_url').in('user_id', ids);
             fmList.innerHTML = ids.map((id: string) => {

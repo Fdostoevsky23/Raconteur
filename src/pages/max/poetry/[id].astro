@@ -33,7 +33,7 @@ const authorSlug = String(authorName).toLowerCase().replace(/\s+/g, '-');
 const poemCount = (poems || []).length;
 ---
 
-<MaxLayout title={`${collection.name} — ${authorName} · Raconteur Max`} description={collection.description || `A poetry collection by ${authorName}.`}>
+<MaxLayout title={`${collection.name} · ${authorName} · Raconteur Max`} description={collection.description || `A poetry collection by ${authorName}.`}>
     <div class="mx-page">
         <div id="coll-owner" data-owner={collection.owner_id} hidden></div>
 
@@ -144,7 +144,7 @@ const poemCount = (poems || []).length;
                 });
                 if (!ok) return;
                 const { error } = await supabase.from('stories').delete().eq('id', id);
-                if (error) dvToast('Something went wrong — please try again.', 'err');
+                if (error) dvToast('Something went wrong. Please try again.', 'err');
                 else { dvToast('Poem deleted.'); setTimeout(() => window.location.reload(), 700); }
             });
 

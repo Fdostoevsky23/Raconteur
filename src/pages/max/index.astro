@@ -62,7 +62,7 @@ const moods = [
 ];
 ---
 
-<MaxLayout title="Raconteur Max — The Editorial Split" description="Literature you want to read — the Raconteur Max edition.">
+<MaxLayout title="Raconteur Max · The Editorial Split" description="Literature you want to read. The Raconteur Max edition.">
     {/* ===== SPLIT HERO — type left, daily plate right ===== */}
     <section class="mx-split mx-hero" data-wipe>
         <div class="mx-split-side mx-hero-type">
@@ -72,7 +72,7 @@ const moods = [
             </h1>
             <p class="mx-hero-lede">
                 A quiet literary home on the internet. Drop caps, pull quotes, and room
-                to breathe — publishing for people who still believe in the sentence.
+                to breathe: publishing for people who still believe in the sentence.
             </p>
             <div class="mx-hero-actions">
                 <a href="/max/stories" class="mx-btn mx-btn-ink">Enter the library</a>
@@ -85,7 +85,7 @@ const moods = [
         <div class="mx-split-side mx-hero-plate">
             <div class="mx-plate" data-mx-parallax="14">
                 <img src={`/hero/${heroIndex}.jpg`} alt="Today's editorial plate" />
-                <span class="mx-plate-caption">Plate of the day — {editionNo}</span>
+                <span class="mx-plate-caption">Plate of the day · {editionNo}</span>
             </div>
         </div>
     </section>
@@ -102,7 +102,7 @@ const moods = [
     {/* ===== SPLIT SHELF — hover a title, the plate changes (split-screen browser) ===== */}
     <section class="mx-split mx-shelf" data-wipe>
         <div class="mx-split-side mx-shelf-list">
-            <p class="mx-eyebrow">01 — The Shelf</p>
+            <p class="mx-eyebrow">01 · The Shelf</p>
             <h2 class="mx-display mx-shelf-title">Fresh from the desk</h2>
             <ul class="mx-shelf-items">
                 {shelf.map((s: any, i: number) => (
@@ -147,12 +147,12 @@ const moods = [
     {verse.length > 0 && (
         <section class="mx-split mx-verse" data-wipe>
             <div class="mx-split-side mx-verse-paper">
-                <p class="mx-eyebrow">02 — Verse</p>
+                <p class="mx-eyebrow">02 · Verse</p>
                 <h2 class="mx-display mx-verse-title">The poem<br />of the week</h2>
                 <blockquote class="mx-verse-quote">
                     “{verse[0].excerpt}”
                 </blockquote>
-                <p class="mx-verse-cite">— from <a href={`/story/${verse[0].slug}`} class="mx-ulink">{verse[0].title}</a> by {verse[0].author}</p>
+                <p class="mx-verse-cite">from <a href={`/story/${verse[0].slug}`} class="mx-ulink">{verse[0].title}</a> by {verse[0].author}</p>
             </div>
             <div class="mx-split-side mx-verse-list">
                 {verse.slice(0, 3).map((v: any) => (
@@ -172,15 +172,15 @@ const moods = [
     <section class="mx-letter" data-mx-reveal>
         <hr class="mx-rule-strong" data-mx-reveal="rule" />
         <div class="mx-letter-inner">
-            <p class="mx-eyebrow">03 — From the editor's desk</p>
+            <p class="mx-eyebrow">03 · From the editor's desk</p>
             <p class="mx-letter-body">
                 Raconteur began with a simple conviction: that a story deserves a quiet room.
                 No recommendation engines shouting over the prose, no infinite scroll
                 pulling you away from the last page. Just writing, typeset with care,
-                waiting for the reader it was written for. Whether you arrive here weekly
-                or once a season — the shelf keeps.
+                waiting for the reader it was written for. Arrive weekly or once a
+                season; the shelf keeps.
             </p>
-            <p class="mx-letter-sign">— The Editor, Kohima · {editionNo}</p>
+            <p class="mx-letter-sign">The Editor · Kohima · {editionNo}</p>
         </div>
     </section>
 
@@ -203,7 +203,7 @@ const moods = [
     {/* ===== MOOD INDEX — feelings as entries ===== */}
     <section class="mx-moods" data-mx-reveal>
         <hr class="mx-rule" data-mx-reveal="rule" />
-        <p class="mx-eyebrow">04 — The Mood Index</p>
+        <p class="mx-eyebrow">04 · The Mood Index</p>
         <div class="mx-moods-row">
             {moods.map(m => (
                 <a href={`/max/stories?q=${m.query}`} class="mx-mood">

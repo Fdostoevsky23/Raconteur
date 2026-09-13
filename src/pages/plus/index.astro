@@ -80,10 +80,10 @@ const deskNote = {
     name: 'Nzan Kikon',
     role: 'Editor · Raconteur',
     message:
-        'Welcome, reader. Raconteur was built on a simple belief — that a story does not need a printing press or a publisher\u2019s blessing to be worth your evening. Every word on this shelf was written to be remembered, and every writer here is real. So settle in. The lamp is lit, the pages are turned, and there is always room for one more reader at the fire.',
+        'Welcome, reader. Raconteur was built on a simple belief: that a story does not need a printing press or a publisher\u2019s blessing to be worth your evening. Every word on this shelf was written to be remembered, and every writer here is real. So settle in. The lamp is lit, the pages are turned, and there is always room for one more reader at the fire.',
 };
 ---
-<PlusLayout title="Raconteur+ — Literature you want to read" description="A second way to read Raconteur — ink-black, brass, and built for night readers.">
+<PlusLayout title="Raconteur+ · Literature you want to read" description="A second way to read Raconteur. Ink-black, brass, and built for night readers.">
     {/* ============================================ */}
     {/* HERO — full cinematic build (Chunk 3)        */}
     {/* ============================================ */}
@@ -137,7 +137,7 @@ const deskNote = {
                 </span></span>
             </h1>
             <p class="ph-hero-sub">
-                Ink-black. Brass-trimmed. Every story, every poem, every writer —
+                Ink-black. Brass-trimmed. Every story, every poem, every writer,
                 reimagined in Raconteur+, the second skin of your favourite bookshop.
             </p>
             <div class="ph-hero-actions">
@@ -186,7 +186,7 @@ const deskNote = {
     {/* ============================================ */}
     <section class="ph-section" id="shelf">
         <header class="ph-section-head" data-reveal>
-            <p class="ph-section-eyebrow">01 — Fresh from the desk</p>
+            <p class="ph-section-eyebrow">01 · Fresh from the desk</p>
             <h2 class="ph-section-title">The Featured Shelf</h2>
             <p class="ph-section-note">
                 {proseShelf.length} {proseShelf.length === 1 ? 'story' : 'stories'} · hand-picked by the editor
@@ -231,7 +231,7 @@ const deskNote = {
             ))}
         </div>
         {proseShelf.length === 0 && featuredPoems.length === 0 && (
-            <p class="ph-empty">The shelf is being curated — check back soon.</p>
+            <p class="ph-empty">The shelf is being curated. Check back soon.</p>
         )}
     </section>
 
@@ -241,7 +241,7 @@ const deskNote = {
     {featuredPoems.length > 0 && (
         <section class="ph-section" id="verse">
             <header class="ph-section-head" data-reveal>
-                <p class="ph-section-eyebrow">02 — Verse</p>
+                <p class="ph-section-eyebrow">02 · Verse</p>
                 <h2 class="ph-section-title">Featured Poetry</h2>
                 <p class="ph-section-note">
                     {featuredPoems.length} {featuredPoems.length === 1 ? 'poem' : 'poems'}
@@ -287,9 +287,9 @@ const deskNote = {
     {/* ============================================ */}
     <section class="ph-section" id="moods">
         <header class="ph-section-head" data-reveal>
-            <p class="ph-section-eyebrow">03 — Find a feeling</p>
+            <p class="ph-section-eyebrow">03 · Find a feeling</p>
             <h2 class="ph-section-title">What are you tonight?</h2>
-            <p class="ph-section-note">Pick a mood — the shelf rearranges itself around you.</p>
+            <p class="ph-section-note">Pick a mood, and the shelf rearranges itself around you.</p>
         </header>
 
         <div class="ph-mood-grid">
@@ -351,7 +351,7 @@ const deskNote = {
     {/* ============================================ */}
     <section class="ph-section" id="desk">
         <header class="ph-section-head" data-reveal>
-            <p class="ph-section-eyebrow">04 — From the editor's desk</p>
+            <p class="ph-section-eyebrow">04 · From the editor's desk</p>
             <h2 class="ph-section-title">A Note Before You Read</h2>
         </header>
 
@@ -361,7 +361,7 @@ const deskNote = {
             <div class="ph-desk-body">
                 <p class="ph-desk-message">{deskNote.message}</p>
                 <p class="ph-desk-signature">
-                    — {deskNote.name} <span class="ph-desk-role">· {deskNote.role}</span>
+                    {deskNote.name} <span class="ph-desk-role">· {deskNote.role}</span>
                 </p>
             </div>
         </article>

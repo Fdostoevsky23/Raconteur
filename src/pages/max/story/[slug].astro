@@ -98,7 +98,7 @@ const coverUrl = safeCover(story.cover);
 const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
 ---
 
-<MaxLayout title={`${story.title} — ${story.author} · Raconteur Max`} description={firstLine} ogImage={ogImage}>
+<MaxLayout title={`${story.title} · ${story.author} · Raconteur Max`} description={firstLine} ogImage={ogImage}>
     <div class="mx-progress" id="progressBar"></div>
 
     <article class={`mx-story ${isPoem ? 'poem-mode' : ''}`} id="storyContent">
@@ -564,7 +564,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
               </div>`;
         };
         list.innerHTML = (byParent['root'] || []).map(c => renderOne(c, false)).join('')
-            || '<p class="mx-c-none">No comments yet — be the first to leave one.</p>';
+            || '<p class="mx-c-none">No comments yet. Be the first to leave one.</p>';
 
         list.querySelectorAll('.mx-c-del').forEach(b => b.addEventListener('click', async () => {
             const id = (b as HTMLElement).dataset.id!;
@@ -580,7 +580,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
             bodyInput.value = `@${name} `;
             bodyInput.focus();
             bodyInput.dataset.replyTo = (b as HTMLElement).dataset.id!;
-            hint.textContent = 'Replying — post to send.';
+            hint.textContent = 'Replying. Post to send.';
         }));
     }
 
@@ -687,7 +687,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
                 reason: reasonSel.value === 'other' ? `Other: ${(document.getElementById('reportDetails') as HTMLTextAreaElement).value.trim()}` : reasonSel.value,
             });
             if (error) { msg.textContent = 'Something went wrong.'; msg.style.color = '#b02410'; }
-            else { msg.textContent = 'Thank you — we will look into it.'; msg.style.color = '#3d6b3c'; }
+            else { msg.textContent = 'Thank you. We will look into it.'; msg.style.color = '#3d6b3c'; }
             submitBtn.textContent = 'Submit report';
             setTimeout(() => modal!.classList.remove('open'), 1400);
         };

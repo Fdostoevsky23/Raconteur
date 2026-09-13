@@ -45,7 +45,7 @@ const trending = (Object.entries(weekCounts)
   })
   .filter(Boolean) as { title: string; slug: string; n: number }[]).slice(0, 3);
 ---
-<PlusLayout title="All Stories — Raconteur+" description="Browse the full Raconteur+ shelf — flash fiction, novellas, and everything between.">
+<PlusLayout title="All Stories · Raconteur+" description="Browse the full Raconteur+ shelf: flash fiction, novellas, and everything between.">
     <main class="ph-archive">
         {/* ============ MASTHEAD ============ */}
         <header class="ph-archive-masthead" data-reveal>
@@ -206,7 +206,7 @@ const trending = (Object.entries(weekCounts)
 
         {/* Empty state */}
         <p class="ph-empty" id="emptyState" hidden>
-            No stories match that search — try another word or feeling.
+            No stories match that search. Try another word or feeling.
         </p>
 
         <div class="ph-back-home">

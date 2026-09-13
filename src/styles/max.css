@@ -139,8 +139,7 @@ main.mx-main { flex: 1; }
 }
 
 .mx-eyebrow::before {
-    content: '— ';
-    color: var(--mx-ink-faint);
+    content: '';
 }
 
 .mx-rule {

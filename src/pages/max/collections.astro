@@ -10,7 +10,7 @@ const { data: collections } = await supabase
     .order('created_at', { ascending: false });
 ---
 
-<MaxLayout title="Collections — Raconteur Max" description="Curated reading bundles, hand-picked by the editor.">
+<MaxLayout title="Collections · Raconteur Max" description="Curated reading bundles, hand-picked by the editor.">
     <div class="mx-page">
         <header class="mx-page-head" data-mx-reveal>
             <p class="mx-eyebrow">Curated shelves</p>
@@ -27,7 +27,7 @@ const { data: collections } = await supabase
                 </a>
             ))}
             {(!collections || collections.length === 0) && (
-                <p class="mx-empty">No collections yet — the curator is still arranging the shelves.</p>
+                <p class="mx-empty">No collections yet. The curator is still arranging the shelves.</p>
             )}
         </div>
 
