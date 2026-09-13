@@ -122,7 +122,7 @@ import { supabase } from '../lib/supabase';
 
   <script>
     import { supabase } from '../lib/supabase';
-    import { dvConfirm, dvToast } from '../lib/dialog';
+    import { dvConfirm, dvToast, dvPick } from '../lib/dialog';
     import { esc } from '../lib/escape';
     const authCheck = document.getElementById('authCheck')!;
     const adminPanel = document.getElementById('adminPanel')!;
@@ -205,10 +205,8 @@ import { supabase } from '../lib/supabase';
         const storyId = (b as HTMLElement).dataset.id!;
         const { data: cols } = await supabase.from('collections').select('id,title,slug');
         if (!cols || cols.length === 0) { dvToast('Create a collection first.', 'err'); return; }
-        const choice = prompt(`Add to collection:\n${cols.map((c, i) => `${i + 1}. ${c.title}`).join('\n')}\n\nEnter number:`);
-        if (!choice) return;
-        const idx = parseInt(choice) - 1;
-        if (idx < 0 || idx >= cols.length) return;
+        const idx = await dvPick('Add to collection:', cols.map((c: any) => c.title));
+        if (idx === null) return;
         const col = cols[idx];
         const { data: existing } = await supabase.from('collection_stories').select('sort_order').eq('collection_id', col.id).order('sort_order', { ascending: false }).limit(1);
         const nextOrder = (existing?.[0]?.sort_order || 0) + 1;

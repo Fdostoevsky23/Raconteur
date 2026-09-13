@@ -1,0 +1,98 @@
+---
+// src/pages/max/login.astro — sign-in (bright glassmorphism).
+// Logic is a faithful copy of classic /login; success redirects in-skin.
+import MaxLayout from '../../layouts/MaxLayout.astro';
+import Icon from '../../components/Icon.astro';
+---
+
+<MaxLayout title="Log In · Raconteur Max" description="Your shelf missed you.">
+    <div class="mx-auth-wrap">
+        <div class="mx-glass mx-auth-card" data-mx-reveal>
+            <p class="mx-eyebrow">Welcome back</p>
+            <h1 class="mx-auth-title">Log in</h1>
+            <p class="mx-auth-sub">Your shelf missed you.</p>
+
+            <form id="loginForm" class="mx-auth-form">
+                <label for="email">Email</label>
+                <input type="email" id="email" class="mx-field" placeholder="you@example.com" required autocomplete="email" />
+                <label for="password">Password</label>
+                <div class="mx-pw-wrap">
+                    <input type="password" id="password" class="mx-field" placeholder="Your password" required autocomplete="current-password" />
+                    <button type="button" class="mx-pw-toggle" id="pwToggle" aria-label="Show password"><Icon name="eye" size={16} /></button>
+                </div>
+                <button type="submit" class="mx-btn mx-btn-ink mx-auth-btn">Log in</button>
+                <p class="mx-forgot"><a href="/max/reset-password">Forgot password?</a></p>
+                <p class="mx-auth-msg" id="authMsg"></p>
+            </form>
+
+            <p class="mx-auth-alt">New here? <a href="/max/signup">Create an account</a></p>
+        </div>
+    </div>
+</MaxLayout>
+
+<script>
+    import { supabase } from '../../lib/supabase';
+    import { iconSvg } from '../../lib/icons';
+
+    const form = document.getElementById('loginForm') as HTMLFormElement;
+    const msg = document.getElementById('authMsg')!;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = (document.getElementById('email') as HTMLInputElement).value;
+        const password = (document.getElementById('password') as HTMLInputElement).value;
+        msg.textContent = 'Logging you in...';
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+            msg.textContent = error.message;
+        } else {
+            msg.textContent = 'Welcome back. Redirecting...';
+            setTimeout(() => (window.location.href = '/max/dashboard'), 1200);
+        }
+    });
+    const pwInput = document.getElementById('password') as HTMLInputElement;
+    const pwToggle = document.getElementById('pwToggle');
+    pwToggle?.addEventListener('click', () => {
+        const isPassword = pwInput.type === 'password';
+        pwInput.type = isPassword ? 'text' : 'password';
+        pwToggle.innerHTML = isPassword ? iconSvg('eye-off', 16) : iconSvg('eye', 16);
+        pwToggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+    });
+</script>
+
+<style>
+    .mx-auth-wrap { min-height: 62vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
+
+    .mx-auth-card {
+        width: 100%;
+        max-width: 420px;
+        padding: 2.6rem 2.3rem;
+        text-align: center;
+    }
+
+    .mx-auth-title { font-family: var(--mx-font-display); font-size: 1.9rem; font-weight: 900; color: var(--mx-ink); margin: 0.6rem 0 0.4rem; }
+    .mx-auth-sub { font-size: 0.9rem; color: var(--mx-ink-soft); margin: 0 0 1.8rem; }
+
+    .mx-auth-form { display: flex; flex-direction: column; text-align: left; }
+    .mx-auth-form label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mx-vermilion); margin: 0.9rem 0 0.35rem; }
+
+    .mx-pw-wrap { position: relative; display: flex; align-items: center; }
+    .mx-pw-wrap input { flex: 1; padding-right: 3rem; }
+    .mx-pw-toggle {
+        position: absolute; right: 0.6rem;
+        background: transparent; border: none;
+        color: var(--mx-ink-faint); cursor: pointer;
+        padding: 0.2rem; opacity: 0.7; transition: opacity 0.2s;
+    }
+    .mx-pw-toggle:hover { opacity: 1; }
+
+    .mx-auth-btn { margin-top: 1.5rem; width: 100%; justify-content: center; }
+
+    .mx-forgot { text-align: center; margin-top: 1rem; }
+    .mx-forgot a { color: var(--mx-ink-soft); text-decoration: none; font-size: 0.85rem; }
+    .mx-forgot a:hover { color: var(--mx-vermilion); }
+
+    .mx-auth-msg { min-height: 1.2rem; margin-top: 0.9rem; font-size: 0.85rem; color: var(--mx-vermilion); text-align: center; }
+    .mx-auth-alt { margin-top: 1.4rem; font-size: 0.88rem; color: var(--mx-ink-soft); }
+    .mx-auth-alt a { color: var(--mx-vermilion); font-weight: 600; }
+</style>
