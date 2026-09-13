@@ -1519,12 +1519,17 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     .mx-room-half {
         position: relative;
         background:
-            repeating-linear-gradient(to bottom, transparent 0 27px, rgba(28, 25, 23, 0.055) 27px 28px),
-            #fffdf9;
+            repeating-linear-gradient(to bottom, transparent 0 27px, rgba(28, 25, 23, 0.05) 27px 28px),
+            #fffefb;
+        border: 1px solid var(--mx-line-strong);
+        box-shadow: 0 18px 50px rgba(28, 25, 23, 0.14), 0 4px 14px rgba(28, 25, 23, 0.08);
         padding: 1.8rem 1.6rem 1.8rem 2.2rem;
         display: flex; flex-direction: column;
         border-radius: 4px;
+        transition: box-shadow 0.3s ease;
     }
+
+    .mx-room-half:hover { box-shadow: 0 24px 60px rgba(28, 25, 23, 0.18), 0 6px 18px rgba(28, 25, 23, 0.1); }
 
     /* the notebook's red margin line */
     .mx-room-half::before {
