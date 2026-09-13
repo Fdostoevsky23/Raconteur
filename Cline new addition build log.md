@@ -36,7 +36,17 @@
 
 **Audit rule:** every chunk commit runs a self-check against THE LIST (new code must add zero items; existing items only shrink, never grow). Flagged-but-not-yet-fixed items live in the De-Vibe Tracker (§6b) and get burned down in de-vibe phases.
 
-## 6c. DE-VIBE REHAUL — the plan (boss order 2026-09-13: "keep the idea, modify it so it passes the test")
+## 1d. 📕 THE CANONICAL TEST — "Vibe Coding Tells - Exhaustive List.docx" (boss mandate, Session 48)
+
+> From now on the Word doc in the repo root IS the de-vibe test pass. 10 sections: visual/UI, copywriting slop, code-level, security (RLS/secrets/CORS), functional/runtime, infrastructure/metadata, process debt, platform fingerprints, detection caveats, and the fix-order checklist. Every build phase ends with a doc-pass on its pages.
+
+**Re-audit vs the doc (2026-09-13, max homepage + project):**
+- FIXED NOW: hardcoded 86400000 magic numbers → DAY_MS const (max home/dashboard); ghost param in dashboard; "export coming soon" tell on both privacy pages (the export feature SHIPPED — copy updated).
+- VERIFIED CLEAN: 0 emoji, 0 em-dash UI copy, 0 native dialogs, custom tab titles/favicon, no lorem, no Inter-as-default (classic=Playfair/Lora, max=Hanken, plus=Archivo, pro=Outfit), real data behind every stat/chart, .env NOT committed (only .env.example), only the anon key client-side (never service_role), href="#" ×3 are all JS-wired actions (not dead links).
+- ACCEPTED IDENTITY CHOICES (logged, boss-approved direction): single outline icon system (deliberate brand set), glassmorphism-as-accent (post-DR4), wordmark-as-logo (classic's identity too).
+- FLAGGED FOR LATER: plus skin = permanent dark + glows (doc tell — needs its own pass if plus survives the bake-off); pro = bento grid + dashboard aesthetic (doc tells — the Pro rebuild must vary composition and keep every card on real data); zero automated tests (doc's "most reliable tell" — propose a small characterisation-test phase after the builds, boss decision).
+
+## 6c. DE-VIBE REHAUL## 6c. DE-VIBE REHAUL — the plan (boss order 2026-09-13: "keep the idea, modify it so it passes the test")
 
 **Prime directive: keep each skin's identity, change the expression.** Glass stays — but stops being the default surface (tell 18) and becomes a *deliberate accent*: floating glass nav + at most ONE focal glass surface per page (the reading sheet); all ordinary cards become solid warm-paper surfaces with ink hairlines, higher opacity (0.55→0.78), reduced blur (22→14px) — "frosted vellum", not 2022 glass. Glows/colour fields survive only if they RESPOND to the user (scroll-linked intensity/position); decorative always-on loops get removed or made interactive. Classic skin stays FROZEN (§3.1) — its tells (emoji, native dialogs, genre border-bars) are flagged for a boss-only "classic polish" decision; new skins + shared new-skin layouts go first.
 
