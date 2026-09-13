@@ -197,7 +197,6 @@ const interludeQuotes = [
 ];
 const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.length)];
 ---
----
 
 <MaxLayout title="Raconteur Max · The Editorial Split" description="Literature you want to read. The Raconteur Max edition.">
     {/* ===== SPLIT HERO — rotating words left, looping plates right ===== */}
@@ -369,6 +368,7 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         <div class="mx-altar-head">
             <p class="mx-eyebrow">{shelfKicker}</p>
             <h2 class="mx-display mx-altar-title">The bookshelf</h2>
+            <p class="mx-altar-sub">Four covers, chosen for today. Hover to meet the writer.</p>
         </div>
         <div class="mx-altar-shelf">
             {shelfBooks.map((b: any, i: number) => (
@@ -1310,13 +1310,23 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     .mx-altar-head { text-align: center; margin-bottom: 3rem; }
     .mx-altar-title { font-size: clamp(2rem, 4vw, 3.2rem); margin: 0.9rem 0 0; }
 
+    .mx-altar-head { text-align: center; margin-bottom: 3.2rem; }
+    .mx-altar-title { font-size: clamp(2.2rem, 4.4vw, 3.4rem); margin: 0.9rem 0 0; }
+    .mx-altar-sub {
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        font-size: 0.95rem;
+        color: var(--mx-ink-faint);
+        margin: 0.7rem 0 0;
+    }
+
     .mx-altar-shelf {
         display: flex;
         align-items: flex-end;
         justify-content: center;
-        gap: 2.2rem;
+        gap: 2.6rem;
         flex-wrap: wrap;
-        max-width: 940px;
+        max-width: 1080px;
         margin: 0 auto;
         padding: 0 1rem;
     }

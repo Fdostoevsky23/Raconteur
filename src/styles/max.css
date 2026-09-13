@@ -616,19 +616,17 @@ main.mx-main { flex: 1; }
     position: relative;
     z-index: 1;
     text-align: center;
-    padding: 2.2rem 1rem 1.6rem;
-    border-bottom: 1px solid var(--mx-line);
-    background: var(--mx-paper);
+    padding: 2.6rem 1rem 2rem;
 }
 
-.mx-inner-brand { font-size: 1.9rem; }
+.mx-inner-brand { font-size: clamp(2.8rem, 6vw, 4.2rem); }
 
 .mx-inner-tagline {
     font-family: var(--mx-font-read);
     font-style: italic;
-    font-size: 0.85rem;
+    font-size: clamp(1rem, 2vw, 1.25rem);
     color: var(--mx-ink-faint);
-    margin: 0.3rem 0 0;
+    margin: 0.5rem 0 0;
 }
 
 /* === 7c. AUTH CHROME — global (rendered client-side into the home nav) === */
