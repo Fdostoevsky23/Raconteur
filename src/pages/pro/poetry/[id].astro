@@ -1,0 +1,292 @@
+---
+// src/pages/pro/poetry/[id].astro — a poetry collection's own page (the dark desk).
+// Server logic is a faithful copy of classic /poetry/[id] (feature parity):
+// collection header, poem tiles, owner-only edit/export/delete buttons.
+import ProLayout from '../../../layouts/ProLayout.astro';
+import { supabase } from '../../../lib/supabase';
+
+const id = Astro.params.id ?? '';
+
+const { data: collection } = await supabase
+    .from('poetry_collections')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+if (!collection) return Astro.redirect('/pro');
+
+const { data: poems } = await supabase
+    .from('stories')
+    .select('*')
+    .eq('collection_id', id)
+    .eq('status', 'published')
+    .order('created_at', { ascending: true });
+
+const { data: owner } = await supabase
+    .from('profiles')
+    .select('pen_name')
+    .eq('user_id', collection.owner_id)
+    .maybeSingle();
+
+const authorName = owner?.pen_name || 'A Raconteur writer';
+const authorSlug = String(authorName).toLowerCase().replace(/\s+/g, '-');
+const poemCount = (poems || []).length;
+---
+
+<ProLayout title={`${collection.name} · ${authorName} · Raconteur Pro`} description={collection.description || `A poetry collection by ${authorName}.`}>
+    <div class="pro-page">
+        <div id="coll-owner" data-owner={collection.owner_id} hidden></div>
+
+        <header class="pro-page-head" data-pro-reveal>
+            {collection.cover_url && <img src={collection.cover_url} alt={`Cover of ${collection.name}`} class="pro-coll-cover" />}
+            <p class="pro-browser-kicker">A poetry collection</p>
+            <h1 class="pro-page-title">{collection.name}</h1>
+            {collection.description && (
+                <div class="pro-coll-desc">
+                    {String(collection.description).split(/\n+/).filter((s: string) => s.trim()).map((para: string) => <p>{para}</p>)}
+                </div>
+            )}
+            <p class="pro-page-sub">{poemCount} {poemCount === 1 ? 'poem' : 'poems'}</p>
+        </header>
+
+        <div class="pro-work-grid pro-poem-grid">
+            {(poems || []).map((p: any, i: number) => (
+                <div class="pro-work-card is-poem pro-poem-tile" style={`--pro-reveal-delay: ${Math.min(i * 0.06, 0.4)}s`} data-pro-reveal data-id={p.id} data-title={p.title} data-content={p.content || ''}>
+                    <a href={`/story/${p.id}`} class="pro-poem-link">
+                        {p.cover_url ? (
+                            <img src={p.cover_url} alt={`Cover of ${p.title}`} class="pro-poem-cover" loading="lazy" />
+                        ) : (
+                            <div class="pro-work-quote"><p class="pro-poem-preview">{(p.content || '').replace(/<[^>]+>/g, ' ').trim().slice(0, 60)}</p></div>
+                        )}
+                        <div class="pro-poem-body">
+                            <h3 class="pro-poem-title">{p.title}</h3>
+                        </div>
+                    </a>
+                </div>
+            ))}
+            {poemCount === 0 && (
+                <p class="pro-empty-state">No poems in this collection yet.</p>
+            )}
+        </div>
+
+        <div class="pro-back">
+            <a href={`/pro/author/${authorSlug}`} class="pro-card-link">← {authorName}</a>
+        </div>
+    </div>
+</ProLayout>
+
+<script>
+    // Owner-only poem management — faithful clone of classic (edit/export/delete).
+    import { supabase } from '../../../lib/supabase';
+    import { iconSvg } from '../../../lib/icons';
+    import { dvConfirm, dvToast } from '../../../lib/dialog';
+
+    (async () => {
+        const ownerId = document.getElementById('coll-owner')?.getAttribute('data-owner') || '';
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || session.user.id !== ownerId) return;
+
+        document.querySelectorAll('.pro-poem-tile').forEach(tile => {
+            const el = tile as HTMLElement;
+            const id = el.dataset.id!;
+            const title = el.dataset.title || 'untitled';
+            const content = el.dataset.content || '';
+
+            const edit = document.createElement('a');
+            edit.className = 'pro-poem-btn pro-poem-edit';
+            edit.href = `/submit?edit=${id}`;
+            edit.title = 'Edit';
+            edit.innerHTML = iconSvg('edit', 14);
+
+            const exp = document.createElement('button');
+            exp.className = 'pro-poem-btn pro-poem-export';
+            exp.title = 'Download as .md';
+            exp.innerHTML = iconSvg('download', 14);
+            exp.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const text = content
+                    .replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/<\/p>/gi, '\n\n')
+                    .replace(/<[^>]+>/g, '')
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#39;/g, "'")
+                    .replace(/\n{3,}/g, '\n\n')
+                    .trim();
+                const md = `# ${title}\n\n${text}\n\n---\nExported from Raconteur · raconteur.stories\n`;
+                const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}.md`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            const del = document.createElement('button');
+            del.className = 'pro-poem-btn pro-poem-delete';
+            del.title = 'Delete';
+            del.innerHTML = iconSvg('trash', 14);
+            del.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const ok = await dvConfirm({
+                    title: 'Delete this poem?',
+                    body: 'It will be removed permanently. This cannot be undone.',
+                    confirmLabel: 'Delete',
+                    danger: true,
+                });
+                if (!ok) return;
+                const { error } = await supabase.from('stories').delete().eq('id', id);
+                if (error) dvToast('Something went wrong. Please try again.', 'err');
+                else { dvToast('Poem deleted.'); setTimeout(() => window.location.reload(), 700); }
+            });
+
+            el.appendChild(edit);
+            el.appendChild(exp);
+            el.appendChild(del);
+        });
+    })();
+</script>
+
+<style>
+    .pro-page {
+        position: relative;
+        z-index: 1;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 3.4rem 1.6rem 3rem;
+    }
+
+    .pro-page-head { text-align: center; margin-bottom: 2.6rem; }
+
+    .pro-page-title {
+        font-family: var(--pro-font);
+        font-size: clamp(2.2rem, 4.8vw, 3.4rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--pro-text);
+        margin: 0.6rem 0 0;
+    }
+
+    .pro-page-sub {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        font-size: 1rem;
+        color: var(--pro-text-2);
+        margin: 0.5rem 0 0;
+    }
+
+    /* Cover + description */
+    .pro-coll-cover {
+        width: 170px;
+        height: 250px;
+        object-fit: cover;
+        border-radius: 12px;
+        box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--pro-line-hi);
+        margin-bottom: 1.4rem;
+    }
+
+    .pro-coll-desc { max-width: 720px; margin: 0 auto 1.2rem; }
+
+    .pro-coll-desc p {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-2);
+        line-height: 1.8;
+        margin-bottom: 1rem;
+    }
+
+    /* Poem tiles — dark card, cover or first-line preview */
+    .pro-poem-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+
+    .pro-poem-tile { position: relative; }
+
+    .pro-poem-link { display: block; text-decoration: none; color: inherit; }
+
+    .pro-poem-cover {
+        width: 100%;
+        height: 210px;
+        object-fit: cover;
+        object-position: top;
+        display: block;
+        transition: transform 0.6s var(--pro-ease, ease);
+    }
+
+    .pro-poem-tile:hover .pro-poem-cover { transform: scale(1.06); }
+
+    .pro-poem-preview {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        font-size: 0.88rem;
+        color: var(--pro-text-2);
+        text-align: center;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    .pro-poem-body { padding: 1rem 1.1rem 1.1rem; }
+
+    .pro-poem-title {
+        font-family: var(--pro-font);
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--pro-text);
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+    /* Owner buttons — dark mini-chips, top-right */
+    .pro-poem-btn {
+        position: absolute;
+        top: 0.8rem;
+        z-index: 10;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2rem;
+        height: 2rem;
+        padding: 0 0.4rem;
+        background: rgba(6, 8, 10, 0.8);
+        border: 1px solid var(--pro-line-hi);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        text-decoration: none;
+        color: var(--pro-text-2);
+        cursor: pointer;
+        opacity: 0.85;
+        transition: opacity 0.2s, transform 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .pro-poem-btn:hover { opacity: 1; transform: scale(1.1); color: var(--pro-amber); border-color: rgba(255, 106, 0, 0.45); }
+    .pro-poem-edit { right: 3.4rem; }
+    .pro-poem-export { right: 5.8rem; }
+    .pro-poem-delete { right: 1rem; }
+
+    .pro-empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-3);
+        padding: 2rem 0;
+    }
+
+    .pro-back { text-align: center; margin-top: 3rem; }
+
+    @media (max-width: 640px) {
+        .pro-page { padding: 2.2rem 1rem 2.4rem; }
+        .pro-poem-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .pro-poem-tile:hover .pro-poem-cover { transform: none; }
+        .pro-poem-btn:hover { transform: none; }
+    }
+</style>

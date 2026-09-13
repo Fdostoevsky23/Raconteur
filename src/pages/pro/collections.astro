@@ -1,0 +1,127 @@
+---
+// src/pages/pro/collections.astro — curated collections index (the dark desk).
+// Server logic is a faithful copy of classic /collections (feature parity).
+import ProLayout from '../../layouts/ProLayout.astro';
+import { supabase } from '../../lib/supabase';
+
+const { data: collections } = await supabase
+    .from('collections')
+    .select('*, collection_stories(count)')
+    .order('created_at', { ascending: false });
+---
+
+<ProLayout title="Collections · Raconteur Pro" description="Curated reading bundles, hand-picked by the editor.">
+    <div class="pro-page">
+        <header class="pro-page-head" data-pro-reveal>
+            <p class="pro-browser-kicker">Curated shelves</p>
+            <h1 class="pro-page-title">Collections</h1>
+            <p class="pro-page-sub">Themed bundles of stories, placed side by side because they speak to each other.</p>
+        </header>
+
+        <div class="pro-coll-grid">
+            {(collections || []).map((c: any, i: number) => (
+                <a href={`/pro/collection/${c.slug}`} class="pro-card pro-coll-card" data-pro-reveal style={`--pro-reveal-delay: ${Math.min(i * 0.06, 0.4)}s`}>
+                    <h2 class="pro-coll-title">{c.title}</h2>
+                    {c.curator_note && <p class="pro-coll-note">{c.curator_note}</p>}
+                    <p class="pro-coll-count">✦ {c.collection_stories?.[0]?.count || 0} stories</p>
+                </a>
+            ))}
+            {(!collections || collections.length === 0) && (
+                <p class="pro-empty-state">No collections yet. The curator is still arranging the shelves.</p>
+            )}
+        </div>
+
+        <div class="pro-back">
+            <a href="/pro" class="pro-card-link">← Back to the Desk</a>
+        </div>
+    </div>
+</ProLayout>
+
+<style>
+    .pro-page {
+        position: relative;
+        z-index: 1;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 3.4rem 1.6rem 3rem;
+    }
+
+    .pro-page-head { text-align: center; margin-bottom: 2.6rem; }
+
+    .pro-page-title {
+        font-family: var(--pro-font);
+        font-size: clamp(2.2rem, 4.8vw, 3.4rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--pro-text);
+        margin: 0.6rem 0 0;
+    }
+
+    .pro-page-sub {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        font-size: 1rem;
+        color: var(--pro-text-2);
+        margin: 0.5rem 0 0;
+    }
+
+    .pro-coll-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .pro-coll-card {
+        padding: 2.4rem 2rem;
+        display: block;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .pro-coll-card:hover { transform: translateY(-6px); }
+
+    .pro-coll-title {
+        font-family: var(--pro-font);
+        font-size: 1.55rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--pro-text);
+        margin: 0 0 0.8rem;
+    }
+
+    .pro-coll-note {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        font-size: 0.94rem;
+        line-height: 1.65;
+        color: var(--pro-text-2);
+        margin: 0 0 1.2rem;
+    }
+
+    .pro-coll-count {
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: var(--pro-amber);
+        margin: 0;
+    }
+
+    .pro-empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-3);
+        padding: 2rem 0;
+    }
+
+    .pro-back { text-align: center; margin-top: 3rem; }
+
+    @media (max-width: 640px) {
+        .pro-page { padding: 2.2rem 1rem 2.4rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .pro-coll-card:hover { transform: none; }
+    }
+</style>
