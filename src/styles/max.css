@@ -59,7 +59,7 @@ body.max-skin {
     overflow-x: hidden;
 }
 
-main.mx-main { flex: 1; }
+main.mx-main { flex: 1; position: relative; z-index: 1; }
 
 /* Mode switch: the <body> carries data-max-mode —
    editorial (home) or glass (inner pages). */
@@ -728,6 +728,63 @@ main.mx-main { flex: 1; }
 .mx-notif-icon { color: var(--mx-vermilion); display: inline-flex; }
 .mx-notif-text { font-size: 0.82rem; flex: 1; }
 .mx-notif-time { font-size: 0.7rem; color: var(--mx-ink-faint); }
+
+/* === 7d. THE MANUSCRIPT — ruled sheet + margin line + letterpress ghosts === */
+.mx-manuscript {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* faint ruled baselines across the whole sheet */
+.mx-manuscript-rules {
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0 31px,
+        rgba(28, 25, 23, 0.05) 31px 32px
+    );
+}
+
+/* the editor's red margin line */
+.mx-manuscript-margin {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: clamp(2.4rem, 6vw, 6rem);
+    width: 1px;
+    background: rgba(216, 52, 28, 0.22);
+}
+
+/* giant letterpress words drifting behind everything */
+.mx-ghost-word {
+    position: absolute;
+    font-family: var(--mx-font-display);
+    font-weight: 900;
+    font-size: clamp(7rem, 24vw, 22rem);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: rgba(28, 25, 23, 0.045);
+    white-space: nowrap;
+    opacity: 0;
+    animation: mx-ghost-drift var(--dur, 90s) ease-in-out forwards;
+}
+
+.mx-ghost-word.is-vermilion { color: rgba(216, 52, 28, 0.04); }
+
+@keyframes mx-ghost-drift {
+    0%   { opacity: 0; transform: translate(0, 0) rotate(var(--rot, 0deg)); }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--dx, 4vw), var(--dy, 3vh)) rotate(var(--rot, 0deg)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mx-ghost-word { animation: none; opacity: 1; }
+}
 
 /* === 8. FOOTER — giant masthead + the word rain === */
 .mx-footer {

@@ -83,6 +83,13 @@ const navHref = {
     {/* Search data island — same queries as classic, lives in layout so search works everywhere */}
     <script type="application/json" id="all-stories-data" set:html={JSON.stringify(searchStories).replace(/</g,'\\u003c')} />
 
+    {/* The Manuscript — ruled sheet + red margin + drifting letterpress ghosts */}
+    <div class="mx-manuscript" aria-hidden="true">
+        <div class="mx-manuscript-rules"></div>
+        <div class="mx-manuscript-margin"></div>
+        <div class="mx-manuscript-ghosts" id="mxGhosts"></div>
+    </div>
+
     {/* Bright-glass colour fields — inner-mode only (max.css hides the wrapper otherwise) */}
     {!isHome && (
         <div class="mx-glass-field" aria-hidden="true">
@@ -241,6 +248,41 @@ const navHref = {
                 }
                 qi++;
             }, 130);
+        })();
+    </script>
+
+    <script>
+        // Letterpress ghosts — giant words drifting behind the manuscript
+        (() => {
+            const stage = document.getElementById('mxGhosts');
+            if (!stage) return;
+            const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            const WORDS = ['STORIES', 'POETRY', 'VERSE', 'PROSE', 'FICTION', 'EDIT', 'DRAFT', 'INK', 'CANON', 'CHAPTER'];
+
+            function spawnWord() {
+                if (stage.childElementCount >= 3) return;
+                const el = document.createElement('span');
+                el.className = 'mx-ghost-word';
+                el.textContent = WORDS[Math.floor(Math.random() * WORDS.length)];
+                if (Math.random() < 0.3) el.classList.add('is-vermilion');
+                el.style.top = (4 + Math.random() * 66) + '%';
+                el.style.left = (Math.random() * 52 - 6) + '%';
+                el.style.setProperty('--dur', (Math.round((70 + Math.random() * 50)) + 's'));
+                el.style.setProperty('--dx', (Math.random() * 12 - 6).toFixed(1) + 'vw');
+                el.style.setProperty('--dy', (Math.random() * 8 - 4).toFixed(1) + 'vh');
+                el.style.setProperty('--rot', (Math.random() * 4 - 2).toFixed(1) + 'deg');
+                el.addEventListener('animationend', () => el.remove());
+                stage.appendChild(el);
+            }
+
+            if (reduced) {
+                spawnWord();
+                stage.querySelector('.mx-ghost-word')?.style.setProperty('animation', 'none');
+                return;
+            }
+            spawnWord();
+            setInterval(spawnWord, 15000);
         })();
     </script>
 
