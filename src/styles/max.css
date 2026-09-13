@@ -619,7 +619,20 @@ main.mx-main { flex: 1; }
     padding: 2.6rem 1rem 2rem;
 }
 
-.mx-inner-brand { font-size: clamp(2.8rem, 6vw, 4.2rem); }
+.mx-inner-bar a.mx-brand { font-size: clamp(2.8rem, 6vw, 4.2rem); }
+
+.mx-inner-back {
+    position: absolute;
+    top: 1.1rem;
+    left: 1.4rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--mx-ink-soft);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.mx-inner-back:hover { color: var(--mx-vermilion); }
 
 .mx-inner-tagline {
     font-family: var(--mx-font-read);

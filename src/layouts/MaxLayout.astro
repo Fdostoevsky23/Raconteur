@@ -137,6 +137,7 @@ const navHref = {
         </header>
     ) : (
         <header class="mx-inner-bar">
+            <a href="/max" class="mx-inner-back">← Back to the Max edition</a>
             <a href="/max" class="mx-brand mx-inner-brand" aria-label="Raconteur Max home">
                 Raconteur <span class="mx-brand-max">Max</span>
             </a>
@@ -559,7 +560,7 @@ import { iconSvg } from '../lib/icons';
 
     /* Masthead: brand centered, tagline beneath */
     .mx-masthead { text-align: center; padding: 1.4rem 1rem 0.7rem; }
-    .mx-masthead .mx-brand { font-size: clamp(3.2rem, 7vw, 5rem); }
+    .mx-masthead a.mx-brand { font-size: clamp(3.2rem, 7vw, 5rem); }
     .mx-masthead-tagline {
         font-family: var(--mx-font-read);
         font-style: italic;
