@@ -58,7 +58,20 @@ body.pro-skin {
     overflow-x: hidden;
 }
 
-main.pro-main { flex: 1; }
+main.pro-main { flex: 1; position: relative; z-index: 1; }
+
+/* The Ledger — faint vertical columns over the void (Pro's manuscript) */
+.pro-ledger {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent 0 calc(100% / 6 - 1px),
+        rgba(255, 255, 255, 0.028) calc(100% / 6 - 1px) calc(100% / 6)
+    );
+}
 
 /* Ambient glow fields — they respond to the reader: swell with scroll,
    settle when idle (de-vibe DR4 — no always-on decoration) */
@@ -262,9 +275,140 @@ main.pro-main { flex: 1; }
 .pro-footer-brand { font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em; }
 .pro-footer-brand em { font-style: normal; color: var(--pro-amber); }
 .pro-footer-links { margin-top: 0.7rem; display: flex; gap: 1.1rem; justify-content: center; flex-wrap: wrap; }
-.pro-footer-links a { color: var(--pro-text-2); font-size: 0.85rem; text-decoration: none; }
-.pro-footer-links a:hover { color: var(--pro-text); }
-.pro-fineprint { margin-top: 1rem; color: var(--pro-text-3); font-size: 0.75rem; }
+.pro-footer {
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    margin-top: 11rem;
+    border-top: 1px solid var(--pro-line);
+    padding: 5.5rem 2rem 3.5rem;
+    text-align: center;
+}
+
+.pro-footer-inner { margin-top: 6rem; padding: 3.8rem 2rem 2.8rem; }
+
+.pro-rain { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+.pro-rain-word {
+    position: absolute;
+    top: -3rem;
+    font-family: var(--pro-font-read);
+    font-style: italic;
+    font-size: 0.92rem;
+    color: var(--pro-text-2);
+    opacity: 0.38;
+    white-space: nowrap;
+    animation: pro-rain-fall linear forwards;
+}
+
+.pro-rain-word.is-author {
+    font-style: normal;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--pro-amber);
+    opacity: 0.55;
+}
+
+@keyframes pro-rain-fall {
+    to { transform: translateY(var(--fall, 400px)) rotate(var(--rot, 0deg)); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pro-rain-word { display: none; }
+}
+
+.pro-footer-core { position: relative; z-index: 1; }
+
+.pro-footer-name {
+    font-family: var(--pro-font);
+    font-size: clamp(2.9rem, 8.5vw, 6rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--pro-text);
+    margin: 0;
+}
+
+.pro-footer-name em { font-style: normal; color: var(--pro-amber); }
+
+.pro-footer-tagline {
+    font-family: var(--pro-font-read);
+    font-style: italic;
+    font-size: clamp(1rem, 2.2vw, 1.35rem);
+    color: var(--pro-text-2);
+    margin: 0.9rem 0 0;
+}
+
+.pro-footer-inner .mx-footer-name { font-size: inherit; }
+.pro-footer-inner { margin-top: 6rem; padding: 3.8rem 2rem 2.8rem; }
+.pro-footer-inner .pro-footer-name { font-size: clamp(2.2rem, 5vw, 3.6rem); }
+.pro-footer-inner .pro-footer-tagline { font-size: clamp(0.95rem, 1.8vw, 1.15rem); }
+.pro-footer-inner .pro-footer-links { margin-top: 1.5rem; }
+
+.pro-footer-links { margin-top: 2rem; display: flex; gap: 1.4rem; justify-content: center; flex-wrap: wrap; }
+.pro-footer-links a { color: var(--pro-text-2); font-size: 0.9rem; font-weight: 500; text-decoration: none; }
+.pro-footer-links a:hover { color: var(--pro-amber); }
+.pro-footer-legal { margin-top: 0.9rem; font-size: 0.8rem; color: var(--pro-text-3); }
+.pro-footer-legal a { color: var(--pro-text-3); text-decoration: none; }
+.pro-footer-legal a:hover { color: var(--pro-amber); }
+.pro-fineprint { margin-top: 1.4rem; color: var(--pro-text-3); font-size: 0.75rem; }
+
+/* Auth chrome — global (rendered client-side into the home toolbar) */
+.pro-auth-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 1.05rem;
+    border-radius: 999px;
+    background: var(--pro-amber);
+    color: #1a0d00;
+    font-family: var(--pro-font);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.2s var(--pro-ease, ease), background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.pro-auth-pill:hover { background: var(--pro-mint); transform: translateY(-1px); }
+
+.pro-auth-pill.ghost {
+    background: transparent;
+    border: 1px solid var(--pro-line-hi, var(--pro-line));
+    color: var(--pro-text);
+}
+
+.pro-auth-pill.ghost:hover { background: rgba(255, 255, 255, 0.06); border-color: var(--pro-mint); color: var(--pro-mint); transform: translateY(-1px); }
+
+.pro-notif-wrap { position: relative; display: inline-flex; }
+
+.pro-notif-bell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    background: transparent;
+    border: 1px solid var(--pro-line);
+    border-radius: 50%;
+    color: var(--pro-text);
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.2s, color 0.2s, transform 0.2s;
+}
+
+.pro-notif-bell:hover { border-color: var(--pro-amber); color: var(--pro-amber); transform: translateY(-1px); }
+.pro-notif-bell svg { width: 15px; height: 15px; }
+
+.pro-notif-dot {
+    position: absolute;
+    top: -2px; right: -2px;
+    width: 8px; height: 8px;
+    background: var(--pro-amber);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(255, 106, 0, 0.8);
+}
 
 /* === 9. UTILITIES === */
 .pro-row { display: flex; align-items: center; gap: 0.6rem; }

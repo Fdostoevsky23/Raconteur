@@ -42,6 +42,9 @@ const navHref = {
     dashboard: '/dashboard',
     digest: '/digest',
 };
+
+// Home = the Desk. Full chrome lives here; inner pages get the quiet brand bar.
+const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
 ---
 
 <!DOCTYPE html>
@@ -102,48 +105,67 @@ const navHref = {
             }
         }
     </script>
+    <div class="pro-ledger" aria-hidden="true"></div>
     <div class="pro-ambient" aria-hidden="true"></div>
 
     {/* Royal entrance — pro variant, born covered on skin switches (?welcome=1) */}
     <SkinSplash variant="pro" eager={Astro.url.searchParams.get('welcome') === '1'} />
 
     {/* Top nav — logo left, pill nav center, search + auth right (the brief's top-nav pattern) */}
-    <header class="pro-topbar" id="proTopbar">
-        <div class="pro-topbar-inner">
-            <a href="/pro" class="pro-logo" aria-label="Raconteur Pro home">
+    {isHome && (
+        <div class="pro-toggle-row">
+            <SkinToggle variant="regal" />
+        </div>
+    )}
+    {isHome ? (
+        <header class="pro-topbar">
+            <div class="pro-masthead">
+                <a href="/pro" class="pro-logo pro-logo-masthead" aria-label="Raconteur Pro home">
+                    <span class="pro-logo-word">Raconteur</span>
+                    <span class="pro-logo-tag">PRO</span>
+                </a>
+                <p class="pro-masthead-tagline">Literature you want to read</p>
+            </div>
+            <div class="pro-toolbar">
+                <div class="pro-toolbar-search">
+                    <div class="pro-search" id="proSearchWrap">
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Search stories &amp; writers…"
+                            autocomplete="off"
+                            aria-label="Search stories and writers"
+                        />
+                        <span class="pro-search-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                        <div id="searchDropdown" class="pro-search-dropdown" style="display: none;">
+                            <div id="searchResults" class="pro-search-results"></div>
+                        </div>
+                    </div>
+                </div>
+                <nav class="pro-pillnav" aria-label="Primary">
+                    <a href="/pro" class="pro-pill-link active" aria-current="page">Desk</a>
+                    <a href={navHref.stories} class="pro-pill-link">Library</a>
+                    <a href={navHref.feed} class="pro-pill-link">Feed</a>
+                    <a href={navHref.about} class="pro-pill-link">About</a>
+                </nav>
+                <div class="pro-toolbar-auth">
+                    <div class="pro-auth" id="authArea">
+                        <a href={navHref.login} class="pro-auth-pill ghost">Log in</a>
+                        <a href={navHref.signup} class="pro-auth-pill">Sign up</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+    ) : (
+        <header class="pro-inner-bar">
+            <a href="/pro" class="pro-inner-back">← Back to the Desk</a>
+            <a href="/pro" class="pro-logo pro-inner-brand" aria-label="Raconteur Pro home">
                 <span class="pro-logo-word">Raconteur</span>
                 <span class="pro-logo-tag">PRO</span>
             </a>
-
-            <nav class="pro-pillnav" aria-label="Primary">
-                <a href="/pro" class="pro-pill-link active" aria-current="page">Desk</a>
-                <a href={navHref.stories} class="pro-pill-link">Library</a>
-                <a href={navHref.feed} class="pro-pill-link">Feed</a>
-                <a href={navHref.about} class="pro-pill-link">About</a>
-            </nav>
-
-            <div class="pro-topbar-right">
-                <div class="pro-search" id="proSearchWrap">
-                    <input
-                        type="text"
-                        id="searchInput"
-                        placeholder="Search stories &amp; writers…"
-                        autocomplete="off"
-                        aria-label="Search stories and writers"
-                    />
-                    <span class="pro-search-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-                    <div id="searchDropdown" class="pro-search-dropdown" style="display: none;">
-                        <div id="searchResults" class="pro-search-results"></div>
-                    </div>
-                </div>
-
-                <div class="pro-auth" id="authArea">
-                    <a href={navHref.login} class="pro-auth-link">Log in</a>
-                    <a href={navHref.signup} class="pro-btn pro-btn-amber pro-auth-cta">Sign up</a>
-                </div>
-            </div>
-        </div>
-    </header>
+            <p class="pro-inner-tagline">Literature you want to read</p>
+        </header>
+    )}
 
     {/* Skin switch — PRO HOME ONLY (SkinToggle also self-guards to home paths) */}
     {Astro.url.pathname === '/pro' && (
@@ -156,18 +178,77 @@ const navHref = {
         <slot />
     </main>
 
-    <footer class="pro-footer">
-        <p class="pro-footer-brand">Raconteur <em>Pro</em> — The Reader's Desk</p>
-        <nav class="pro-footer-links" aria-label="Footer">
-            <a href="/pro">Desk</a>
-            <a href={navHref.stories}>Library</a>
-            <a href={navHref.feed}>Feed</a>
-            <a href="/about">About</a>
-            <a href="/tos">Terms</a>
-            <a href="/privacy">Privacy</a>
-        </nav>
-        <p class="pro-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur</p>
+    <footer class={`pro-footer ${isHome ? '' : 'pro-footer-inner'}`}>
+        <div class="pro-rain" aria-hidden="true" id="proRain"></div>
+        <div class="pro-footer-core">
+            <p class="pro-footer-name">Raconteur <em>Pro</em></p>
+            <p class="pro-footer-tagline">Literature you want to read</p>
+            <nav class="pro-footer-links" aria-label="Footer">
+                <a href="/pro">Desk</a>
+                <a href={navHref.stories}>Library</a>
+                <a href={navHref.feed}>Feed</a>
+                <a href="/about">About</a>
+            </nav>
+            <p class="pro-footer-legal"><a href="/tos">Terms</a> · <a href="/privacy">Privacy</a></p>
+            <p class="pro-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur</p>
+        </div>
     </footer>
+
+    <script>
+        // The word rain — falling quotes over the footer, amber/mint on the void
+        (() => {
+            const rain = document.getElementById('proRain');
+            if (!rain) return;
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+            const QUOTES = [
+                { text: 'There is nothing to writing. All you do is sit down at a typewriter and bleed.', author: 'Ernest Hemingway' },
+                { text: 'All you have to do is write one true sentence. Write the truest sentence that you know.', author: 'Ernest Hemingway' },
+                { text: 'You can always edit a bad page. You cannot edit a blank page.', author: 'Jodi Picoult' },
+                { text: 'Do not tell me the moon is shining; show me the glint of light on broken glass.', author: 'Anton Chekhov' },
+                { text: 'There is no greater agony than bearing an untold story inside you.', author: 'Maya Angelou' },
+                { text: 'Write what should not be forgotten.', author: 'Isabel Allende' },
+                { text: 'The worst enemy to creativity is self-doubt.', author: 'Sylvia Plath' },
+                { text: 'You can make anything by writing.', author: 'C.S. Lewis' },
+                { text: 'Fill your paper with the breathings of your heart.', author: 'William Wordsworth' },
+                { text: 'If there is a book that you want to read, but it has not been written yet, then you must write it.', author: 'Toni Morrison' },
+                { text: 'You fail only if you stop writing.', author: 'Ray Bradbury' },
+                { text: 'The heart of another is a dark forest, always.', author: 'Willa Cather' },
+                { text: 'Every story here was written to be remembered.', author: 'Raconteur' },
+                { text: 'Settle in. Stay a while.', author: 'Raconteur' },
+            ];
+
+            let qi = 0;
+            let lastAuthor = 0;
+
+            function dropWord(text, isAuthor) {
+                if (rain.childElementCount > 50) return;
+                const el = document.createElement('span');
+                el.className = 'pro-rain-word' + (isAuthor ? ' is-author' : '');
+                el.textContent = isAuthor ? '\u2014 ' + text : text;
+                el.style.left = (2 + Math.random() * 92) + '%';
+                el.style.setProperty('--fall', (rain.offsetHeight + 90) + 'px');
+                el.style.setProperty('--rot', (Math.random() * 10 - 5).toFixed(1) + 'deg');
+                el.style.animationDuration = (2.6 + Math.random() * 2.4) + 's';
+                el.addEventListener('animationend', () => el.remove());
+                rain.appendChild(el);
+            }
+
+            setInterval(() => {
+                const q = QUOTES[qi % QUOTES.length];
+                const words = q.text.split(' ');
+                for (let k = 0; k < 3; k++) {
+                    const w = words[(qi * 3 + k) % words.length];
+                    if (w) dropWord(w, false);
+                }
+                if (qi % 4 === 0 && Date.now() - lastAuthor > 4000) {
+                    dropWord(q.author, true);
+                    lastAuthor = Date.now();
+                }
+                qi++;
+            }, 140);
+        })();
+    </script>
 
     <script is:inline>
         // Service worker disabled — same policy as classic (unregister + clear caches)
@@ -221,8 +302,8 @@ const navHref = {
                 const safeName = esc(name);
                 const profileSlug = esc(name.toLowerCase().replace(/\s+/g, '-'));
                 authArea.innerHTML = `
-                    <a href="/dashboard" class="pro-auth-link">My Shelf</a>
-                    <a href="/author/${profileSlug}" class="pro-hello" title="Your public writer page">Hello, ${safeName}</a>
+                    <a href="/dashboard" class="pro-auth-pill">My Shelf</a>
+                    <a href="/author/${profileSlug}" class="pro-auth-pill ghost" title="Your public writer page">${safeName}</a>
                     <span class="pro-notif-wrap">
                         <button id="notifBell" class="pro-notif-bell" type="button" aria-label="Notifications"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="notifDot" class="pro-notif-dot" hidden></span></button>
                         <div id="notifPanel" class="pro-notif-panel" hidden>
@@ -238,7 +319,7 @@ const navHref = {
                     window.location.href = '/pro';
                 });
             } else {
-                authArea.innerHTML = `<a href="/login" class="pro-auth-link">Log in</a><a href="/signup" class="pro-btn pro-btn-amber pro-auth-cta">Sign up</a>`;
+                authArea.innerHTML = `<a href="/login" class="pro-auth-pill ghost">Log in</a><a href="/signup" class="pro-auth-pill">Sign up</a>`;
             }
         }
 
@@ -401,25 +482,66 @@ const navHref = {
 </html>
 
 <style>
-    /* === PRO TOPBAR — logo left, pill nav center, tools right === */
-    .pro-topbar {
-        position: sticky;
-        top: 0;
-        z-index: 50;
-        background: rgba(6, 8, 10, 0.72);
-        border-bottom: 1px solid var(--pro-line);
-        backdrop-filter: blur(16px) saturate(1.15);
-        -webkit-backdrop-filter: blur(16px) saturate(1.15);
+    /* === HOME MASTHEAD — brand centered, tagline beneath === */
+    .pro-masthead { text-align: center; padding: 1.6rem 1rem 0.7rem; }
+    .pro-logo-masthead { justify-content: center; display: flex; align-items: baseline; gap: 0.6rem; }
+    .pro-logo-masthead .pro-logo-word { font-size: clamp(2.6rem, 5.6vw, 3.9rem); font-weight: 700; }
+    .pro-logo-masthead .pro-logo-tag {
+        font-size: clamp(0.9rem, 1.8vw, 1.2rem);
+        padding: 0.2rem 0.6rem;
+        transform: translateY(-0.5rem);
+        border-radius: 10px;
+    }
+    .pro-masthead-tagline {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        font-size: clamp(0.95rem, 2vw, 1.2rem);
+        color: var(--pro-text-2);
+        margin: 0.4rem 0 0;
     }
 
-    .pro-topbar-inner {
+    /* === TOOLBAR — search left · nav center · auth right === */
+    .pro-toolbar {
         max-width: 1320px;
         margin: 0 auto;
-        padding: 0.8rem 1.6rem;
-        display: flex;
+        padding: 0.5rem 1.6rem 0.9rem;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
         align-items: center;
-        gap: 1.4rem;
+        gap: 1rem;
     }
+    .pro-toolbar-search { justify-self: start; }
+    .pro-toolbar-auth { justify-self: end; display: flex; align-items: center; gap: 0.5rem; }
+
+    /* === INNER BRAND BAR === */
+    .pro-inner-bar {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        padding: 2.6rem 1rem 2rem;
+        border-bottom: 1px solid var(--pro-line);
+    }
+    .pro-inner-brand { display: inline-flex; align-items: baseline; gap: 0.55rem; text-decoration: none; }
+    .pro-inner-brand .pro-logo-word { font-size: clamp(2.2rem, 4.6vw, 3.3rem); font-weight: 600; color: var(--pro-text); }
+    .pro-inner-brand .pro-logo-tag { font-size: 0.9rem; padding: 0.18rem 0.55rem; transform: translateY(-0.4rem); }
+    .pro-inner-tagline {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        font-size: clamp(0.95rem, 2vw, 1.2rem);
+        color: var(--pro-text-3);
+        margin: 0.45rem 0 0;
+    }
+    .pro-inner-back {
+        position: absolute;
+        top: 1.1rem;
+        left: 1.4rem;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--pro-text-2);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    .pro-inner-back:hover { color: var(--pro-amber); }
 
     .pro-logo {
         display: inline-flex;
@@ -447,35 +569,7 @@ const navHref = {
         transform: translateY(-2px);
     }
 
-    .pro-pillnav {
-        display: flex;
-        gap: 0.25rem;
-        margin: 0 auto;
-        padding: 0.28rem;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid var(--pro-line);
-        border-radius: 999px;
-    }
-
-    .pro-pill-link {
-        padding: 0.42rem 1.05rem;
-        border-radius: 999px;
-        font-size: 0.88rem;
-        font-weight: 500;
-        color: var(--pro-text-2);
-        text-decoration: none;
-        transition: color 0.2s, background 0.2s;
-    }
-
-    .pro-pill-link:hover { color: var(--pro-text); background: rgba(255, 255, 255, 0.05); }
-
-    .pro-pill-link.active {
-        color: #1a0d00;
-        background: var(--pro-amber);
-        font-weight: 600;
-    }
-
-    .pro-topbar-right { display: flex; align-items: center; gap: 1rem; }
+    .pro-topbar-inner { display: contents; }
 
     /* === SEARCH === */
     .pro-search { position: relative; }
@@ -603,7 +697,7 @@ const navHref = {
     .pro-toggle-row {
         display: flex;
         justify-content: center;
-        padding: 1.4rem 1rem 0;
+        padding: 1.1rem 1rem 0.3rem;
         position: relative;
         z-index: 1;
     }
@@ -616,7 +710,8 @@ const navHref = {
 
     @media (max-width: 860px) {
         .pro-pillnav { display: none; }
-        .pro-topbar-inner { justify-content: space-between; }
+        .pro-toolbar { grid-template-columns: 1fr auto; }
+        .pro-toolbar-search { order: -1; }
         .pro-search input { width: 130px; }
         .pro-search input:focus { width:  170px; }
         .pro-search-dropdown { width: 260px; }

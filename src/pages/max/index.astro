@@ -9,6 +9,8 @@ import { getVisibleStories } from '../../data/stories';
 import { supabase } from '../../lib/supabase';
 import { buildStoryFromDB } from '../../lib/storyLoader';
 
+const DAY_MS = 86400000;
+
 // 1. Static stories
 const staticStories = getVisibleStories();
 
@@ -26,52 +28,18 @@ const totalWords = stories.reduce((sum, s) => sum + s.wordCount, 0);
 const poems = stories.filter(s => (s as any).kind === 'poem' || s.genre === 'Poetry');
 const prose = stories.filter(s => !((s as any).kind === 'poem' || s.genre === 'Poetry'));
 
-// ===== Curated browsers: 3 works from 3 different random accounts + 1 reserved
-// for the editor's account, prose on top and poetry below (four each). =====
-const BOSS_NAME = 'Nzan Kikon';
-
-// deterministic daily shuffle — same lineup all day, fresh tomorrow
-const DAY_MS = 86400000;
-const daySeed = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / DAY_MS) * 2654435761;
-const dailyRank = (id: string) => {
-    let h = daySeed;
-    for (let c = 0; c < id.length; c++) h = ((h ^ id.charCodeAt(c)) * 16777619) >>> 0;
-    return h;
-};
-
-function curate(pool: any[], count: number): any[] {
-    const picks: any[] = [];
-    // 1. the reserved slot: the boss's latest work in this lane
-    const bossLatest = pool.find((x: any) => x.author === BOSS_NAME);
-    if (bossLatest) picks.push(bossLatest);
-    // 2. three works from three DIFFERENT random accounts
-    const latestByAuthor: Record<string, any> = {};
-    pool.forEach((x: any) => {
-        if (x.author === BOSS_NAME) return;
-        if (!latestByAuthor[x.author]) latestByAuthor[x.author] = x; // pool is newest-first
-    });
-    const others = Object.values(latestByAuthor)
-        .sort((a: any, b: any) => dailyRank(String(a.slug ?? a.id)) - dailyRank(String(b.slug ?? b.id)));
-    for (const w of others) {
-        if (picks.length >= count) break;
-        if (!picks.some((px) => px.author === w.author)) picks.push(w);
-    }
-    // 3. top up from the newest of the whole pool if the house is quiet
-    for (const x of pool) {
-        if (picks.length >= count) break;
-        if (!picks.some((px) => px.slug === x.slug && px.id === x.id)) picks.push(x);
-    }
-    return picks.slice(0, count);
-}
+// ===== Curated browsers via the shared house engine =====
+import { curate, dayOfYearNow } from '../../lib/curate';
+const daySeed = dayOfYearNow() * 2654435761;
 
 const prosePool = [...prose].sort((a: any, b: any) => new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime());
 const poemPool = [...poems].sort((a: any, b: any) => new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime());
 
 // The shelf — four prose works for the split-screen browser
-const shelf = curate(prosePool, 4);
+const shelf = curate(prosePool, 4, daySeed);
 
 // Verse — four poems for the verse browser
-const verse = curate(poemPool, 4);
+const verse = curate(poemPool, 4, daySeed);
 
 // Daily hero plate — deterministic daily rotation across the 13 hero images
 const heroImageCount = 13;
