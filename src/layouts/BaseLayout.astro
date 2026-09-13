@@ -756,6 +756,11 @@ const _staticSearchData = getVisibleStories().map(s => ({ slug: s.slug, title: s
 .search-emoji {
   filter: grayscale(1) brightness(2);
 }
+
+    /* Auth cluster is JS-injected — global styles (scoped never applied) */
+    .notif-bell { display: inline-flex; align-items: center; justify-content: center; width: 2.1rem; height: 2.1rem; border: 1px solid rgba(228,221,200,0.35); border-radius: 50%; background: transparent; cursor: pointer; color: #e4ddc8; position: relative; transition: border-color 0.2s, color 0.2s; }
+    .notif-bell:hover { border-color: #a8b89c; color: #f4ede0; }
+    .notif-bell svg { width: 16px; height: 16px; display: block; }
 </style>
 
 <script>

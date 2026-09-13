@@ -93,18 +93,21 @@ const navHref = {
     {/* Royal entrance — max variant, born covered on skin switches (?welcome=1) */}
     <SkinSplash variant="max" eager={Astro.url.searchParams.get('welcome') === '1'} />
 
+    {isHome && (
+        <div class="mx-toggle-row">
+            <SkinToggle variant="editorial" />
+        </div>
+    )}
     {isHome ? (
         <header class="mx-topbar">
-            <div class="mx-topbar-inner">
-                <a href="/max" class="mx-brand" aria-label="Raconteur Max home">
+            <div class="mx-masthead">
+                <a href="/max" class="mx-brand mx-brand-masthead" aria-label="Raconteur Max home">
                     Raconteur <span class="mx-brand-max">Max</span>
                 </a>
-                <nav class="mx-topnav" aria-label="Primary">
-                    <a href={navHref.stories}>Library</a>
-                    <a href={navHref.feed}>Feed</a>
-                    <a href={navHref.about}>About</a>
-                </nav>
-                <div class="mx-topbar-tools">
+                <p class="mx-masthead-tagline">Literature you want to read</p>
+            </div>
+            <div class="mx-toolbar">
+                <div class="mx-toolbar-search">
                     <div class="mx-search" id="mxSearchWrap">
                         <input
                             type="text"
@@ -118,9 +121,16 @@ const navHref = {
                             <div id="searchResults" class="mx-search-results"></div>
                         </div>
                     </div>
+                </div>
+                <nav class="mx-topnav" aria-label="Primary">
+                    <a href={navHref.stories}>Library</a>
+                    <a href={navHref.feed}>Feed</a>
+                    <a href={navHref.about}>About</a>
+                </nav>
+                <div class="mx-toolbar-auth">
                     <div class="mx-auth" id="authArea">
-                        <a href={navHref.login} class="mx-auth-link">Log in</a>
-                        <a href={navHref.signup} class="mx-btn mx-btn-ink mx-auth-cta">Sign up</a>
+                        <a href={navHref.login} class="mx-auth-pill ghost">Log in</a>
+                        <a href={navHref.signup} class="mx-auth-pill">Sign up</a>
                     </div>
                 </div>
             </div>
@@ -134,12 +144,6 @@ const navHref = {
         </header>
     )}
 
-    {/* Skin switch — MAX HOME ONLY */}
-    {isHome && (
-        <div class="mx-toggle-row">
-            <SkinToggle variant="editorial" />
-        </div>
-    )}
 
     <main class="mx-main">
         <slot />
@@ -301,7 +305,7 @@ import { iconSvg } from '../lib/icons';
                     window.location.href = '/max';
                 });
             } else {
-                authArea.innerHTML = `<a href="/max/login" class="mx-auth-link">Log in</a><a href="/max/signup" class="mx-btn mx-btn-ink mx-auth-cta">Sign up</a>`;
+                authArea.innerHTML = `<a href="/max/login" class="mx-auth-pill ghost">Log in</a><a href="/max/signup" class="mx-auth-pill">Sign up</a>`;
             }
         }
 
@@ -475,14 +479,30 @@ import { iconSvg } from '../lib/icons';
         -webkit-backdrop-filter: blur(12px);
     }
 
-    .mx-topbar-inner {
+    /* Masthead: brand centered, tagline beneath */
+    .mx-masthead { text-align: center; padding: 1.4rem 1rem 0.7rem; }
+    .mx-brand-masthead { font-size: 1.9rem; }
+    .mx-masthead-tagline {
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        font-size: 0.85rem;
+        color: var(--mx-ink-faint);
+        margin: 0.2rem 0 0;
+    }
+
+    /* Toolbar: search left · nav center · auth right */
+    .mx-toolbar {
         max-width: 1240px;
         margin: 0 auto;
-        padding: 0.9rem 1.6rem;
-        display: flex;
+        padding: 0.5rem 1.6rem 0.9rem;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
         align-items: center;
-        gap: 1.4rem;
+        gap: 1rem;
     }
+
+    .mx-toolbar-search { justify-self: start; }
+    .mx-toolbar-auth { justify-self: end; display: flex; align-items: center; gap: 0.5rem; }
 
     .mx-brand {
         font-family: var(--mx-font-display);
@@ -499,7 +519,7 @@ import { iconSvg } from '../lib/icons';
         color: var(--mx-vermilion);
     }
 
-    .mx-topnav { display: flex; gap: 1.2rem; margin: 0 auto; }
+    .mx-topnav { display: flex; gap: 1.2rem; }
 
     .mx-topnav a {
         font-size: 0.86rem;
@@ -512,6 +532,7 @@ import { iconSvg } from '../lib/icons';
     .mx-topnav a:hover { color: var(--mx-ink); }
 
     .mx-topbar-tools { display: flex; align-items: center; gap: 0.9rem; }
+
 
     /* === SEARCH === */
     .mx-search { position: relative; }
@@ -576,138 +597,22 @@ import { iconSvg } from '../lib/icons';
     .mx-search-writer h4 { color: var(--mx-vermilion); }
     .mx-search-empty { padding: 0.8rem; font-size: 0.8rem; color: var(--mx-ink-faint); margin: 0; }
 
-    /* === AUTH + NOTIFICATIONS === */
-    .mx-auth { display: flex; align-items: center; gap: 0.85rem; white-space: nowrap; }
-    .mx-auth-link { color: var(--mx-ink-soft); font-size: 0.85rem; font-weight: 500; text-decoration: none; }
-    .mx-auth-link:hover { color: var(--mx-ink); }
-    .mx-auth-cta { padding: 0.5rem 1.1rem; font-size: 0.82rem; }
-    .mx-hello { color: var(--mx-brass); font-size: 0.85rem; font-weight: 600; text-decoration: none; }
-
-    .mx-notif-wrap { position: relative; }
-    .mx-notif-bell {
-        background: transparent;
-        border: 1px solid var(--mx-line-strong);
-        border-radius: 999px;
-        padding: 0.32rem 0.6rem;
-        font-size: 0.88rem;
-        cursor: pointer;
-        position: relative;
-    }
-
-    .mx-notif-dot {
-        position: absolute;
-        top: -2px; right: -2px;
-        width: 8px; height: 8px;
-        background: var(--mx-vermilion);
-        border-radius: 50%;
-        box-shadow: 0 0 8px rgba(216, 52, 28, 0.7);
-    }
-
-    .mx-notif-panel {
-        position: absolute;
-        top: calc(100% + 10px);
-        right: 0;
-        width: 320px;
-        background: #fffdf9;
-        border: 1px solid var(--mx-line-strong);
-        border-radius: 14px;
-        box-shadow: 0 22px 60px rgba(28, 25, 23, 0.16);
-        padding: 0.9rem;
-        z-index: 60;
-    }
-
-    .mx-notif-head { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mx-ink-faint); margin-bottom: 0.6rem; }
-    .mx-notif-list { max-height: 320px; overflow-y: auto; }
-    .mx-notif-empty { color: var(--mx-ink-faint); font-size: 0.8rem; margin: 0; padding: 0.6rem 0; }
-    .mx-notif-item {
-        display: flex; gap: 0.6rem; align-items: flex-start;
-        padding: 0.55rem 0.6rem; border-radius: 10px;
-        text-decoration: none; color: var(--mx-ink-soft);
-    }
-    .mx-notif-item:hover { background: rgba(28, 25, 23, 0.06); }
-    .mx-notif-item.unread { background: rgba(216, 52, 28, 0.07); }
-    .mx-notif-icon { color: var(--mx-vermilion); }
-    .mx-notif-text { font-size: 0.82rem; flex: 1; }
-    .mx-notif-time { font-size: 0.7rem; color: var(--mx-ink-faint); }
-
-    /* === INNER BRAND BAR — inner pages carry only the name + tagline === */
-    .mx-inner-bar {
-        position: relative;
-        z-index: 1;
-        text-align: center;
-        padding: 2.2rem 1rem 1.6rem;
-        border-bottom: 1px solid var(--mx-line);
-        background: var(--mx-paper);
-    }
-
-    .mx-inner-brand { font-size: 1.7rem; }
-
-    .mx-inner-tagline {
-        font-family: var(--mx-font-read);
-        font-style: italic;
-        font-size: 0.85rem;
-        color: var(--mx-ink-faint);
-        margin: 0.3rem 0 0;
-    }
-
-    /* === AUTH PILLS — icon buttons in the nav === */
-    .mx-auth-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        padding: 0.5rem 1.05rem;
-        border-radius: 999px;
-        background: var(--mx-ink);
-        color: var(--mx-paper);
-        font-family: var(--mx-font-body);
-        font-size: 0.82rem;
-        font-weight: 600;
-        text-decoration: none;
-        transition: transform 0.2s var(--mx-ease), background 0.2s, color 0.2s, border-color 0.2s;
-    }
-
-    .mx-auth-pill:hover { background: var(--mx-vermilion); transform: translateY(-1px); }
-
-    .mx-auth-pill.ghost {
-        background: transparent;
-        border: 1px solid var(--mx-line-strong);
-        color: var(--mx-ink);
-    }
-
-    .mx-auth-pill.ghost:hover { background: rgba(28, 25, 23, 0.06); border-color: var(--mx-ink); transform: translateY(-1px); }
-
-    .mx-auth-pill.ghost.danger:hover { background: var(--mx-vermilion); border-color: var(--mx-vermilion); color: var(--mx-paper); }
-
-    .mx-notif-bell {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 2.2rem;
-        height: 2.2rem;
-        background: transparent;
-        border: 1px solid var(--mx-line-strong);
-        border-radius: 50%;
-        color: var(--mx-ink);
-        cursor: pointer;
-        position: relative;
-        transition: border-color 0.2s, color 0.2s, transform 0.2s;
-    }
-
-    .mx-notif-bell:hover { border-color: var(--mx-vermilion); color: var(--mx-vermilion); transform: translateY(-1px); }
 
     /* === TOGGLE ROW === */
     .mx-toggle-row {
         display: flex;
         justify-content: center;
-        padding: 1.1rem 1rem 0;
+        padding: 1rem 1rem 0.4rem;
         position: relative;
         z-index: 1;
+        background: var(--mx-paper);
     }
 
     /* === RESPONSIVE === */
     @media (max-width: 860px) {
         .mx-topnav { display: none; }
-        .mx-topbar-inner { justify-content: space-between; }
+        .mx-toolbar { grid-template-columns: 1fr auto; }
+        .mx-toolbar-search { order: -1; }
         .mx-search input { width: 120px; }
         .mx-search input:focus { width: 160px; }
     }
