@@ -34,7 +34,19 @@
 
 **Audit rule:** every chunk commit runs a self-check against THE LIST (new code must add zero items; existing items only shrink, never grow). Flagged-but-not-yet-fixed items live in the De-Vibe Tracker (§6b) and get burned down in de-vibe phases.
 
+## 6c. DE-VIBE REHAUL — the plan (boss order 2026-09-13: "keep the idea, modify it so it passes the test")
+
+**Prime directive: keep each skin's identity, change the expression.** Glass stays — but stops being the default surface (tell 18) and becomes a *deliberate accent*: floating glass nav + at most ONE focal glass surface per page (the reading sheet); all ordinary cards become solid warm-paper surfaces with ink hairlines, higher opacity (0.55→0.78), reduced blur (22→14px) — "frosted vellum", not 2022 glass. Glows/colour fields survive only if they RESPOND to the user (scroll-linked intensity/position); decorative always-on loops get removed or made interactive. Classic skin stays FROZEN (§3.1) — its tells (emoji, native dialogs, genre border-bars) are flagged for a boss-only "classic polish" decision; new skins + shared new-skin layouts go first.
+
+- [ ] **DR1 — Icon system** — `src/components/Icon.astro` (one inline-SVG, stroke-based, currentColor, named set: bell/user/heart/comment/reply/mail/edit/download/trash/search/close/check/arrow/book/share…). Sweep all emoji out of MaxLayout, PlusLayout, ProLayout + every built max page (incl. max story reader's 21). New-skin rule: zero emoji in chrome; emoji in user content stays (it's data, not UI).
+- [ ] **DR2 — Dialog & toast system** — `src/lib/dialog.ts` (promise-based confirm + toast, skin-aware styling) replacing ALL native alert/confirm in new skins (max/poetry now; classic files flagged for the boss-only classic pass).
+- [ ] **DR3 — Typography de-tell** — Max body Inter → **Hanken Grotesk**; Plus Instrument Sans+Serif combo → **Archivo** (UI) with Fraunces kept for display; Pro keeps Outfit (not on the list). Kill the italic-serif-accent-word hero tell (Max "with you." / Plus rotating word): new treatment = upright accent in the skin's accent colour w/ hand-drawn underline — emphasis survives, the cliché doesn't. Cut all-caps section labels to true print conventions only (folios/meta), sentence-case section titles.
+- [ ] **DR4 — Surface & glow rehaul** — the glass-accent doctrine above applied to all 3 skins' CSS: cards → paper+hairline, blur/opacity retune, ink borders; colour fields → scroll-reactive (fields drift/intensify WITH scroll, static when idle) or reduced to a single wash; aurora always-on loops end; stat banner rows (tell 14) → integrated mono meta lines inside content; eyebrow-badge-above-H1 (tell 10) removed (meta moves inline with rules); border-top genre bars (tell 11/21) removed in new skins — genre = text label only.
+- [ ] **DR5 — Contrast & copy pass** — all faint text ≥4.5:1 on its surface (Max ink-faint #9a918a → ~#6f675f; plus equivalents); TODO comments out of PlusLayout (registry moves to log only); copy audit for AI-generic phrasing.
+- [ ] **DR6 — The seal** — full grep sweep (emoji=0 in new skins, alert=0, uppercase count reduced), npm build clean, dead-link audit, final §1c list pass, log the "passes the test" verdict. Then resume Max Phase 3.
+
 ## 6b. DE-VIBE TRACKER (audit 2026-09-13 — everything the project currently FAILS on)
+
 
 Severity: 🔴 unambiguous tell · 🟡 flagged, needs judgment (could be defended as deliberate editorial style)
 | # | Item (list #) | Where it lives | Sev |

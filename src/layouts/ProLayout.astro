@@ -108,7 +108,7 @@ const navHref = {
                         autocomplete="off"
                         aria-label="Search stories and writers"
                     />
-                    <span class="pro-search-icon" aria-hidden="true">⌕</span>
+                    <span class="pro-search-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
                     <div id="searchDropdown" class="pro-search-dropdown" style="display: none;">
                         <div id="searchResults" class="pro-search-results"></div>
                     </div>
@@ -178,6 +178,7 @@ const navHref = {
         // Auth widget — feature parity with PlusLayout's auth + notifications
         import { supabase } from '../lib/supabase';
         import { esc } from '../lib/escape';
+        import { iconSvg } from '../lib/icons';
 
         const authArea = document.getElementById('authArea');
 
@@ -200,7 +201,7 @@ const navHref = {
                     <a href="/dashboard" class="pro-auth-link">My Shelf</a>
                     <a href="/author/${profileSlug}" class="pro-hello" title="Your public writer page">Hello, ${safeName}</a>
                     <span class="pro-notif-wrap">
-                        <button id="notifBell" class="pro-notif-bell" type="button" aria-label="Notifications">🔔<span id="notifDot" class="pro-notif-dot" hidden></span></button>
+                        <button id="notifBell" class="pro-notif-bell" type="button" aria-label="Notifications"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="notifDot" class="pro-notif-dot" hidden></span></button>
                         <div id="notifPanel" class="pro-notif-panel" hidden>
                             <div class="pro-notif-head">Notifications</div>
                             <div id="notifList" class="pro-notif-list"></div>
@@ -225,7 +226,7 @@ const navHref = {
             const list = document.getElementById('notifList')!;
 
             const actorLabel = (n: any) => n.actor_id ? (n._actorName || 'Someone') : (n.body_preview || 'A Wandering Reader');
-            const icon = (t: string) => ({ like: '♥', comment: '💬', reply: '↩', follow: '👤', message: '✉' }[t] || '•');
+            const icon = (t: string) => (({ like: iconSvg('heart'), comment: iconSvg('comment'), reply: iconSvg('reply'), follow: iconSvg('user'), message: iconSvg('mail') } as any)[t] || iconSvg('sparkle'));
             const text = (n: any) => {
                 if (n.type === 'like') return `${actorLabel(n)} appreciated your story`;
                 if (n.type === 'follow') return `${actorLabel(n)} started following you`;
@@ -301,6 +302,7 @@ const navHref = {
         // Live search — stories AND writers (same queries as classic)
         import { supabase } from '../lib/supabase';
         import { esc } from '../lib/escape';
+        import { iconSvg } from '../lib/icons';
 
         const searchInput = document.getElementById('searchInput') as HTMLInputElement;
         const searchDropdown = document.getElementById('searchDropdown');
@@ -351,7 +353,7 @@ const navHref = {
                 .slice(0, 3)
                 .map(([slug, name]) => `
                     <a href="/author/${esc(slug)}" class="pro-search-item pro-search-writer">
-                      <h4>👤 ${esc(name)}</h4>
+                      <h4>${iconSvg('user', 14)} ${esc(name)}</h4>
                       <p>View writer page</p>
                     </a>
                 `);

@@ -4,6 +4,7 @@
 // with movements and effects throughout (reveal staggers, hover floats, cover zooms).
 // Server logic is a faithful copy of classic /stories (feature parity).
 import MaxLayout from '../../layouts/MaxLayout.astro';
+import Icon from '../../components/Icon.astro';
 import { getVisibleStories } from '../../data/stories';
 import { supabase } from '../../lib/supabase';
 import { buildStoryFromDB, bandFromWords } from '../../lib/storyLoader';
@@ -79,7 +80,7 @@ const trending = (Object.entries(weekCounts)
                     placeholder="Search by title, author, or feeling…"
                     aria-label="Search stories"
                 />
-                <span class="mx-searchbar-icon" aria-hidden="true">⌕</span>
+                <span class="mx-searchbar-icon" aria-hidden="true"><Icon name="search" size={16} /></span>
             </div>
 
             <div class="mx-chiprow" id="genreChips">

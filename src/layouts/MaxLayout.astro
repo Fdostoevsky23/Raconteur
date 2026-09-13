@@ -8,6 +8,7 @@ import { getVisibleStories } from '../data/stories';
 import { supabase } from '../lib/supabase';
 import SkinToggle from '../components/plus/SkinToggle.astro';
 import SkinSplash from '../components/plus/SkinSplash.astro';
+import Icon from '../components/Icon.astro';
 import '../styles/max.css';
 
 interface Props {
@@ -112,7 +113,7 @@ const navHref = {
                             autocomplete="off"
                             aria-label="Search stories and writers"
                         />
-                        <span class="mx-search-icon" aria-hidden="true">⌕</span>
+                        <span class="mx-search-icon" aria-hidden="true"><Icon name="search" size={15} /></span>
                         <div id="searchDropdown" class="mx-search-dropdown" style="display: none;">
                             <div id="searchResults" class="mx-search-results"></div>
                         </div>
@@ -143,7 +144,7 @@ const navHref = {
                         autocomplete="off"
                         aria-label="Search stories and writers"
                     />
-                    <span class="mx-search-icon" aria-hidden="true">⌕</span>
+                    <span class="mx-search-icon" aria-hidden="true"><Icon name="search" size={15} /></span>
                     <div id="searchDropdown" class="mx-search-dropdown" style="display: none;">
                         <div id="searchResults" class="mx-search-results"></div>
                     </div>
@@ -256,6 +257,7 @@ const navHref = {
         // Auth widget — feature parity with PlusLayout's auth + notifications
         import { supabase } from '../lib/supabase';
         import { esc } from '../lib/escape';
+import { iconSvg } from '../lib/icons';
 
         const authArea = document.getElementById('authArea');
 
@@ -278,7 +280,7 @@ const navHref = {
                     <a href="/dashboard" class="mx-auth-link">My Shelf</a>
                     <a href="/max/author/${profileSlug}" class="mx-hello" title="Your public writer page">Hello, ${safeName}</a>
                     <span class="mx-notif-wrap">
-                        <button id="notifBell" class="mx-notif-bell" type="button" aria-label="Notifications">🔔<span id="notifDot" class="mx-notif-dot" hidden></span></button>
+                        <button id="notifBell" class="mx-notif-bell" type="button" aria-label="Notifications"><Icon name="bell" size={15} /><span id="notifDot" class="mx-notif-dot" hidden></span></button>
                         <div id="notifPanel" class="mx-notif-panel" hidden>
                             <div class="mx-notif-head">Notifications</div>
                             <div id="notifList" class="mx-notif-list"></div>
@@ -303,7 +305,7 @@ const navHref = {
             const list = document.getElementById('notifList')!;
 
             const actorLabel = (n: any) => n.actor_id ? (n._actorName || 'Someone') : (n.body_preview || 'A Wandering Reader');
-            const icon = (t: string) => ({ like: '♥', comment: '💬', reply: '↩', follow: '👤', message: '✉' }[t] || '•');
+            const icon = (t: string) => (({ like: iconSvg('heart'), comment: iconSvg('comment'), reply: iconSvg('reply'), follow: iconSvg('user'), message: iconSvg('mail') } as any)[t] || iconSvg('sparkle'));
             const text = (n: any) => {
                 if (n.type === 'like') return `${actorLabel(n)} appreciated your story`;
                 if (n.type === 'follow') return `${actorLabel(n)} started following you`;
@@ -379,6 +381,7 @@ const navHref = {
         // Live search — stories AND writers (same queries as classic)
         import { supabase } from '../lib/supabase';
         import { esc } from '../lib/escape';
+import { iconSvg } from '../lib/icons';
 
         const searchInput = document.getElementById('searchInput') as HTMLInputElement;
         const searchDropdown = document.getElementById('searchDropdown');
@@ -429,7 +432,7 @@ const navHref = {
                 .slice(0, 3)
                 .map(([slug, name]) => `
                     <a href="/max/author/${esc(slug)}" class="mx-search-item mx-search-writer">
-                      <h4>👤 ${esc(name)}</h4>
+                      <h4>${iconSvg('user', 14)} ${esc(name)}</h4>
                       <p>View writer page</p>
                     </a>
                 `);

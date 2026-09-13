@@ -78,6 +78,7 @@ const poemCount = (poems || []).length;
 <script>
     // Owner-only poem management — faithful clone of classic (edit/export/delete).
     import { supabase } from '../../../lib/supabase';
+    import { iconSvg } from '../../../lib/icons';
 
     (async () => {
         const ownerId = document.getElementById('coll-owner')?.getAttribute('data-owner') || '';
@@ -94,12 +95,12 @@ const poemCount = (poems || []).length;
             edit.className = 'mx-poem-btn mx-poem-edit';
             edit.href = `/submit?edit=${id}`;
             edit.title = 'Edit';
-            edit.textContent = '✎';
+            edit.innerHTML = iconSvg('edit', 14);
 
             const exp = document.createElement('button');
             exp.className = 'mx-poem-btn mx-poem-export';
             exp.title = 'Download as .md';
-            exp.textContent = '⬇';
+            exp.innerHTML = iconSvg('download', 14);
             exp.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -130,7 +131,7 @@ const poemCount = (poems || []).length;
             const del = document.createElement('button');
             del.className = 'mx-poem-btn mx-poem-delete';
             del.title = 'Delete';
-            del.textContent = '🗑️';
+            del.innerHTML = iconSvg('trash', 14);
             del.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();

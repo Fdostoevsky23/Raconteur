@@ -4,6 +4,7 @@
 // print-style motion. Inner max pages will use bright glassmorphism
 // (handled by MaxLayout's mode switch); the home stays pure editorial.
 import MaxLayout from '../../layouts/MaxLayout.astro';
+import Icon from '../../components/Icon.astro';
 import { getVisibleStories } from '../../data/stories';
 import { supabase } from '../../lib/supabase';
 import { buildStoryFromDB } from '../../lib/storyLoader';
@@ -52,12 +53,12 @@ const tickerItems = [
 
 // Moods — deep-link into archive search
 const moods = [
-    { emoji: '🌧', name: 'Melancholy', query: 'rain' },
-    { emoji: '🌙', name: 'Nocturnal', query: 'night' },
-    { emoji: '❤', name: 'Tender', query: 'love' },
-    { emoji: '🕯', name: 'Still', query: 'silence' },
-    { emoji: '🏠', name: 'Homeward', query: 'home' },
-    { emoji: '✨', name: 'Wonder', query: 'light' },
+    { icon: 'cloud-rain', name: 'Melancholy', query: 'rain' },
+    { icon: 'moon', name: 'Nocturnal', query: 'night' },
+    { icon: 'heart', name: 'Tender', query: 'love' },
+    { icon: 'feather', name: 'Still', query: 'silence' },
+    { icon: 'home', name: 'Homeward', query: 'home' },
+    { icon: 'sparkle', name: 'Wonder', query: 'light' },
 ];
 ---
 
@@ -206,7 +207,7 @@ const moods = [
         <div class="mx-moods-row">
             {moods.map(m => (
                 <a href={`/max/stories?q=${m.query}`} class="mx-mood">
-                    <span class="mx-mood-emoji">{m.emoji}</span>
+                    <span class="mx-mood-emoji"><Icon name={m.icon} size={22} /></span>
                     <span class="mx-mood-name">{m.name}</span>
                 </a>
             ))}

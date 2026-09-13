@@ -4,11 +4,13 @@
 // bright glassmorphism: a luminous glass reading sheet floating over the
 // drifting colour fields, glass controls, vermilion dropcap, movements.
 import MaxLayout from '../../../layouts/MaxLayout.astro';
+import Icon from '../../../components/Icon.astro';
 import { getAllStorySlugs, getStoryBySlug, getVisibleStories } from '../../../data/stories';
 import { supabase } from '../../../lib/supabase';
 import { buildStoryFromDB } from '../../../lib/storyLoader';
 import authors from '../../../data/authors.json';
 import { esc } from '../../../lib/escape';
+import { iconSvg } from '../../../lib/icons';
 
 // (Server-rendered on every request — slugs are static names or DB uuids.)
 const { slug } = Astro.params;
@@ -115,8 +117,8 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
                         <span class="mx-font-label large">A</span>
                     </div>
                     <div class="mx-mode-switcher" role="group" aria-label="Reading mode">
-                        <button type="button" data-mode="light" title="Light mode">☀️</button>
-                        <button type="button" data-mode="sepia" title="Sepia mode">🌙</button>
+                        <button type="button" data-mode="light" title="Light mode" aria-label="Light mode"><Icon name="sun" size={15} /></button>
+                        <button type="button" data-mode="sepia" title="Sepia mode" aria-label="Sepia mode"><Icon name="moon" size={15} /></button>
                         <button type="button" data-mode="dark" title="Dark mode">🌑</button>
                     </div>
                 </div>
@@ -202,11 +204,11 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
             {/* Quiet applause — like + bookmark */}
             <div class="mx-like-row">
                 <button id="likeBtn" class="mx-like-btn" type="button" aria-label="Appreciate this story">
-                    <span id="likeHeart">♡</span>
+                    <span id="likeHeart"><Icon name="heart" size={16} /></span>
                     <span id="likeCount">0</span>
                 </button>
                 <button id="bookmarkBtn" class="mx-like-btn" type="button" aria-label="Save for later">
-                    <span>🔖</span>
+                    <Icon name="bookmark" size={16} />
                     <span id="bookmarkLabel">Save</span>
                 </button>
                 <span id="likeHint" class="mx-like-hint"></span>
@@ -242,7 +244,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
                 <button type="button" class="mx-share-btn" id="shareCopy" title="Copy link">🔗 Copy</button>
                 <a class="mx-share-btn" id="shareX" target="_blank" rel="noopener" title="Share on X" href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(Astro.url.href)}&text=${encodeURIComponent(story.title)}`}>𝕏</a>
                 <a class="mx-share-btn" id="shareFb" target="_blank" rel="noopener" title="Share on Facebook" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(Astro.url.href)}`}>f</a>
-                <a class="mx-share-btn" id="shareMail" target="_blank" rel="noopener" title="Share by email" href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(story.title)}&body=${encodeURIComponent('I thought you might enjoy this on Raconteur: ' + Astro.url.href)}`}>✉</a>
+                <a class="mx-share-btn" id="shareMail" target="_blank" rel="noopener" title="Share by email" href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(story.title)}&body=${encodeURIComponent('I thought you might enjoy this on Raconteur: ' + Astro.url.href)}`}><Icon name="mail" size={15} /></a>
                 <a class="mx-share-btn" id="shareWa" target="_blank" rel="noopener" title="Share on WhatsApp" href={`https://wa.me/?text=${encodeURIComponent(story.title + ' ' + Astro.url.href)}`}>WhatsApp</a>
             </div>
 
@@ -405,7 +407,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
 
     function paint(liked: boolean) {
         likeBtn.classList.toggle('liked', liked);
-        likeHeart.textContent = liked ? '♥' : '♡';
+        likeHeart.innerHTML = liked ? iconSvg('heart-filled', 16) : iconSvg('heart', 16);
     }
 
     initLikes();
@@ -494,6 +496,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     // === Comments with replies + reports (classic clone) ===
     import { supabase } from '../../../lib/supabase';
     import { esc } from '../../../lib/escape';
+    import { iconSvg } from '../../../lib/icons';
 
     const slug = JSON.parse(document.getElementById('current-slug')?.textContent || '""');
     const isDbStory = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
@@ -536,13 +539,13 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
             const replyBtn = (!isReply)
                 ? `<button class="mx-c-reply" data-id="${c.id}" data-name="${esc(name)}">Reply</button>` : '';
             const delBtn = canDelete
-                ? `<button class="mx-c-del" data-id="${c.id}">🗑️</button>` : '';
-            const reportBtn = `<button class="mx-c-report" data-id="${c.id}">⚑</button>`;
+                ? `<button class="mx-c-del" data-id="${c.id}">${iconSvg("trash", 14)}</button>` : '';
+            const reportBtn = `<button class="mx-c-report" data-id="${c.id}">${iconSvg("flag", 14)}</button>`;
             const replies: string = (byParent[c.id] || []).map((r: any) => renderOne(r, true)).join('');
 
             const isGuest = !c.user_id;
             const avatarContent = isGuest
-                ? ['🦉', '🌙', '📚', '✨', '🍃'][Math.abs(c.id.charCodeAt(0)) % 5]
+                ? `<span class="mx-c-guest" style="filter:hue-rotate(${(Math.abs(c.id.charCodeAt(0)) % 5) * 47}deg)">${iconSvg("feather", 14)}</span>`
                 : name.substring(0, 2).toUpperCase();
             const avatarClass = isGuest ? 'mx-c-avatar guest' : 'mx-c-avatar';
 
@@ -684,7 +687,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
                 reason: reasonSel.value === 'other' ? `Other: ${(document.getElementById('reportDetails') as HTMLTextAreaElement).value.trim()}` : reasonSel.value,
             });
             if (error) { msg.textContent = 'Something went wrong.'; msg.style.color = '#b02410'; }
-            else { msg.textContent = '✦ Thank you — we will look into it.'; msg.style.color = '#3d6b3c'; }
+            else { msg.textContent = 'Thank you — we will look into it.'; msg.style.color = '#3d6b3c'; }
             submitBtn.textContent = 'Submit report';
             setTimeout(() => modal!.classList.remove('open'), 1400);
         };
@@ -810,6 +813,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     // === Recommendations widget (classic clone) ===
     import { supabase } from '../../../lib/supabase';
     import { esc } from '../../../lib/escape';
+    import { iconSvg } from '../../../lib/icons';
     (async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
