@@ -12,17 +12,15 @@ import { buildStoryFromDB } from '../../../lib/storyLoader';
 
 const { slug } = Astro.params;
 
-let author: any = null;
+let author: any = Astro.props.author;
 let authorStories: Story[] = [];
 let isDbAuthor = false;
 
-// 1. Static author
-const staticAuthor = authors.find((a) => a.name.toLowerCase().replace(/\s+/g, '-') === slug);
-if (staticAuthor) {
-    author = { ...staticAuthor };
+// 1. Static author (props only — URL visits fall through to the DB branch,
+//    exactly like classic, so live profiles serve photo/verified/socials/recs)
+if (author) {
     const allStories = getVisibleStories();
     authorStories = allStories.filter((s) => s.author.toLowerCase() === author.name.toLowerCase());
-    // Also pull DB-published stories by the same name
     const { data: dbRowsStatic } = await supabase
         .from('stories')
         .select('*')
@@ -34,7 +32,7 @@ if (staticAuthor) {
     author.storyCount = authorStories.length;
     author.totalWords = authorStories.reduce((sum: number, s: any) => sum + s.wordCount, 0);
 }
-// 2. Database writer
+// 2. Database writer (the branch classic serves on every URL visit)
 else if (slug) {
     const { data: dbRows } = await supabase
         .from('stories')
@@ -69,14 +67,18 @@ else if (slug) {
             proseCount: (profile as any)?.prose_count || 0,
             poetryCount: (profile as any)?.poetry_count || 0,
             bookRecs: (profile as any)?.book_recs || [],
+            role: (profile as any)?.is_admin ? '' : 'Community Writer',
             xUrl: profile?.x_url || '',
             instagramUrl: profile?.instagram_url || '',
             facebookUrl: profile?.facebook_url || '',
             publicEmail: profile?.public_email || '',
+            location: (profile as any)?.is_admin ? '' : 'The Raconteur Community',
             joinedDate: new Date(dbRows[0].created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
             storyCount: dbRows.length,
             totalWords,
             favoriteLine: '',
+            featuredStorySlug: '',
+            featuredStoryTitle: '',
             books: []
         } as any;
     }
