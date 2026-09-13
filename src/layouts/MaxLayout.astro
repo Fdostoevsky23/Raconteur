@@ -150,17 +150,98 @@ const navHref = {
     </main>
 
     <footer class="mx-footer">
-        <p class="mx-footer-brand">Raconteur <em>Max</em></p>
-        <nav class="mx-footer-links" aria-label="Footer">
-            <a href="/max">Home</a>
-            <a href="/max/stories">Library</a>
-            <a href={navHref.feed}>Feed</a>
-            <a href="/max/about">About</a>
-            <a href="/max/tos">Terms</a>
-            <a href="/max/privacy">Privacy</a>
-        </nav>
-        <p class="mx-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur</p>
+        <div class="mx-rain" aria-hidden="true" id="mxRain"></div>
+        <div class="mx-footer-core">
+            <p class="mx-footer-name">Raconteur <em>Max</em></p>
+            <p class="mx-footer-tagline">Literature you want to read</p>
+            <nav class="mx-footer-links" aria-label="Footer">
+                <a href="/max">Home</a>
+                <a href="/max/stories">Library</a>
+                <a href={navHref.feed}>Feed</a>
+                <a href="/max/about">About</a>
+            </nav>
+            <p class="mx-footer-legal"><a href="/max/tos">Terms</a> · <a href="/max/privacy">Privacy</a></p>
+            <p class="mx-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur</p>
+        </div>
     </footer>
+
+    <script>
+        // The word rain — writer quotes falling like weather over the footer
+        (() => {
+            const rain = document.getElementById('mxRain');
+            if (!rain) return;
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+            const QUOTES = [
+                { text: 'There is nothing to writing. All you do is sit down at a typewriter and bleed.', author: 'Ernest Hemingway' },
+                { text: 'We are all apprentices in a craft where no one ever becomes a master.', author: 'Ernest Hemingway' },
+                { text: 'Prose is architecture, not interior decoration.', author: 'Ernest Hemingway' },
+                { text: 'All you have to do is write one true sentence. Write the truest sentence that you know.', author: 'Ernest Hemingway' },
+                { text: 'Writing is mainly work.', author: 'E.B. White' },
+                { text: 'Get it down. Take chances. It may be bad, but it is the only way you can do anything really good.', author: 'William Faulkner' },
+                { text: 'You cannot wait for inspiration, you have to go after it with a club.', author: 'Jack London' },
+                { text: 'It is perfectly okay to write garbage, as long as you edit brilliantly.', author: 'C.J. Cherryh' },
+                { text: 'You can always edit a bad page. You cannot edit a blank page.', author: 'Jodi Picoult' },
+                { text: 'If you do not have time to read, you do not have the time to write. Simple as that.', author: 'Stephen King' },
+                { text: 'The road to hell is paved with adverbs.', author: 'Stephen King' },
+                { text: 'The difference between the almost right word and the right word is really a large matter.', author: 'Mark Twain' },
+                { text: 'Do not tell me the moon is shining; show me the glint of light on broken glass.', author: 'Anton Chekhov' },
+                { text: 'Read, read, read. Read everything and see how they do it. Just like a carpenter who studies the master.', author: 'William Faulkner' },
+                { text: 'There is no greater agony than bearing an untold story inside you.', author: 'Maya Angelou' },
+                { text: 'You can make anything by writing.', author: 'C.S. Lewis' },
+                { text: 'Write what should not be forgotten.', author: 'Isabel Allende' },
+                { text: 'Good fiction comforts the disturbed and disturbs the comfortable.', author: 'David Foster Wallace' },
+                { text: 'I write entirely to find out what I am thinking, what I am looking at, what I see, and what it means.', author: 'Joan Didion' },
+                { text: 'The worst enemy to creativity is self-doubt.', author: 'Sylvia Plath' },
+                { text: 'A blank piece of paper is God\u2019s way of telling us how hard it is to be God.', author: 'Sidney Sheldon' },
+                { text: 'You do not write because you want to say something; you write because you have something to say.', author: 'F. Scott Fitzgerald' },
+                { text: 'Fill your paper with the breathings of your heart.', author: 'William Wordsworth' },
+                { text: 'The scariest moment is always just before you start.', author: 'Stephen King' },
+                { text: 'You fail only if you stop writing.', author: 'Ray Bradbury' },
+                { text: 'If there is a book that you want to read, but it has not been written yet, then you must write it.', author: 'Toni Morrison' },
+                { text: 'The heart of another is a dark forest, always.', author: 'Willa Cather' },
+                { text: 'A writer is someone for whom writing is more difficult than it is for other people.', author: 'Thomas Mann' },
+                { text: 'Stories are a communal currency of humanity.', author: 'Tahir Shah' },
+                { text: 'Words are, of course, the most inexhaustible source of magic we have.', author: 'J.K. Rowling' },
+                { text: 'One must always be careful of books, for words have the power to change us.', author: 'Cassandra Clare' },
+                { text: 'Not that the story need be long, but it will take a long while to make it short.', author: 'Henry David Thoreau' },
+                { text: 'Every story here was written to be remembered.', author: 'Raconteur' },
+                { text: 'Settle in. Stay a while.', author: 'Raconteur' },
+            ];
+
+            let qi = 0;
+            let lastAuthor = 0;
+
+            function dropWord(text, isAuthor) {
+                if (rain.childElementCount > 60) return;
+                const el = document.createElement('span');
+                el.className = 'mx-rain-word' + (isAuthor ? ' is-author' : '');
+                el.textContent = isAuthor ? '\u2014 ' + text : text;
+                el.style.left = (2 + Math.random() * 92) + '%';
+                el.style.setProperty('--fall', (rain.offsetHeight + 90) + 'px');
+                el.style.setProperty('--rot', (Math.random() * 10 - 5).toFixed(1) + 'deg');
+                el.style.animationDuration = (2.4 + Math.random() * 2.2) + 's';
+                el.addEventListener('animationend', () => el.remove());
+                rain.appendChild(el);
+            }
+
+            setInterval(() => {
+                // spawn a burst of words from the current quote, fast — like a squall
+                const q = QUOTES[qi % QUOTES.length];
+                const words = q.text.split(' ');
+                for (let k = 0; k < 3; k++) {
+                    const w = words[(qi * 3 + k) % words.length];
+                    if (w) dropWord(w, false);
+                }
+                // the author's name falls occasionally, in small caps
+                if (qi % 4 === 0 && Date.now() - lastAuthor > 4000) {
+                    dropWord(q.author, true);
+                    lastAuthor = Date.now();
+                }
+                qi++;
+            }, 130);
+        })();
+    </script>
 
     <script is:inline>
         // Service worker disabled — same policy as classic (unregister + clear caches)

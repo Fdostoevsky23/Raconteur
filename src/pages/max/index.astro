@@ -39,9 +39,6 @@ const heroImageCount = 13;
 const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
 const heroIndex = (dayOfYear % heroImageCount) + 1;
 
-// Edition number — print flavour
-const editionNo = `№ ${dayOfYear}`;
-
 // Ticker — rotating one-liners across the marquee strip
 const tickerItems = [
     'Literature you want to read',
@@ -51,26 +48,31 @@ const tickerItems = [
     'Writers publish instantly',
 ];
 
-// Moods — deep-link into archive search
-const moods = [
-    { icon: 'cloud-rain', name: 'Melancholy', query: 'rain' },
-    { icon: 'moon', name: 'Nocturnal', query: 'night' },
-    { icon: 'heart', name: 'Tender', query: 'love' },
-    { icon: 'feather', name: 'Still', query: 'silence' },
-    { icon: 'home', name: 'Homeward', query: 'home' },
-    { icon: 'sparkle', name: 'Wonder', query: 'light' },
+// Hero plates — the full 13-image library, looping every 10s
+const heroPlates = Array.from({ length: heroImageCount }, (_, i) => `/hero/${i + 1}.jpg`);
+
+// Rotating hero headlines — the same words as classic, looping
+const heroHeadlines = [
+    ['Stories,', 'beautifully told.'],
+    ['Poetry,', 'written with soul.'],
+    ['A warm shelf for', 'unforgettable literature.'],
+    ['Settle in.', 'Stay a while.'],
+    ['Every story here was written', 'to be remembered.'],
+    ['Every poem here was written', 'to be loved.'],
 ];
 
-// ===== Featured author of the day (admin spotlight + two rotating writers) =====
+// Featured writers of the day (admin spotlight + two rotating writers)
 import giants from '../../data/giants.json';
 
 const adminAuthor = {
     name: 'Nzan Kikon',
+    avatarUrl: '/avatars/nzan-kikon.jpg',
     avatarInitials: 'NK',
+    role: 'The editor\u2019s desk',
+    place: 'Kohima, Nagaland',
     bio: 'Nzan Kikon is a writer based in Kohima, Nagaland. He is the author of The Starry Night, The Unlikely Indians, Loving Lauren & Lauren and Raindrops of Dostoevsky. He enjoys reading, gazing at the night sky, spending time alone, and watching sci-fi movies. His personal heroes include Dostoevsky, Camus, Von Neumann, Van Gogh, Carl Jung, and Carl Sagan. A humanist and existentialist at heart, Nzan immerses himself in a variety of fields for pleasure, with his top five being science particularly physics and cosmology, philosophy, psychology, human and artificial intelligence, and mythology.',
     favoriteLine: 'Remember that I am thy creature; I ought to be thy Adam, but I am rather the fallen angel, whom thou drivest from joy for no misdeed. Everywhere I see bliss, from which I alone am irrevocably excluded. I was benevolent and good, misery made me a fiend. Make me happy, and I shall again be virtuous.',
     featuredStorySlug: 'poets-from-tomorrow',
-    featuredStoryTitle: 'Poets From Tomorrow',
     favoriteBook: 'Frankenstein',
 };
 
@@ -89,11 +91,11 @@ const resolveFeatured = (name: string, slug: string, title: string) => {
 const rotatingWriters = [
     {
         name: 'Quite Verbose',
-        role: 'Community Writer',
+        role: 'Community writer',
         bio: qvProfile?.bio || 'I am Qverbose and I love reading and writing.',
         avatarUrl: '/avatars/quite-verbose.jpg',
         avatarInitials: 'QV',
-        location: 'The Raconteur Community',
+        place: 'The Raconteur Community',
         joinedDate: 'August 2026',
         storyCount: 1,
         totalWords: 500,
@@ -103,11 +105,11 @@ const rotatingWriters = [
     },
     {
         name: 'Mr. Wordy',
-        role: 'Community Writer',
+        role: 'Community writer',
         bio: mwProfile?.bio || 'A writer who believes in the power of words to change the world.',
         avatarUrl: '/avatars/mr-wordy.jpg',
         avatarInitials: 'MW',
-        location: 'The Raconteur Community',
+        place: 'The Raconteur Community',
         joinedDate: 'August 2026',
         storyCount: 3,
         totalWords: 2500,
@@ -117,7 +119,7 @@ const rotatingWriters = [
     },
 ];
 
-// ===== The bookshelf today: editor's books + a community writer's books, daily rotation =====
+// Bookshelf today: editor's books + a community writer's books, daily rotation
 import authorsData from '../../data/authors.json';
 const altarAuthor = (authorsData as any[]).find((a: any) => a.name === 'Nzan Kikon') || (authorsData as any[])[0];
 const dayIndex = Math.floor(Date.now() / 86400000);
@@ -161,38 +163,53 @@ const shelfBooks: any[] = mergedBooks.filter((b: any) => {
 });
 const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the editor's bookshelf";
 
-// ===== Literary giants: three featured per day =====
+// Literary giants: three featured per day
 const giantsFirst = (dayOfYear * 3) % giants.length;
 const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.length], giants[(giantsFirst + 2) % giants.length]];
 
-// ===== Quote interlude =====
+// Quote interlude — reading + writing quotes, a long loop
 const interludeQuotes = [
     { text: 'A reader lives a thousand lives before he dies. The man who never reads lives only one.', cite: 'George R.R. Martin' },
     { text: 'There is no friend as loyal as a book.', cite: 'Ernest Hemingway' },
     { text: 'A word after a word after a word is power.', cite: 'Margaret Atwood' },
     { text: 'We read to know we are not alone.', cite: 'William Nicholson' },
-    { text: 'Stories are the creative conversion of life itself into a more powerful, clearer, more meaningful experience.', cite: 'Robert McKee' },
-    { text: 'One must always be careful of books, and what is inside them, for words have the power to change us.', cite: 'Cassandra Clare' },
     { text: 'I have always imagined that Paradise will be a kind of library.', cite: 'Jorge Luis Borges' },
-    { text: 'The reading of all good books is like a conversation with the finest minds of past centuries.', cite: 'Rene Descartes' },
     { text: 'Books are a uniquely portable magic.', cite: 'Stephen King' },
     { text: 'Until I feared I would lose it, I never loved to read. One does not love breathing.', cite: 'Harper Lee' },
     { text: 'A room without books is like a body without a soul.', cite: 'Marcus Tullius Cicero' },
-    { text: 'So many books, so little time.', cite: 'Frank Zappa' },
-    { text: 'Reading is essential for those who seek to rise above the ordinary.', cite: 'Jim Rohn' },
     { text: 'The world was hers for the reading.', cite: 'Betty Smith' },
     { text: 'Literature is the most agreeable way of ignoring life.', cite: 'Fernando Pessoa' },
+    { text: 'There is nothing to writing. All you do is sit down at a typewriter and bleed.', cite: 'Ernest Hemingway' },
+    { text: 'All you have to do is write one true sentence. Write the truest sentence that you know.', cite: 'Ernest Hemingway' },
+    { text: 'You can always edit a bad page. You can\u2019t edit a blank page.', cite: 'Jodi Picoult' },
+    { text: 'Don\u2019t tell me the moon is shining; show me the glint of light on broken glass.', cite: 'Anton Chekhov' },
+    { text: 'There is no greater agony than bearing an untold story inside you.', cite: 'Maya Angelou' },
+    { text: 'Write what should not be forgotten.', cite: 'Isabel Allende' },
+    { text: 'The worst enemy to creativity is self-doubt.', cite: 'Sylvia Plath' },
+    { text: 'Fill your paper with the breathings of your heart.', cite: 'William Wordsworth' },
+    { text: 'The scariest moment is always just before you start.', cite: 'Stephen King' },
+    { text: 'You fail only if you stop writing.', cite: 'Ray Bradbury' },
+    { text: 'If there\u2019s a book that you want to read, but it hasn\u2019t been written yet, then you must write it.', cite: 'Toni Morrison' },
+    { text: 'The heart of another is a dark forest, always.', cite: 'Willa Cather' },
+    { text: 'A writer is someone for whom writing is more difficult than it is for other people.', cite: 'Thomas Mann' },
+    { text: 'Stories are a communal currency of humanity.', cite: 'Tahir Shah' },
+    { text: 'You have to write the book that wants to be written. And if the book will be too difficult for grown-ups, then you write it for children.', cite: 'Madeleine L\u2019Engle' },
 ];
 const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.length)];
 ---
+---
 
 <MaxLayout title="Raconteur Max · The Editorial Split" description="Literature you want to read. The Raconteur Max edition.">
-    {/* ===== SPLIT HERO — type left, daily plate right ===== */}
+    {/* ===== SPLIT HERO — rotating words left, looping plates right ===== */}
     <section class="mx-split mx-hero" data-wipe>
         <div class="mx-split-side mx-hero-type">
-            <p class="mx-eyebrow">The Max Edition · {editionNo}</p>
+            <p class="mx-eyebrow">A quiet place for writers</p>
             <h1 class="mx-display mx-hero-headline">
-                Stories that<br />stay <em>with you.</em>
+                {heroHeadlines.map((lines, i) => (
+                    <span class={`mx-hero-line ${i === 0 ? 'active' : ''}`}>
+                        {lines[0]}<br />{lines[1]}
+                    </span>
+                ))}
             </h1>
             <p class="mx-hero-lede">
                 A quiet literary home on the internet. Drop caps, pull quotes, and room
@@ -208,8 +225,12 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         </div>
         <div class="mx-split-side mx-hero-plate">
             <div class="mx-plate" data-mx-parallax="14">
-                <img src={`/hero/${heroIndex}.jpg`} alt="Today's editorial plate" />
-                <span class="mx-plate-caption">Plate of the day · {editionNo}</span>
+                <div class="mx-plate-stack">
+                    {heroPlates.map((src, i) => (
+                        <img src={src} alt="Editorial plate" class={`mx-plate-img ${i === 0 ? 'active' : ''}`} data-idx={i} loading={i === 0 ? 'eager' : 'lazy'} />
+                    ))}
+                </div>
+                <span class="mx-plate-caption">Plate of the day</span>
             </div>
         </div>
     </section>
@@ -267,27 +288,48 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         </div>
     </section>
 
-    {/* ===== VERSE SPLIT — poetry on paper ===== */}
+    {/* ===== VERSE — same browser as the shelf: titles left, plates right ===== */}
     {verse.length > 0 && (
         <section class="mx-split mx-verse" data-wipe>
-            <div class="mx-split-side mx-verse-paper">
-                <p class="mx-eyebrow">02 · Verse</p>
-                <h2 class="mx-display mx-verse-title">The poem<br />of the week</h2>
-                <blockquote class="mx-verse-quote">
-                    “{verse[0].excerpt}”
-                </blockquote>
-                <p class="mx-verse-cite">from <a href={`/max/story/${verse[0].slug}`} class="mx-ulink">{verse[0].title}</a> by {verse[0].author}</p>
+            <div class="mx-split-side mx-shelf-list">
+                <p class="mx-eyebrow">Verse</p>
+                <h2 class="mx-display mx-shelf-title">Fresh poetry</h2>
+                <ul class="mx-shelf-items">
+                    {verse.map((v: any, i: number) => (
+                        <li>
+                            <a
+                                href={`/max/story/${v.slug}`}
+                                class="mx-shelf-item mx-poem-item"
+                                data-plate={v.cover || `/hero/${((i + 4) % heroImageCount) + 1}.jpg`}
+                                data-genre="Poetry"
+                            >
+                                <span class="mx-shelf-num">{String(i + 1).padStart(2, '0')}</span>
+                                <span class="mx-shelf-main">
+                                    <span class="mx-shelf-name">{v.title}</span>
+                                    <span class="mx-shelf-by">{v.author} · {v.wordCount.toLocaleString()} words</span>
+                                </span>
+                                <span class="mx-shelf-arrow" aria-hidden="true">→</span>
+                            </a>
+                        </li>
+                    ))}
+                </ul>
+                <a href="/max/stories" class="mx-ulink mx-shelf-more">Browse the full shelf of verse</a>
             </div>
-            <div class="mx-split-side mx-verse-list">
-                {verse.slice(0, 3).map((v: any) => (
-                    <a href={`/max/story/${v.slug}`} class="mx-verse-item">
-                        <span class="mx-verse-mark">✦</span>
-                        <span>
-                            <strong>{v.title}</strong>
-                            <em>{v.author}</em>
-                        </span>
-                    </a>
-                ))}
+            <div class="mx-split-side mx-shelf-plate">
+                <div class="mx-shelf-frame" data-mx-parallax="10">
+                    <div class="mx-shelf-plates" id="mxPoemPlates">
+                        {verse.map((v: any, i: number) => (
+                            <img
+                                src={v.cover || `/hero/${((i + 4) % heroImageCount) + 1}.jpg`}
+                                alt={`Cover of ${v.title}`}
+                                class={`mx-shelf-plate-img ${i === 0 ? 'active' : ''}`}
+                                data-idx={i}
+                                loading="lazy"
+                            />
+                        ))}
+                    </div>
+                    <span class="mx-shelf-frame-caption" id="mxPoemCaption">Poetry</span>
+                </div>
             </div>
         </section>
     )}
@@ -296,7 +338,7 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     <section class="mx-letter" data-mx-reveal>
         <hr class="mx-rule-strong" data-mx-reveal="rule" />
         <div class="mx-letter-inner">
-            <p class="mx-eyebrow">03 · From the editor's desk</p>
+            <p class="mx-eyebrow">From the editor's desk</p>
             <p class="mx-letter-body">
                 Raconteur began with a simple conviction: that a story deserves a quiet room.
                 No recommendation engines shouting over the prose, no infinite scroll
@@ -304,7 +346,7 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
                 waiting for the reader it was written for. Arrive weekly or once a
                 season; the shelf keeps.
             </p>
-            <p class="mx-letter-sign">The Editor · Kohima · {editionNo}</p>
+            <p class="mx-letter-sign">The Editor · Kohima</p>
         </div>
     </section>
 
@@ -324,114 +366,78 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         </div>
     </section>
 
-    {/* ===== MOOD INDEX — feelings as entries ===== */}
-    <section class="mx-moods" data-mx-reveal>
-        <hr class="mx-rule" data-mx-reveal="rule" />
-        <p class="mx-eyebrow">04 · The Mood Index</p>
-        <div class="mx-moods-row">
-            {moods.map(m => (
-                <a href={`/max/stories?q=${m.query}`} class="mx-mood">
-                    <span class="mx-mood-emoji"><Icon name={m.icon} size={22} /></span>
-                    <span class="mx-mood-name">{m.name}</span>
-                </a>
-            ))}
-        </div>
-    </section>
 
-    {/* ===== FEATURED AUTHORS OF THE DAY — the trio ===== */}
+    {/* ===== FEATURED WRITERS OF THE DAY — magazine profile rows ===== */}
     <section class="mx-featured" data-mx-reveal>
         <hr class="mx-rule-strong" data-mx-reveal="rule" />
-        <p class="mx-eyebrow mx-featured-eyebrow">04 · Featured writers of the day</p>
-        <div class="mx-trio">
-            <article class="mx-trio-card mx-trio-admin">
-                <div class="mx-trio-head">
-                    <span class="mx-avatar mx-trio-avatar" style="background: linear-gradient(135deg, #3d5a3c, #a8763e);">{adminAuthor.avatarInitials}</span>
-                    <div>
-                        <h3 class="mx-trio-name">{adminAuthor.name} <span class="mx-trio-admin-tag">Editor</span></h3>
-                        <p class="mx-trio-loc">Kohima, Nagaland</p>
-                    </div>
+        <p class="mx-eyebrow mx-featured-eyebrow">Featured writers of the day</p>
+        {[adminAuthor, ...rotatingWriters].map((w: any, i: number) => (
+            <article class={`mx-profile-row ${i === 0 ? 'lead' : ''}`} data-mx-reveal style={`--mx-reveal-delay: ${i * 0.08}s`}>
+                <div class="mx-profile-plate">
+                    {w.avatarUrl
+                        ? <img src={w.avatarUrl} alt={`Portrait of ${w.name}`} />
+                        : <span class="mx-avatar" style="background: linear-gradient(135deg, var(--mx-vermilion), var(--mx-vermilion-deep));">{w.avatarInitials}</span>}
                 </div>
-                <p class="mx-trio-bio">{adminAuthor.bio}</p>
-                <p class="mx-trio-line">“{adminAuthor.favoriteLine}”</p>
-                <div class="mx-trio-meta">
-                    <span><Icon name="book" size={13} /> Favorite book: {adminAuthor.favoriteBook}</span>
-                    {adminAuthor.featuredStorySlug && <a href={`/max/story/${adminAuthor.featuredStorySlug}`} class="mx-ulink">Read their featured story</a>}
-                </div>
-            </article>
-            {rotatingWriters.map((w: any) => (
-                <article class="mx-trio-card">
-                    <div class="mx-trio-head">
-                        <span class="mx-avatar mx-trio-avatar" style="background: linear-gradient(135deg, #4a6b6b, #6b8a8a);">{w.name === 'Mr. Wordy' ? 'MW' : 'QV'}</span>
-                        <div>
-                            <h3 class="mx-trio-name">{w.name}</h3>
-                            <p class="mx-trio-loc">{w.location} · Joined {w.joinedDate}</p>
-                        </div>
+                <div class="mx-profile-body">
+                    <div class="mx-profile-namebar">
+                        <h3 class="mx-profile-name">{w.name}</h3>
+                        <span class="mx-profile-role">{i === 0 ? 'The editor\u2019s desk' : w.role}</span>
                     </div>
-                    <p class="mx-trio-bio">{w.bio}</p>
-                    <p class="mx-trio-line">“{w.favoriteLine}”</p>
-                    <div class="mx-trio-meta">
+                    <p class="mx-profile-place">{w.place} · Joined {w.joinedDate}</p>
+                    <p class="mx-profile-bio">{w.bio}</p>
+                    {w.favoriteLine && <p class="mx-profile-line">“{w.favoriteLine}”</p>}
+                    <div class="mx-profile-meta">
                         <span><Icon name="book" size={13} /> Favorite book: {w.favoriteBook}</span>
-                        <span><Icon name="edit" size={13} /> {w.totalWords.toLocaleString()} words written</span>
+                        {i > 0 && <span><Icon name="edit" size={13} /> {w.totalWords.toLocaleString()} words written</span>}
                         {w.featuredStorySlug && <a href={`/max/story/${w.featuredStorySlug}`} class="mx-ulink">Read their featured story</a>}
                     </div>
-                </article>
+                </div>
+            </article>
+        ))}
+    </section>
+
+    {/* ===== THE BOOKSHELF — books as spines on the ledge ===== */}
+    <section class="mx-altar" data-mx-reveal>
+        <div class="mx-altar-head">
+            <p class="mx-eyebrow">{shelfKicker}</p>
+            <h2 class="mx-display mx-altar-title">The bookshelf</h2>
+        </div>
+        <div class="mx-spine-row">
+            {shelfBooks.map((b: any, i: number) => (
+                <a
+                    href={`/max/author/${b.authorSlug}`}
+                    class="mx-spine"
+                    style={`--spine-h: ${196 + (i % 3) * 26}px; --band: ${['#d8341c', '#c9a24b', '#1c1917', '#4a6b6b', '#a8763e'][i % 5]};`}
+                    title={`${b.title} by ${b.authorName} · visit their page`}
+                >
+                    <span class="mx-spine-band"></span>
+                    <span class="mx-spine-title">{b.title}</span>
+                    <span class="mx-spine-author">{b.authorName}</span>
+                </a>
+            ))}
+            {(shelfBooks.length === 0) && (
+                <p class="mx-empty">The shelf is being arranged.</p>
+            )}
+        </div>
+        <div class="mx-spine-base" data-mx-reveal="rule"></div>
+    </section>
+
+    {/* ===== LITERARY GIANTS — the canon, spoken in their own words ===== */}
+    <section class="mx-canon" data-mx-reveal>
+        <p class="mx-eyebrow mx-canon-eyebrow">The Eternal Canon</p>
+        <div class="mx-canon-stage">
+            <span class="mx-cameo"><img id="mxCameoImg" src={todaysGiants[0].portrait} alt="" loading="lazy" /></span>
+            <p class="mx-display mx-canon-line" id="mxCanonLine">“{todaysGiants[0].greatestLine}”</p>
+            <p class="mx-canon-name" id="mxCanonName">{todaysGiants[0].name} · {todaysGiants[0].born}–{todaysGiants[0].died}</p>
+            <p class="mx-canon-hint">Tap the button to open the dossier</p>
+            <button class="mx-canon-open" id="mxCanonOpen" aria-label="Open dossier"><Icon name="eye" size={16} /></button>
+        </div>
+        <div class="mx-canon-dots" id="mxCanonDots">
+            {todaysGiants.map((g: any, i: number) => (
+                <button class={`mx-canon-dot ${i === 0 ? 'active' : ''}`} data-giant={i} aria-label={g.name}></button>
             ))}
         </div>
     </section>
-
-    {/* ===== THE BOOKSHELF + LITERARY GIANTS — the altar ===== */}
-    <section class="mx-altar">
-        <div class="mx-altar-books" data-mx-reveal>
-            <p class="mx-eyebrow">05 · {shelfKicker}</p>
-            <h2 class="mx-display mx-altar-title">On the bookshelf today</h2>
-            <div class="mx-altar-shelf">
-                {shelfBooks.map((b: any) => (
-                    <a href={`/max/author/${b.authorSlug}`} class="mx-altar-book" title={`${b.title} by ${b.authorName} · visit their page`}>
-                        {(b.cover_url || b.cover) ? (
-                            <img src={b.cover_url || b.cover} alt={`Cover of ${b.title}`} loading="lazy" />
-                        ) : (
-                            <div class="mx-altar-book-empty">{b.title}</div>
-                        )}
-                        <span class="mx-altar-book-title">{b.title}</span>
-                        <span class="mx-altar-book-author">{b.authorName}</span>
-                    </a>
-                ))}
-            </div>
-        </div>
-        <div class="mx-altar-giants" data-mx-reveal style="--mx-reveal-delay: 0.1s">
-            <p class="mx-eyebrow">The Eternal Canon</p>
-            <h3 class="mx-giants-title">Know your literary giants</h3>
-            <div class="mx-giants-row">
-                {todaysGiants.map((g: any, i: number) => (
-                    <button class="mx-giant" data-giant={i}>
-                        <span class="mx-giant-portrait"><img src={g.portrait} alt={`Portrait of ${g.name}`} loading="lazy" /></span>
-                        <span class="mx-giant-name">{g.name}</span>
-                        <span class="mx-giant-years">{g.born} – {g.died}</span>
-                    </button>
-                ))}
-            </div>
-        </div>
-    </section>
-
-    {/* Giants details modal */}
-    <div id="mxGiantModal" class="mx-modal" hidden>
-        <div class="mx-modal-backdrop"></div>
-        <div class="mx-modal-card mx-gm-card">
-            <button class="mx-modal-close" aria-label="Close">×</button>
-            <h4 class="mx-gm-name"></h4>
-            <p class="mx-gm-years"></p>
-            <p class="mx-gm-bio"></p>
-            <div class="mx-gm-grid">
-                <div><span class="mx-gm-label">Magnum Opus</span><p class="mx-gm-opus"></p></div>
-                <div><span class="mx-gm-label">Active Years</span><p class="mx-gm-years-inline"></p></div>
-            </div>
-            <span class="mx-gm-label">Books</span>
-            <p class="mx-gm-books"></p>
-            <span class="mx-gm-label">A Fact Few Know</span>
-            <p class="mx-gm-fact"></p>
-            <blockquote class="mx-gm-line"></blockquote>
-        </div>
-    </div>
 
     {/* ===== QUOTE INTERLUDE ===== */}
     <section class="mx-interlude" data-mx-reveal>
@@ -441,11 +447,11 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         </blockquote>
     </section>
 
-    {/* ===== THE READING ROOM ===== */}
+    {/* ===== THE READING ROOM — marginalia ===== */}
     <section class="mx-room" data-mx-reveal>
         <hr class="mx-rule" data-mx-reveal="rule" />
         <div class="mx-room-head">
-            <p class="mx-eyebrow">06 · From the community</p>
+            <p class="mx-eyebrow">From the community</p>
             <h2 class="mx-display mx-room-title">The Reading Room</h2>
         </div>
         <div class="mx-room-split">
@@ -473,6 +479,26 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
             </div>
         </div>
     </section>
+
+    {/* ===== GIANTS DOSSIER MODAL ===== */}
+    <div id="mxGiantModal" class="mx-modal" hidden>
+        <div class="mx-modal-backdrop"></div>
+        <div class="mx-modal-card mx-gm-card">
+            <button class="mx-modal-close" aria-label="Close">×</button>
+            <h4 class="mx-gm-name"></h4>
+            <p class="mx-gm-years"></p>
+            <p class="mx-gm-bio"></p>
+            <div class="mx-gm-grid">
+                <div><span class="mx-gm-label">Magnum Opus</span><p class="mx-gm-opus"></p></div>
+                <div><span class="mx-gm-label">Active Years</span><p class="mx-gm-years-inline"></p></div>
+            </div>
+            <span class="mx-gm-label">Books</span>
+            <p class="mx-gm-books"></p>
+            <span class="mx-gm-label">A Fact Few Know</span>
+            <p class="mx-gm-fact"></p>
+            <blockquote class="mx-gm-line"></blockquote>
+        </div>
+    </div>
 </MaxLayout>
 
 <script type="application/json" id="giants-data" set:html={JSON.stringify(todaysGiants).replace(/</g, '\u003c')} />
@@ -512,6 +538,36 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     giantModal?.querySelector('.mx-modal-close')?.addEventListener('click', closeGiant);
     giantModal?.addEventListener('click', (e) => { if (e.target === giantModal) closeGiant(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGiant(); });
+
+    // Canon carousel — the three giants take turns speaking
+    if (giantsData.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        let canonIdx = 0;
+        const lineEl = document.getElementById('mxCanonLine');
+        const nameEl = document.getElementById('mxCanonName');
+        const cameoEl = document.getElementById('mxCameoImg');
+        const dots = Array.from(document.querySelectorAll('.mx-canon-dot'));
+        const show = (i: number) => {
+            const g = giantsData[i];
+            if (!g || !lineEl || !nameEl) return;
+            lineEl.style.opacity = '0';
+            nameEl.style.opacity = '0';
+            setTimeout(() => {
+                lineEl.textContent = '\u201C' + g.greatestLine + '\u201D';
+                nameEl.textContent = g.name + ' \u00B7 ' + g.born + '\u2013' + g.died;
+                if (cameoEl) cameoEl.src = g.portrait;
+                lineEl.style.opacity = '1';
+                nameEl.style.opacity = '1';
+            }, 400);
+            dots.forEach((d, di) => d.classList.toggle('active', di === i));
+        };
+        setInterval(() => { canonIdx = (canonIdx + 1) % giantsData.length; show(canonIdx); }, 6500);
+        dots.forEach((d, di) => d.addEventListener('click', () => { canonIdx = di; show(di); }));
+        document.getElementById('mxCanonOpen')?.addEventListener('click', () => {
+            fillGiant(canonIdx);
+            giantModal?.removeAttribute('hidden');
+            document.body.style.overflow = 'hidden';
+        });
+    }
 </script>
 
 <script>
@@ -767,19 +823,44 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
 </script>
 
 <script>
-    // Split shelf — hover/focus a title and its plate crossfades into the frame.
-    const items = Array.from(document.querySelectorAll<HTMLElement>('.mx-shelf-item'));
-    const plates = Array.from(document.querySelectorAll<HTMLElement>('.mx-shelf-plate-img'));
-    const caption = document.getElementById('mxShelfCaption');
+    // Split browsers — hover/focus a title and its plate crossfades (shelf + poetry)
+    function wireBrowser(itemSel: string, plateWrapId: string, captionId: string) {
+        const items = Array.from(document.querySelectorAll<HTMLElement>(itemSel));
+        const plates = Array.from(document.querySelectorAll<HTMLElement>(`#${plateWrapId} .mx-shelf-plate-img`));
+        const caption = document.getElementById(captionId);
+        items.forEach((item, i) => {
+            const show = () => {
+                plates.forEach((pl) => pl.classList.toggle('active', Number(pl.dataset.idx) === i));
+                if (caption && item.dataset.genre) caption.textContent = item.dataset.genre;
+            };
+            item.addEventListener('mouseenter', show);
+            item.addEventListener('focus', show);
+        });
+    }
+    wireBrowser('.mx-shelf-list .mx-shelf-item', 'mxShelfPlates', 'mxShelfCaption');
+    wireBrowser('.mx-poem-item', 'mxPoemPlates', 'mxPoemCaption');
 
-    items.forEach((item, i) => {
-        const show = () => {
-            plates.forEach((p) => p.classList.toggle('active', Number(p.dataset.idx) === i));
-            if (caption && item.dataset.genre) caption.textContent = item.dataset.genre;
-        };
-        item.addEventListener('mouseenter', show);
-        item.addEventListener('focus', show);
-    });
+    // Hero plates — the 13-image library, crossfading every 10 seconds
+    const heroPlates = Array.from(document.querySelectorAll<HTMLElement>('.mx-plate-img'));
+    if (heroPlates.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        let heroIdx = 0;
+        setInterval(() => {
+            heroPlates[heroIdx].classList.remove('active');
+            heroIdx = (heroIdx + 1) % heroPlates.length;
+            heroPlates[heroIdx].classList.add('active');
+        }, 10000);
+    }
+
+    // Hero headline rotator — the classic words, looping every 7 seconds
+    const heroLines = Array.from(document.querySelectorAll<HTMLElement>('.mx-hero-line'));
+    if (heroLines.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        let lineIdx = 0;
+        setInterval(() => {
+            heroLines[lineIdx].classList.remove('active');
+            lineIdx = (lineIdx + 1) % heroLines.length;
+            heroLines[lineIdx].classList.add('active');
+        }, 7000);
+    }
 </script>
 
 <style>
@@ -789,8 +870,30 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     .mx-hero-type { padding-top: 5rem; padding-bottom: 5rem; }
 
     .mx-hero-headline {
+        position: relative;
         font-size: clamp(2.8rem, 6.4vw, 5.4rem);
         margin: 1.1rem 0 1.4rem;
+        min-height: 2.3em;
+    }
+
+    .mx-hero-line {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        opacity: 0;
+        transform: translateY(14px);
+        transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .mx-hero-line.active { opacity: 1; transform: none; }
+
+    .mx-hero-line em { font-style: normal; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mx-hero-line { position: static; opacity: 1; transform: none; transition: none; }
+        .mx-hero-line:not(:first-child) { display: none; }
     }
 
     .mx-hero-lede {
@@ -824,12 +927,25 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         box-shadow: 0 30px 80px rgba(28, 25, 23, 0.14);
     }
 
-    .mx-plate img {
-        display: block;
+    .mx-plate-stack { position: relative; width: 100%; aspect-ratio: 4 / 5; overflow: hidden; }
+
+    .mx-plate-img {
+        position: absolute;
+        inset: 0;
         width: 100%;
-        aspect-ratio: 4 / 5;
+        height: 100%;
         object-fit: cover;
         filter: saturate(0.9) contrast(1.02);
+        opacity: 0;
+        transform: scale(1.03);
+        transition: opacity 1.2s ease, transform 8s linear;
+    }
+
+    .mx-plate-img.active { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mx-plate-img { transition: none; }
+        .mx-plate-img:not(:first-child) { display: none; }
     }
 
     .mx-plate-caption {
@@ -1044,32 +1160,6 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
 
     .mx-stat-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mx-ink-faint); }
 
-    /* === MOOD INDEX === */
-    .mx-moods { padding: 3rem clamp(1.4rem, 5vw, 5rem) 4rem; }
-    .mx-moods .mx-rule { margin-bottom: 1.6rem; }
-    .mx-moods-row { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-top: 1.2rem; }
-
-    .mx-mood {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.55rem;
-        padding: 0.7rem 1.2rem;
-        border: 1px solid var(--mx-line-strong);
-        border-radius: 999px;
-        text-decoration: none;
-        color: var(--mx-ink);
-        font-size: 0.86rem;
-        font-weight: 500;
-        background: transparent;
-        transition: background 0.3s var(--mx-ease), border-color 0.3s, transform 0.3s var(--mx-ease);
-    }
-
-    .mx-mood:hover {
-        background: var(--mx-ink);
-        color: var(--mx-paper);
-        border-color: var(--mx-ink);
-        transform: translateY(-3px);
-    }
 
     /* === RESPONSIVE === */
     @media (max-width: 860px) {
@@ -1083,40 +1173,108 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         .mx-letter { padding: 3rem 1.4rem 2.4rem; }
     }
 
-    /* === FEATURED WRITERS TRIO === */
-    .mx-featured { padding: 4rem clamp(1.4rem, 5vw, 5rem) 1rem; }
-    .mx-featured-eyebrow { margin: 2rem 0 1.6rem; }
-    .mx-trio { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.4rem; }
-    .mx-trio-card {
-        border: 1px solid var(--mx-line);
-        background: #fffdf9;
-        padding: 1.8rem 1.6rem;
-        display: flex; flex-direction: column; gap: 1rem;
-        transition: transform 0.35s var(--mx-ease), box-shadow 0.35s var(--mx-ease);
-    }
-    .mx-trio-card:hover { transform: translateY(-6px); box-shadow: 0 22px 60px rgba(28, 25, 23, 0.12); }
-    .mx-trio-admin { border-top: 3px solid var(--mx-vermilion); }
-    .mx-trio-head { display: flex; align-items: center; gap: 0.9rem; }
-    .mx-trio-avatar { width: 56px; height: 56px; font-size: 1.2rem; background: linear-gradient(135deg, var(--mx-vermilion), var(--mx-vermilion-deep)); }
-    .mx-trio-name { font-family: var(--mx-font-display); font-weight: 900; font-size: 1.15rem; color: var(--mx-ink); margin: 0; }
-    .mx-trio-admin-tag {
-        font-family: var(--mx-font-body); font-size: 0.6rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
-        background: var(--mx-vermilion); color: var(--mx-paper); border-radius: 999px; padding: 0.14rem 0.55rem; vertical-align: middle;
-    }
-    .mx-trio-loc { font-size: 0.74rem; color: var(--mx-ink-faint); margin: 0.2rem 0 0; }
-    .mx-trio-bio {
-        font-family: var(--mx-font-read); font-size: 0.92rem; line-height: 1.65; color: var(--mx-ink-soft);
-        margin: 0; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .mx-trio-line {
-        font-family: var(--mx-font-read); font-style: italic; font-size: 0.9rem; line-height: 1.6; color: var(--mx-ink);
-        border-left: 2px solid var(--mx-vermilion); padding-left: 0.9rem; margin: 0;
-        display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .mx-trio-meta { display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem; color: var(--mx-ink-faint); border-top: 1px solid var(--mx-line); padding-top: 0.9rem; margin-top: auto; }
-    .mx-trio-meta span { display: inline-flex; align-items: center; gap: 0.45rem; }
-    .mx-trio-meta a { font-weight: 600; font-size: 0.84rem; }
+    /* === FEATURED WRITERS — magazine profile rows === */
+    .mx-featured { padding: 4rem clamp(1.4rem, 5vw, 5rem) 2rem; }
+    .mx-featured-eyebrow { margin: 2rem 0 1.2rem; }
 
+    .mx-profile-row {
+        display: grid;
+        grid-template-columns: 190px 1fr;
+        gap: 2rem;
+        padding: 2.2rem 0;
+        border-bottom: 1px solid var(--mx-line);
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .mx-profile-plate {
+        width: 190px;
+        height: 240px;
+        overflow: hidden;
+        border: 1px solid var(--mx-line-strong);
+        padding: 0.5rem;
+        background: #fffdf9;
+        box-shadow: 0 18px 44px rgba(28, 25, 23, 0.14);
+    }
+
+    .mx-profile-plate img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top;
+        filter: saturate(0.85) contrast(1.03);
+        display: block;
+    }
+
+    .mx-profile-plate .mx-avatar { width: 100%; height: 100%; font-size: 2.4rem; border-radius: 0; }
+
+    .mx-profile-row.lead .mx-profile-plate { border-top: 4px solid var(--mx-vermilion); }
+
+    .mx-profile-namebar { display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap; }
+    .mx-profile-name {
+        font-family: var(--mx-font-display);
+        font-weight: 900;
+        font-size: clamp(1.7rem, 3vw, 2.4rem);
+        letter-spacing: -0.02em;
+        color: var(--mx-ink);
+        margin: 0;
+    }
+    .mx-profile-row.lead .mx-profile-name { font-size: clamp(2rem, 3.6vw, 2.9rem); }
+    .mx-profile-role {
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--mx-vermilion);
+    }
+    .mx-profile-place { font-size: 0.76rem; color: var(--mx-ink-faint); margin: 0.3rem 0 0; }
+    .mx-profile-bio {
+        font-family: var(--mx-font-read);
+        font-size: 0.98rem;
+        line-height: 1.75;
+        color: var(--mx-ink-soft);
+        margin: 0.9rem 0 0;
+    }
+    .mx-profile-row.lead .mx-profile-bio { columns: 2; column-gap: 2rem; }
+    .mx-profile-bio::first-letter {
+        font-family: var(--mx-font-display);
+        font-weight: 900;
+        font-size: 2.6em;
+        float: left;
+        line-height: 0.85;
+        padding-right: 0.08em;
+        color: var(--mx-vermilion);
+    }
+    .mx-profile-line {
+        font-family: var(--mx-font-display);
+        font-style: italic;
+        font-size: 1.06rem;
+        line-height: 1.55;
+        color: var(--mx-ink);
+        border-left: 3px solid var(--mx-vermilion);
+        padding-left: 1rem;
+        margin: 1.1rem 0 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .mx-profile-meta {
+        display: flex; flex-wrap: wrap; gap: 0.6rem 1.6rem; align-items: center;
+        font-size: 0.8rem; color: var(--mx-ink-faint);
+        border-top: 1px solid var(--mx-line);
+        padding-top: 0.9rem; margin-top: 1.1rem;
+    }
+    .mx-profile-meta span { display: inline-flex; align-items: center; gap: 0.45rem; }
+    .mx-profile-meta a { font-weight: 600; font-size: 0.84rem; }
+
+    @media (max-width: 860px) {
+        .mx-profile-row { grid-template-columns: 1fr; gap: 1.2rem; }
+        .mx-profile-plate { width: 150px; height: 190px; }
+        .mx-profile-row.lead .mx-profile-bio { columns: 1; }
+    }
+
+    /* === ALTAR REMOVED — replaced by spines + canon === */
     /* === ALTAR: BOOKSHELF + GIANTS === */
     .mx-altar {
         display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem;
@@ -1162,7 +1320,7 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     .mx-giant-name { font-family: var(--mx-font-display); font-size: 0.82rem; font-weight: 700; color: var(--mx-ink); max-width: 120px; text-align: center; line-height: 1.2; }
     .mx-giant-years { font-size: 0.66rem; color: var(--mx-ink-faint); letter-spacing: 0.08em; }
 
-    /* Giants modal content */
+    /* Giants dossier modal */
     .mx-gm-card { max-width: 620px; }
     .mx-gm-name { font-family: var(--mx-font-display); font-size: 1.7rem; font-weight: 900; color: var(--mx-ink); margin: 0 0 0.3rem; }
     .mx-gm-years { font-size: 0.8rem; color: var(--mx-ink-faint); letter-spacing: 0.08em; margin: 0 0 1rem; }
@@ -1177,7 +1335,160 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         font-family: var(--mx-font-display); font-style: italic; font-size: 1.05rem; line-height: 1.55; color: var(--mx-ink);
     }
 
-    /* === QUOTE INTERLUDE === */
+    /* === THE BOOKSHELF — book spines on the ledge === */
+    .mx-altar { padding: 4.5rem clamp(1.4rem, 5vw, 5rem) 3rem; border-top: 1px solid var(--mx-line); }
+    .mx-altar-head { text-align: center; margin-bottom: 3rem; }
+    .mx-altar-title { font-size: clamp(2rem, 4vw, 3.2rem); margin: 0.9rem 0 0; }
+
+    .mx-spine-row {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 0.55rem;
+        flex-wrap: wrap;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 0 1rem;
+    }
+
+    .mx-spine {
+        writing-mode: vertical-rl;
+        width: 52px;
+        height: var(--spine-h, 210px);
+        background: #fffdf9;
+        border: 1px solid var(--mx-line-strong);
+        border-radius: 3px 3px 0 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-decoration: none;
+        color: var(--mx-ink);
+        padding: 0.5rem 0 0.7rem;
+        box-shadow: 0 10px 26px rgba(28, 25, 23, 0.12);
+        transition: transform 0.35s var(--mx-ease), box-shadow 0.35s var(--mx-ease);
+    }
+
+    .mx-spine:hover {
+        transform: translateY(-12px);
+        box-shadow: 0 24px 50px rgba(28, 25, 23, 0.2);
+    }
+
+    .mx-spine-band {
+        width: 100%;
+        height: 12px;
+        flex-shrink: 0;
+        background: var(--band, var(--mx-vermilion));
+        margin-bottom: 0.7rem;
+    }
+
+    .mx-spine-title {
+        font-family: var(--mx-font-display);
+        font-weight: 700;
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-height: 100%;
+    }
+
+    .mx-spine-author {
+        margin-top: auto;
+        font-family: var(--mx-font-body);
+        font-size: 0.56rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--mx-ink-faint);
+    }
+
+    .mx-spine-base {
+        max-width: 940px;
+        margin: 0 auto;
+        height: 7px;
+        border-top: 3px solid var(--mx-ink);
+        border-bottom: 1px solid var(--mx-ink);
+    }
+
+    /* === THE CANON — giants speak in their own words === */
+    .mx-canon {
+        padding: 4.5rem clamp(1.4rem, 5vw, 5rem);
+        text-align: center;
+        border-top: 1px solid var(--mx-line);
+        background: var(--mx-paper-deep);
+    }
+
+    .mx-canon-eyebrow { margin-bottom: 2rem; }
+
+    .mx-canon-stage { max-width: 760px; margin: 0 auto; }
+
+    .mx-cameo {
+        display: inline-flex;
+        width: 84px;
+        height: 84px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 3px solid var(--mx-ink);
+        box-shadow: 0 12px 30px rgba(28, 25, 23, 0.2);
+        margin-bottom: 1.6rem;
+    }
+
+    .mx-cameo img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(0.3) contrast(1.05); display: block; }
+
+    .mx-canon-line {
+        font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+        line-height: 1.35;
+        font-style: italic;
+        transition: opacity 0.4s ease;
+        margin: 0 0 1.2rem;
+        min-height: 2.7em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mx-canon-name {
+        font-size: 0.74rem;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--mx-vermilion);
+        transition: opacity 0.4s ease;
+        margin: 0 0 0.8rem;
+    }
+
+    .mx-canon-hint { font-family: var(--mx-font-read); font-style: italic; font-size: 0.78rem; color: var(--mx-ink-faint); margin: 0 0 0.6rem; }
+
+    .mx-canon-open {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.6rem;
+        height: 2.6rem;
+        border-radius: 50%;
+        border: 1px solid var(--mx-line-strong);
+        background: #fffdf9;
+        color: var(--mx-ink);
+        cursor: pointer;
+        transition: border-color 0.2s, color 0.2s, transform 0.2s;
+    }
+
+    .mx-canon-open:hover { border-color: var(--mx-vermilion); color: var(--mx-vermilion); transform: translateY(-2px); }
+
+    .mx-canon-dots { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.4rem; }
+
+    .mx-canon-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        border: 1px solid var(--mx-ink);
+        background: transparent;
+        cursor: pointer;
+        padding: 0;
+        transition: background 0.2s, transform 0.2s;
+    }
+
+    .mx-canon-dot.active { background: var(--mx-vermilion); border-color: var(--mx-vermilion); transform: scale(1.2); }
+
+    /* === QUOTE INTERLUDE === */    /* === QUOTE INTERLUDE === */
     .mx-interlude {
         padding: 4.5rem clamp(1.4rem, 6vw, 7rem);
         text-align: center;
@@ -1208,8 +1519,30 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     .mx-room-half-sub { font-family: var(--mx-font-read); font-style: italic; font-size: 0.84rem; color: var(--mx-ink-faint); margin: 0 0 1.4rem; }
     .mx-notes-list { flex: 1; display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.4rem; max-height: 420px; overflow-y: auto; }
     :global(.mx-notes-empty) { font-family: var(--mx-font-read); font-style: italic; color: var(--mx-ink-faint); font-size: 0.88rem; }
-    :global(.mx-note-card) { border: 1px solid var(--mx-line); background: var(--mx-paper); padding: 0.9rem 1rem; border-radius: 12px; }
-    :global(.mx-note-card.reply) { margin: 0.7rem 0 0 1.2rem; background: var(--mx-paper-deep); }
+    :global(.mx-note-card) {
+        position: relative;
+        border: 1px solid var(--mx-line);
+        background: #fffdf9;
+        padding: 1rem 1rem 0.8rem;
+        border-radius: 4px;
+        box-shadow: 0 8px 22px rgba(28, 25, 23, 0.09);
+        transform: rotate(-0.7deg);
+    }
+    :global(.mx-note-card:nth-child(even)) { transform: rotate(0.9deg); }
+    :global(.mx-note-card:hover) { transform: rotate(0deg) translateY(-2px); }
+    :global(.mx-note-card::before) {
+        content: '';
+        position: absolute;
+        top: -5px;
+        left: 50%;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--mx-vermilion);
+        box-shadow: 0 2px 5px rgba(28, 25, 23, 0.35);
+    }
+    :global(.mx-note-card.reply) { margin: 0.8rem 0 0 1.4rem; background: var(--mx-paper-deep); transform: rotate(0.6deg); }
+    :global(.mx-note-card.reply::before) { background: var(--mx-ink-faint); width: 7px; height: 7px; }
     :global(.mx-note-body) { font-size: 0.9rem; line-height: 1.6; color: var(--mx-ink); margin: 0 0 0.5rem; overflow-wrap: anywhere; }
     :global(.mx-note-meta) { display: flex; align-items: center; gap: 0.6rem; font-size: 0.72rem; color: var(--mx-ink-faint); flex-wrap: wrap; }
     :global(.mx-note-author) { font-family: var(--mx-font-display); font-weight: 600; color: var(--mx-vermilion); }

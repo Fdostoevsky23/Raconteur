@@ -698,22 +698,85 @@ main.mx-main { flex: 1; }
 .mx-notif-text { font-size: 0.82rem; flex: 1; }
 .mx-notif-time { font-size: 0.7rem; color: var(--mx-ink-faint); }
 
-/* === 8. FOOTER (shared by both modes) === */
+/* === 8. FOOTER — giant masthead + the word rain === */
 .mx-footer {
     position: relative;
     z-index: 1;
+    overflow: hidden;
     margin-top: 4rem;
     border-top: 1px solid var(--mx-line);
-    padding: 2.4rem 2rem 2.8rem;
+    background: var(--mx-paper-deep);
+    padding: 4.5rem 2rem 3rem;
     text-align: center;
 }
 
-.mx-footer-brand { font-family: var(--mx-font-display); font-size: 1.05rem; font-weight: 900; letter-spacing: 0.01em; }
-.mx-footer-brand em { font-style: normal; color: var(--mx-vermilion); }
-.mx-footer-links { margin-top: 0.8rem; display: flex; gap: 1.1rem; justify-content: center; flex-wrap: wrap; }
-.mx-footer-links a { color: var(--mx-ink-soft); font-size: 0.85rem; text-decoration: none; }
-.mx-footer-links a:hover { color: var(--mx-ink); }
-.mx-fineprint { margin-top: 1rem; color: var(--mx-ink-faint); font-size: 0.75rem; }
+/* the rain layer sits behind the words */
+.mx-rain {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.mx-rain-word {
+    position: absolute;
+    top: -3rem;
+    font-family: var(--mx-font-read);
+    font-style: italic;
+    font-size: 0.92rem;
+    color: var(--mx-ink-soft);
+    opacity: 0.4;
+    white-space: nowrap;
+    animation: mx-rain-fall linear forwards;
+}
+
+.mx-rain-word.is-author {
+    font-style: normal;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--mx-vermilion);
+    opacity: 0.55;
+}
+
+@keyframes mx-rain-fall {
+    to { transform: translateY(var(--fall, 400px)) rotate(var(--rot, 0deg)); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mx-rain-word { display: none; }
+}
+
+.mx-footer-core { position: relative; z-index: 1; }
+
+.mx-footer-name {
+    font-family: var(--mx-font-display);
+    font-size: clamp(3rem, 9vw, 6.5rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--mx-ink);
+    margin: 0;
+}
+
+.mx-footer-name em { font-style: italic; color: var(--mx-vermilion); }
+
+.mx-footer-tagline {
+    font-family: var(--mx-font-read);
+    font-style: italic;
+    font-size: clamp(1.05rem, 2.4vw, 1.5rem);
+    color: var(--mx-ink-soft);
+    margin: 0.9rem 0 0;
+}
+
+.mx-footer-links { margin-top: 2rem; display: flex; gap: 1.4rem; justify-content: center; flex-wrap: wrap; }
+.mx-footer-links a { color: var(--mx-ink-soft); font-size: 0.9rem; font-weight: 500; text-decoration: none; }
+.mx-footer-links a:hover { color: var(--mx-vermilion); }
+.mx-footer-legal { margin-top: 0.9rem; font-size: 0.8rem; color: var(--mx-ink-faint); }
+.mx-footer-legal a { color: var(--mx-ink-faint); text-decoration: none; }
+.mx-footer-legal a:hover { color: var(--mx-vermilion); }
+.mx-fineprint { margin-top: 1.4rem; color: var(--mx-ink-faint); font-size: 0.75rem; }
 
 /* === 9. RESPONSIVE === */
 @media (max-width: 860px) {
