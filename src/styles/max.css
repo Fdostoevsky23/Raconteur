@@ -729,6 +729,32 @@ main.mx-main { flex: 1; }
 .mx-notif-text { font-size: 0.82rem; flex: 1; }
 .mx-notif-time { font-size: 0.7rem; color: var(--mx-ink-faint); }
 
+/* Slim utility footer — inner pages */
+.mx-footer-slim { padding: 1.6rem 2rem; margin-top: 3rem; background: transparent; }
+
+.mx-footer-slim-row {
+    max-width: 1240px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.mx-footer-slim-brand {
+    font-family: var(--mx-font-display);
+    font-size: 1rem;
+    font-weight: 900;
+    color: var(--mx-ink);
+    text-decoration: none;
+}
+
+.mx-footer-slim-brand em { font-style: italic; color: var(--mx-vermilion); }
+
+.mx-footer-slim .mx-footer-links { margin: 0; gap: 1.1rem; }
+.mx-footer-slim .mx-fineprint { margin: 0; }
+
 /* === 8. FOOTER — giant masthead + the word rain === */
 .mx-footer {
     position: relative;

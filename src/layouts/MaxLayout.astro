@@ -150,21 +150,38 @@ const navHref = {
         <slot />
     </main>
 
-    <footer class="mx-footer">
-        {isHome && <div class="mx-rain" aria-hidden="true" id="mxRain"></div>}
-        <div class="mx-footer-core">
-            <p class="mx-footer-name">Raconteur <em>Max</em></p>
-            <p class="mx-footer-tagline">Literature you want to read</p>
-            <nav class="mx-footer-links" aria-label="Footer">
-                <a href="/max">Home</a>
-                <a href="/max/stories">Library</a>
-                <a href={navHref.feed}>Feed</a>
-                <a href="/max/about">About</a>
-            </nav>
-            <p class="mx-footer-legal"><a href="/max/tos">Terms</a> · <a href="/max/privacy">Privacy</a></p>
-            <p class="mx-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur</p>
-        </div>
-    </footer>
+    {isHome ? (
+        <footer class="mx-footer">
+            <div class="mx-rain" aria-hidden="true" id="mxRain"></div>
+            <div class="mx-footer-core">
+                <p class="mx-footer-name">Raconteur <em>Max</em></p>
+                <p class="mx-footer-tagline">Literature you want to read</p>
+                <nav class="mx-footer-links" aria-label="Footer">
+                    <a href="/max">Home</a>
+                    <a href="/max/stories">Library</a>
+                    <a href={navHref.feed}>Feed</a>
+                    <a href="/max/about">About</a>
+                </nav>
+                <p class="mx-footer-legal"><a href="/max/tos">Terms</a> · <a href="/max/privacy">Privacy</a></p>
+                <p class="mx-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur</p>
+            </div>
+        </footer>
+    ) : (
+        <footer class="mx-footer mx-footer-slim">
+            <div class="mx-footer-slim-row">
+                <a href="/max" class="mx-footer-slim-brand">Raconteur <em>Max</em></a>
+                <nav class="mx-footer-links" aria-label="Footer">
+                    <a href="/max">Home</a>
+                    <a href="/max/stories">Library</a>
+                    <a href={navHref.feed}>Feed</a>
+                    <a href="/max/about">About</a>
+                    <a href="/max/tos">Terms</a>
+                    <a href="/max/privacy">Privacy</a>
+                </nav>
+                <p class="mx-fineprint">© {new Date().getFullYear()} Raconteur</p>
+            </div>
+        </footer>
+    )}
 
     <script>
         // The word rain — writer quotes falling like weather over the footer
