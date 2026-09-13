@@ -511,6 +511,13 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     let storyAuthorId: string | null = null;
     let meIsAdmin = false;
 
+    // Interactive writes go through the dedicated write client (see lib/supabase-write.ts).
+    import { restInsert } from '../../../lib/supabase-write';
+    
+
+    // Warm the write path at load — the first comment insert can otherwise sit
+    // queued for seconds while the supabase client finishes initializing.
+
     function timeAgo(iso: string) {
         const diff = Date.now() - new Date(iso).getTime();
         const m = Math.floor(diff / 60000);
@@ -601,10 +608,23 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
             displayName = prof?.pen_name || (me.email ?? 'reader').split('@')[0];
         }
 
-        const { error, data: newComment } = await supabase.from('comments').insert({
-            story_id: slug, user_id: userId, body, parent_id: parentId, display_name: displayName,
-        }).select('id').single();
-        if (error) { hint.textContent = 'Could not post: ' + error.message; return; }
+        let error: any = null;
+        let newComment: any = null;
+        try {
+            const res: any = await Promise.race([
+                restInsert('comments', {
+                    story_id: slug, user_id: userId, body, parent_id: parentId, display_name: displayName,
+                }, { single: true }),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000)),
+            ]);
+            error = res?.error ?? null;
+            newComment = res?.data ?? null;
+        } catch (e: any) {
+            error = e;
+        }
+        if (error) { hint.textContent = error.message === 'timeout'
+            ? 'The desk is busy — your comment did not post. Please try again.'
+            : 'Could not post: ' + error.message; return; }
 
         // Notify: reply → parent comment author; top-level → story author
         let notifyUserId: string | null = null;

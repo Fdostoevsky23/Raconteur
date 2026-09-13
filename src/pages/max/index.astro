@@ -488,6 +488,11 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     import { dvToast } from '../../lib/dialog';
     import { iconSvg } from '../../lib/icons';
     import { esc } from '../../lib/escape';
+    import { restInsert } from '../../lib/supabase-write';
+
+    // Warm the auth/session machinery at load — the very first insert after page
+    // load can otherwise hang on the client's internal session lock.
+    supabase.auth.getSession().catch(() => {});
 
     const giantsData = JSON.parse(document.getElementById('giants-data')?.textContent || '[]');
     const giantModal = document.getElementById('mxGiantModal');
@@ -594,9 +599,12 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
 <script>
     // The Reading Room — whispers + notes (faithful clone of classic)
     import { supabase } from '../../lib/supabase';
+    // Client-side day constant (the frontmatter DAY_MS doesn't exist in module scope)
+    const DAY_MS = 86400000;
     import { dvToast } from '../../lib/dialog';
     import { iconSvg } from '../../lib/icons';
     import { esc } from '../../lib/escape';
+    import { restInsert } from '../../lib/supabase-write';
 
     function timeAgo(iso) {
         const diff = Date.now() - new Date(iso).getTime();
@@ -691,14 +699,42 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         };
         const parentId = input.dataset.replyTo || null;
         if (parentId) payload.parent_id = parentId;
-        const { error } = await supabase.from('community_notes').insert(payload);
-        if (error) { console.error('postNote error:', error); dvToast('Something went wrong. Please try again.'); return false; }
+        let error: any = null;
+        try {
+            const res: any = await Promise.race([
+                restInsert('community_notes', payload),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000)),
+            ]);
+            error = res?.error ?? null;
+        } catch (e: any) {
+            error = e;
+        }
+        if (error) {
+            console.error('postNote error:', error);
+            dvToast(error.message === 'timeout'
+                ? 'The desk is busy — your note did not go through. Please try again.'
+                : 'Something went wrong. Please try again.');
+            return false;
+        }
         delete input.dataset.replyTo;
         const hint = document.getElementById(type === 'whisper' ? 'whisperHint' : 'noteHint');
         if (hint) hint.textContent = '';
         input.value = '';
         if (nameEl) nameEl.value = '';
+        // Optimistic render — the reader sees their note instantly; a delayed
+        // re-sync reconciles with the database in case the insert lands late.
+        const listEl = document.getElementById(listId);
+        if (listEl) {
+            const empty = listEl.querySelector('.' + 'mx-notes-empty');
+            if (empty) empty.remove();
+            const card = document.createElement('div');
+            card.className = 'mx-note-card';
+            card.innerHTML = `<p class="mx-note-body">${esc(body)}</p>
+                <div class="mx-note-meta"><span class="mx-note-author">— ${esc(displayName)}</span><span class="mx-note-time">just now</span></div>`;
+            listEl.prepend(card);
+        }
         loadNotes(type, listId);
+        setTimeout(() => loadNotes(type, listId), 4000);
         return true;
     }
 

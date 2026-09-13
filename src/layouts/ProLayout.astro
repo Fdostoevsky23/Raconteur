@@ -682,35 +682,8 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
         box-shadow: 0 0 8px rgba(255, 106, 0, 0.8);
     }
 
-    .pro-notif-panel {
-        position: absolute;
-        top: calc(100% + 10px);
-        right: 0;
-        width: 320px;
-        background: rgba(10, 13, 16, 0.97);
-        border: 1px solid var(--pro-line-hi);
-        border-radius: var(--pro-r-md);
-        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
-        padding: 0.9rem;
-        z-index: 60;
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-    }
-
-    .pro-notif-head { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--pro-text-2); margin-bottom: 0.6rem; }
-    .pro-notif-list { max-height: 320px; overflow-y: auto; }
-    .pro-notif-empty { color: var(--pro-text-3); font-size: 0.8rem; margin: 0; padding: 0.6rem 0; }
-    .pro-notif-item {
-        display: flex; gap: 0.6rem; align-items: flex-start;
-        padding: 0.55rem 0.6rem; border-radius: var(--pro-r-sm);
-        text-decoration: none; color: var(--pro-text-2);
-    }
-    .pro-notif-item:hover { background: rgba(255, 255, 255, 0.05); }
-    .pro-notif-item.unread { background: rgba(255, 106, 0, 0.07); }
-    .pro-notif-icon { color: var(--pro-mint); }
-    .pro-notif-text { font-size: 0.82rem; flex: 1; }
-    .pro-notif-time { font-size: 0.7rem; color: var(--pro-text-3); }
-
+    
+                                    
     /* === TOGGLE ROW (skin switch) === */
     .pro-toggle-row {
         display: flex;
