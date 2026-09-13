@@ -216,7 +216,7 @@ const moods = [
                         <div class="pro-shelf-row">
                             <span class="pro-shelf-name">{s.genre}</span>
                             <div class="pro-shelf-track">
-                                <span class="pro-shelf-bar" style={`width:${Math.max(6, Math.round((s.count / shelfMax) * 100))}%`} class:hot={i === 0}></span>
+                                <span class:list={["pro-shelf-bar", { hot: i === 0 }]} style={`width:${Math.max(6, Math.round((s.count / shelfMax) * 100))}%`}></span>
                             </div>
                             <span class="pro-shelf-count pro-num">{s.count}</span>
                         </div>
@@ -681,12 +681,13 @@ const moods = [
 
         // Chart line draw-in on first reveal (skipped for reduced motion)
         if (!REDUCED && lineEl) {
-            const len = (lineEl as SVGPolylineElement).getTotalLength();
-            lineEl.style.strokeDasharray = `${len}`;
-            lineEl.style.strokeDashoffset = `${len}`;
+            const line = lineEl as SVGPolylineElement;
+            const len = line.getTotalLength();
+            line.style.strokeDasharray = `${len}`;
+            line.style.strokeDashoffset = `${len}`;
             requestAnimationFrame(() => {
-                lineEl.style.transition = 'stroke-dashoffset 1.4s cubic-bezier(0.2, 0.7, 0.2, 1)';
-                lineEl.style.strokeDashoffset = '0';
+                line.style.transition = 'stroke-dashoffset 1.4s cubic-bezier(0.2, 0.7, 0.2, 1)';
+                line.style.strokeDashoffset = '0';
             });
         }
     }
