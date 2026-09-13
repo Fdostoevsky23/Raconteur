@@ -1,0 +1,362 @@
+---
+// src/pages/pro/messages.astro — quiet private messaging (the dark desk).
+// Client logic is a faithful copy of classic /messages (feature parity):
+// conversation grouping, unread dots, ?with= seeding, polling, notifications.
+import ProLayout from '../../layouts/ProLayout.astro';
+---
+
+<ProLayout title="Messages · Raconteur Pro" description="Quiet private messaging between writers.">
+    <div class="pro-page pro-msg-page">
+        <header class="pro-page-head" data-pro-reveal>
+            <p class="pro-browser-kicker">Letters between writers</p>
+            <h1 class="pro-page-title">Messages</h1>
+        </header>
+
+        <div id="authGate" class="pro-empty-state">Checking login status...</div>
+
+        <div id="messagesApp" hidden>
+            <div class="pro-msg-layout">
+                <aside class="pro-card pro-conv-list" id="convList" data-pro-reveal>
+                    <p class="pro-conv-empty">No conversations yet. Visit a writer's page and hit the Message button to start one.</p>
+                </aside>
+
+                <section class="pro-card pro-thread" id="threadPane" data-pro-reveal style="--pro-reveal-delay: 0.08s">
+                    <div class="pro-thread-empty" id="threadEmpty">
+                        <p>Select a conversation to begin.</p>
+                    </div>
+                    <div id="threadActive" hidden>
+                        <div class="pro-thread-head">
+                            <span id="threadName" class="pro-thread-name"></span>
+                        </div>
+                        <div class="pro-thread-body" id="threadBody"></div>
+                        <form id="msgForm" class="pro-msg-form">
+                            <textarea id="msgInput" class="pro-msg-input" rows="2" maxlength="2000"
+                                placeholder="Write a message..."></textarea>
+                            <button type="submit" class="pro-msg-send">Send</button>
+                        </form>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</ProLayout>
+
+<script>
+    // Messaging engine — faithful clone of classic /messages (login path interim → classic).
+    import { supabase } from '../../lib/supabase';
+    import { dvToast } from '../../lib/dialog';
+
+    const authGate = document.getElementById('authGate')!;
+    const app = document.getElementById('messagesApp')!;
+    const convList = document.getElementById('convList')!;
+    const threadEmpty = document.getElementById('threadEmpty')!;
+    const threadActive = document.getElementById('threadActive')!;
+    const threadName = document.getElementById('threadName')!;
+    const threadBody = document.getElementById('threadBody')!;
+    const msgForm = document.getElementById('msgForm') as HTMLFormElement;
+    const msgInput = document.getElementById('msgInput') as HTMLTextAreaElement;
+
+    let me: any = null;
+    let activeWith: string | null = null;
+    let nameMap: Record<string, string> = {};
+
+    function esc(s: string) {
+        return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]!));
+    }
+    function timeAgo(iso: string) {
+        const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+        if (m < 1) return 'now'; if (m < 60) return m + 'm'; const h = Math.floor(m / 60);
+        if (h < 24) return h + 'h'; return Math.floor(h / 24) + 'd';
+    }
+
+    async function resolveNames(ids: string[]) {
+        const missing = ids.filter(id => !nameMap[id]);
+        if (missing.length) {
+            const { data } = await supabase.from('profiles').select('user_id, pen_name').in('user_id', missing);
+            (data || []).forEach((p: any) => { nameMap[p.user_id] = p.pen_name; });
+        }
+    }
+    const nameOf = (id: string) => nameMap[id] || 'Writer';
+
+    async function loadConversations() {
+        const { data: rows } = await supabase
+            .from('messages')
+            .select('id, sender_id, recipient_id, body, created_at, read')
+            .or(`sender_id.eq.${me.id},recipient_id.eq.${me.id}`)
+            .order('created_at', { ascending: false })
+            .limit(200);
+        const all = rows || [];
+
+        // Group by counterpart
+        const convs: Record<string, { last: any; unread: number }> = {};
+        all.forEach(m => {
+            const other = m.sender_id === me.id ? m.recipient_id : m.sender_id;
+            if (!convs[other]) convs[other] = { last: m, unread: 0 };
+            if (m.recipient_id === me.id && !m.read) convs[other].unread++;
+        });
+
+        const ids = Object.keys(convs);
+        await resolveNames(ids);
+
+        // If URL has ?with= and no conversation exists yet, seed it
+        const params = new URLSearchParams(window.location.search);
+        const withId = params.get('with');
+        if (withId && withId !== me.id && !convs[withId]) {
+            convs[withId] = { last: { created_at: new Date().toISOString(), body: '' }, unread: 0 };
+            ids.push(withId);
+            await resolveNames([withId]);
+        }
+
+        if (ids.length === 0) {
+            convList.innerHTML = '<p class="pro-conv-empty">No conversations yet. Visit a writer\'s page and hit the Message button to start one.</p>';
+        } else {
+            const sorted = ids.sort((a, b) =>
+                new Date(convs[b].last.created_at).getTime() - new Date(convs[a].last.created_at).getTime());
+            convList.innerHTML = sorted.map(id => {
+                const c = convs[id];
+                const preview = c.last.body ? esc(c.last.body.slice(0, 50)) : '<i>No messages yet</i>';
+                const dot = c.unread > 0 ? `<span class="pro-conv-dot">${c.unread}</span>` : '';
+                return `<button class="pro-conv-item ${id === activeWith ? 'active' : ''}" data-id="${id}">
+                    <span class="pro-conv-name">${esc(nameOf(id))}</span>
+                    <span class="pro-conv-preview">${preview}</span>
+                    ${dot}
+                </button>`;
+            }).join('');
+            convList.querySelectorAll('.pro-conv-item').forEach(el => el.addEventListener('click', async () => {
+                openThread((el as HTMLElement).dataset.id!);
+            }));
+        }
+
+        // Auto-open the ?with= thread
+        if (withId && withId !== me.id && !activeWith) openThread(withId);
+    }
+
+    async function openThread(userId: string) {
+        activeWith = userId;
+        threadEmpty.hidden = true;
+        threadActive.hidden = false;
+        threadName.textContent = nameOf(userId);
+        convList.querySelectorAll('.pro-conv-item').forEach(el =>
+            el.classList.toggle('active', (el as HTMLElement).dataset.id === userId));
+        await loadThread();
+        // Mark incoming as read
+        await supabase.from('messages').update({ read: true })
+            .eq('sender_id', userId).eq('recipient_id', me.id).eq('read', false);
+        msgInput.focus();
+    }
+
+    async function loadThread() {
+        if (!activeWith) return;
+        const { data: rows } = await supabase
+            .from('messages')
+            .select('id, sender_id, body, created_at')
+            .or(`and(sender_id.eq.${me.id},recipient_id.eq.${activeWith}),and(sender_id.eq.${activeWith},recipient_id.eq.${me.id})`)
+            .order('created_at', { ascending: true });
+        const all = rows || [];
+        threadBody.innerHTML = all.length === 0
+            ? '<p class="pro-thread-start">Say hello. This conversation is private. Only the two of you can see it.</p>'
+            : all.map(m => `
+                <div class="pro-bubble ${m.sender_id === me.id ? 'mine' : 'theirs'}">
+                    <p>${esc(m.body)}</p>
+                    <span class="pro-bubble-time">${timeAgo(m.created_at)}</span>
+                </div>`).join('');
+        threadBody.scrollTop = threadBody.scrollHeight;
+    }
+
+    msgForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const body = msgInput.value.trim();
+        if (!body || !activeWith) return;
+        const { error: sendErr } = await supabase.from('messages').insert({
+            sender_id: me.id, recipient_id: activeWith, body,
+        });
+        if (sendErr) { dvToast('Could not send: ' + sendErr.message, 'err'); return; }
+        await supabase.from('notifications').insert({
+            user_id: activeWith, actor_id: me.id, type: 'message', body_preview: body.slice(0, 60),
+        });
+        msgInput.value = '';
+        await loadThread();
+        await loadConversations();
+    });
+
+    async function init() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { window.location.href = '/login'; return; }
+        me = session.user;
+        authGate.hidden = true;
+        app.hidden = false;
+        await loadConversations();
+        setInterval(async () => {
+            await loadConversations();
+            if (activeWith) await loadThread();
+        }, 8000);
+    }
+
+    init();
+</script>
+
+<style>
+    .pro-page {
+        position: relative;
+        z-index: 1;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 3.4rem 1.6rem 3rem;
+    }
+
+    .pro-page-head { margin-bottom: 2.4rem; }
+
+    .pro-page-title {
+        font-family: var(--pro-font);
+        font-size: clamp(2.2rem, 4.8vw, 3.4rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--pro-text);
+        margin: 0.6rem 0 0;
+    }
+
+    .pro-empty-state {
+        text-align: center;
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-3);
+        padding: 3rem 0;
+    }
+
+    .pro-msg-page { max-width: 1100px; }
+
+    .pro-msg-layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1.4rem;
+        min-height: 520px;
+        align-items: stretch;
+    }
+
+    /* Conversation list */
+    .pro-conv-list {
+        padding: 1rem 0.8rem;
+        max-height: 70vh;
+        overflow-y: auto;
+        align-self: start;
+    }
+
+    .pro-conv-empty {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-3);
+        font-size: 0.9rem;
+        padding: 0.6rem;
+    }
+
+    .pro-conv-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid var(--pro-line);
+        padding: 0.8rem 0.6rem;
+        cursor: pointer;
+        position: relative;
+        color: inherit;
+        font-family: inherit;
+        border-radius: var(--pro-r-sm);
+        transition: background 0.2s;
+    }
+
+    .pro-conv-item:hover { background: rgba(255, 255, 255, 0.04); }
+    .pro-conv-item.active { background: var(--pro-amber-soft); }
+
+    .pro-conv-name { font-family: var(--pro-font); font-weight: 600; color: var(--pro-text); font-size: 0.95rem; }
+    .pro-conv-preview { font-size: 0.8rem; color: var(--pro-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+
+    .pro-conv-dot {
+        position: absolute;
+        top: 0.7rem;
+        right: 0.5rem;
+        background: var(--pro-amber);
+        color: #1a0d00;
+        font-size: 0.68rem;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: 0.1rem 0.45rem;
+    }
+
+    /* Thread */
+    .pro-thread { display: flex; flex-direction: column; overflow: hidden; }
+    .pro-thread-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--pro-text-3); font-family: var(--pro-font-read); font-style: italic; }
+    #threadActive { flex: 1; display: flex; flex-direction: column; min-height: 520px; }
+
+    .pro-thread-head { padding: 1rem 1.3rem; border-bottom: 1px solid var(--pro-line); }
+    .pro-thread-name { font-family: var(--pro-font); font-weight: 600; font-size: 1.15rem; color: var(--pro-text); }
+
+    .pro-thread-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+        max-height: 55vh;
+    }
+
+    .pro-thread-start {
+        text-align: center;
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-3);
+        margin: auto;
+        max-width: 320px;
+    }
+
+    .pro-bubble { max-width: 75%; padding: 0.7rem 1rem; border-radius: 14px; font-size: 0.93rem; line-height: 1.5; }
+    .pro-bubble p { margin: 0 0 0.3rem; white-space: pre-wrap; word-break: break-word; }
+    .pro-bubble-time { font-size: 0.68rem; opacity: 0.6; }
+    .pro-bubble.mine { align-self: flex-end; background: var(--pro-amber); color: #1a0d00; border-bottom-right-radius: 4px; }
+    .pro-bubble.theirs { align-self: flex-start; background: rgba(255, 255, 255, 0.05); color: var(--pro-text); border: 1px solid var(--pro-line); border-bottom-left-radius: 4px; }
+
+    .pro-msg-form { display: flex; gap: 0.6rem; padding: 1rem 1.2rem; border-top: 1px solid var(--pro-line); }
+
+    .pro-msg-input {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: var(--pro-r-sm);
+        padding: 0.7rem 0.9rem;
+        color: var(--pro-text);
+        font-family: var(--pro-font);
+        font-size: 0.93rem;
+        resize: vertical;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .pro-msg-input:focus { border-color: var(--pro-amber); }
+
+    .pro-msg-send {
+        background: var(--pro-amber);
+        color: #1a0d00;
+        border: none;
+        border-radius: 999px;
+        padding: 0 1.5rem;
+        font-family: var(--pro-font);
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.88rem;
+        transition: background 0.2s, transform 0.2s;
+    }
+
+    .pro-msg-send:hover { background: var(--pro-mint); transform: translateY(-1px); }
+
+    @media (max-width: 700px) {
+        .pro-msg-layout { grid-template-columns: 1fr; }
+        .pro-conv-list { max-height: 40vh; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .pro-msg-send:hover { transform: none; }
+    }
+</style>

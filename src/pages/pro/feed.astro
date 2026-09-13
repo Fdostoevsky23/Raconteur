@@ -1,0 +1,144 @@
+---
+// src/pages/pro/feed.astro — stories from writers you follow (the dark desk).
+// Server shell only; client logic is a faithful copy of classic /feed
+// (feature parity): follow-graph query + latest published stories, auth-gated.
+import ProLayout from '../../layouts/ProLayout.astro';
+---
+
+<ProLayout title="Your Feed · Raconteur Pro" description="New stories from the writers you follow.">
+    <div class="pro-page">
+        <header class="pro-page-head" data-pro-reveal>
+            <p class="pro-browser-kicker">From writers you follow</p>
+            <h1 class="pro-page-title">Your Feed</h1>
+        </header>
+
+        <div id="authCheck" class="pro-empty-state">Checking login status...</div>
+        <div id="feedList" class="pro-work-grid" hidden></div>
+        <div id="emptyState" hidden>
+            <div class="pro-quiet-card" data-pro-reveal>
+                <p class="pro-quiet-title">You're not following anyone yet.</p>
+                <p class="pro-quiet-sub">Visit a writer's page and tap Follow, and their new stories will appear here.</p>
+                <a href="/pro/stories" class="pro-btn pro-btn-amber">Browse the Library</a>
+            </div>
+        </div>
+    </div>
+</ProLayout>
+
+<script>
+    // Follow-graph feed — faithful clone of classic /feed (story links interim → classic).
+    import { supabase } from '../../lib/supabase';
+    import { esc } from '../../lib/escape';
+    import { iconSvg } from '../../lib/icons';
+
+    const authCheck = document.getElementById('authCheck')!;
+    const feedList = document.getElementById('feedList')!;
+    const emptyState = document.getElementById('emptyState')!;
+
+    async function initFeed() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { window.location.href = '/login'; return; }
+        authCheck.hidden = true;
+
+        // Who do I follow?
+        const { data: follows } = await supabase
+            .from('follows')
+            .select('followed_id')
+            .eq('follower_id', session.user.id);
+        const ids = (follows || []).map((f: any) => f.followed_id);
+        if (ids.length === 0) { emptyState.hidden = false; return; }
+
+        // Their published stories, newest first
+        const { data: stories } = await supabase
+            .from('stories')
+            .select('id, title, author_name, created_at, kind, genre_tag, cover_url')
+            .in('author_id', ids)
+            .eq('status', 'published')
+            .order('created_at', { ascending: false })
+            .limit(40);
+        if (!stories || stories.length === 0) { emptyState.hidden = false; return; }
+
+        feedList.hidden = false;
+        feedList.innerHTML = stories.map((s: any, i: number) => {
+            const isPoem = s.kind === 'poem' || s.genre_tag === 'Poetry';
+            const date = new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            const cover = s.cover_url
+                ? `<div class="pro-work-cover"><img src="${esc(s.cover_url)}" alt="Cover of ${esc(s.title)}" loading="lazy" /></div>`
+                : `<div class="pro-work-cover">${isPoem
+                    ? `<span class="pro-work-quote">“${esc(s.title)}”</span>`
+                    : `<span class="pro-work-star" aria-hidden="true">${iconSvg('sparkle', 26)}</span>`}</div>`;
+            return `
+                <a href="/story/${esc(s.id)}" class="pro-work-card ${isPoem ? 'is-poem' : ''}" data-pro-reveal style="--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s">
+                    ${cover}
+                    <div class="pro-work-body">
+                        <span class="pro-work-genre ${isPoem ? 'poem' : ''}">${isPoem ? 'Poem' : 'Story'}</span>
+                        <h3 class="pro-work-title">${esc(s.title)}</h3>
+                        <div class="pro-work-meta">
+                            <span>${esc(s.author_name)}</span>
+                            <span>${date}</span>
+                        </div>
+                    </div>
+                </a>`;
+        }).join('');
+        feedList.querySelectorAll('[data-pro-reveal]').forEach(el => el.classList.add('pro-revealed'));
+    }
+    initFeed();
+</script>
+
+<style>
+    .pro-page {
+        position: relative;
+        z-index: 1;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 3.4rem 1.6rem 3rem;
+    }
+
+    .pro-page-head { margin-bottom: 2.4rem; }
+
+    .pro-page-title {
+        font-family: var(--pro-font);
+        font-size: clamp(2.2rem, 4.8vw, 3.4rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--pro-text);
+        margin: 0.6rem 0 0;
+    }
+
+    .pro-empty-state {
+        text-align: center;
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-3);
+        padding: 3rem 0;
+    }
+
+    .pro-quiet-card {
+        max-width: 460px;
+        margin: 2rem auto 0;
+        padding: 3rem 2.2rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
+        background: var(--pro-card);
+        border: 1px solid var(--pro-line);
+        border-radius: var(--pro-r-lg);
+        box-shadow: var(--pro-shadow-card), var(--pro-inner-glow);
+    }
+
+    .pro-quiet-title {
+        font-family: var(--pro-font);
+        font-weight: 600;
+        font-size: 1.25rem;
+        color: var(--pro-text);
+        margin: 0;
+    }
+
+    .pro-quiet-sub {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-2);
+        margin: 0 0 1.2rem;
+    }
+</style>
