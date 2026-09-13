@@ -37,7 +37,7 @@ import ProLayout from '../../layouts/ProLayout.astro';
 
     async function initSaved() {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { window.location.href = '/login'; return; }
+        if (!session) { window.location.href = '/pro/login'; return; }
         authCheck.hidden = true;
 
         const { data: savedRows } = await supabase

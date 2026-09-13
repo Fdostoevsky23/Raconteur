@@ -1,0 +1,116 @@
+---
+// src/pages/pro/privacy.astro — Privacy Policy (the dark desk).
+// Text is a faithful copy of classic /privacy.
+import ProLayout from '../../layouts/ProLayout.astro';
+---
+
+<ProLayout title="Privacy Policy · Raconteur Pro" description="Your data, your trust.">
+    <div class="pro-page pro-page-narrow">
+        <article class="pro-sheet" data-pro-reveal>
+            <header class="pro-sheet-head">
+                <p class="pro-browser-kicker">Your Data, Your Trust</p>
+                <h1 class="pro-page-title">Privacy Policy</h1>
+                <p class="pro-legal-date">Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+            </header>
+
+            <div class="pro-sheet-body">
+                <h2>The Short Version</h2>
+                <p>Raconteur collects only what's necessary to run the site. We don't track you, sell your data, or share it with anyone. You own your words; we just give them a shelf.</p>
+
+                <h2>What We Store</h2>
+                <p><strong>Account data (required):</strong> Your email address and a hashed password (managed securely by Supabase, we never see your password). A timestamp of when you signed up.</p>
+                <p><strong>Profile data (you choose):</strong> Pen name, bio, avatar image, social links (X/Instagram/Facebook), public email (optional, shown on your page), top-5 book recommendations (optional).</p>
+                <p><strong>Content you create:</strong> Stories and poems (title, body, cover image, genre, length), comments, Reading Room notes and whispers, bookmarks, likes, follows.</p>
+                <p><strong>System data (automatic):</strong> Timestamps (created/updated), curation flags (featured, on-homepage), work counts for badges, and which stories are recommended to you.</p>
+
+                <h2>What We Do NOT Collect</h2>
+                <ul>
+                    <li>No analytics or tracking cookies</li>
+                    <li>No third-party ad networks</li>
+                    <li>No behavioral profiling or fingerprinting</li>
+                    <li>No selling or sharing of data with anyone, ever</li>
+                    <li>No reading history beyond what you explicitly bookmark</li>
+                </ul>
+
+                <h2>Why We Store It</h2>
+                <p>To let you log in, publish your work, follow writers, leave comments, and see personalized recommendations. That's it. Every piece of data serves the reader or the writer, never an advertiser.</p>
+
+                <h2>How Long We Keep It</h2>
+                <p>Until you delete your account. When you do, your stories, comments, bookmarks, profile, and all associated data are permanently removed from our database. We keep no backups, no archives, no shadows of your work. Reading Room whispers fade after 7 days; notes after 30 days, automatically.</p>
+
+                <h2>Your Rights</h2>
+                <ul>
+                    <li><strong>Edit:</strong> Change your pen name, bio, avatar, and social links anytime in your dashboard.</li>
+                    <li><strong>Export:</strong> Your stories live in your dashboard and can be exported as markdown files whenever you like.</li>
+                    <li><strong>Delete:</strong> Remove your account and all your data with one click in your dashboard. It's instant and irreversible.</li>
+                    <li><strong>Change email:</strong> Update your login email in your profile editor; a confirmation link goes to the new address.</li>
+                </ul>
+
+                <h2>Email Communications</h2>
+                <p>We send you a confirmation email when you sign up or change your email address. If you opt into the weekly digest, you'll receive a Sunday summary of new stories from writers you follow. You can unsubscribe anytime. We never send marketing spam.</p>
+
+                <h2>Children's Privacy</h2>
+                <p>Raconteur is intended for writers and readers aged 13 and older. We don't knowingly collect data from children under 13. If you believe a child has created an account, contact us and we'll delete it immediately.</p>
+
+                <h2>Changes to This Policy</h2>
+                <p>If we update this policy, we'll post the new version here and note the date at the top. Material changes will be announced in the Reading Room. Your continued use of Raconteur after changes means you accept the updated policy.</p>
+
+                <h2>Contact</h2>
+                <p>Questions about your data or this policy? Write to us at the email on the About page. We read every message and respond within a few days.</p>
+
+                <p class="pro-legal-footer">We built Raconteur because we believe stories deserve a quiet home, and so does your trust.</p>
+            </div>
+        </article>
+    </div>
+</ProLayout>
+
+<style>
+    .pro-page {
+        position: relative;
+        z-index: 1;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 3.4rem 1.6rem 3rem;
+    }
+
+    .pro-page-narrow { max-width: 880px; }
+
+    .pro-sheet {
+        background: #0b0e11;
+        border: 1px solid var(--pro-line);
+        border-radius: 24px;
+        padding: 3rem clamp(1.6rem, 4vw, 3rem);
+        box-shadow: var(--pro-shadow-card), var(--pro-inner-glow);
+    }
+
+    .pro-sheet-head { text-align: center; margin-bottom: 2rem; padding-bottom: 1.6rem; border-bottom: 1px solid var(--pro-line); }
+
+    .pro-page-title {
+        font-family: var(--pro-font);
+        font-size: clamp(2rem, 4.4vw, 3rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--pro-text);
+        margin: 0.6rem 0 0;
+    }
+
+    .pro-legal-date { font-family: var(--pro-font-read); font-size: 0.85rem; font-style: italic; color: var(--pro-text-3); margin: 0.4rem 0 0; }
+
+    .pro-sheet-body h2 {
+        font-family: var(--pro-font);
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--pro-amber);
+        margin: 2rem 0 0.7rem;
+    }
+    .pro-sheet-body p, .pro-sheet-body li { font-size: 0.94rem; line-height: 1.7; color: var(--pro-text-2); margin-bottom: 0.9rem; }
+    .pro-sheet-body ul { padding-left: 1.4rem; }
+    .pro-sheet-body li { margin-bottom: 0.5rem; }
+    .pro-sheet-body strong { color: var(--pro-text); }
+
+    .pro-legal-footer { margin-top: 2.6rem; padding-top: 1.4rem; border-top: 1px solid var(--pro-line); font-family: var(--pro-font-read); font-style: italic; color: var(--pro-text-3); text-align: center; }
+
+    @media (max-width: 640px) {
+        .pro-page { padding: 2.2rem 1rem 2.4rem; }
+    }
+</style>

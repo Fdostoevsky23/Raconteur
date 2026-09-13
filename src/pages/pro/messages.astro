@@ -181,7 +181,7 @@ import ProLayout from '../../layouts/ProLayout.astro';
 
     async function init() {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { window.location.href = '/login'; return; }
+        if (!session) { window.location.href = '/pro/login'; return; }
         me = session.user;
         authGate.hidden = true;
         app.hidden = false;

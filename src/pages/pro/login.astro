@@ -1,0 +1,113 @@
+---
+// src/pages/pro/login.astro — sign-in (the dark desk).
+// Logic is a faithful copy of classic /login; success redirects in-skin.
+import ProLayout from '../../layouts/ProLayout.astro';
+import Icon from '../../components/Icon.astro';
+---
+
+<ProLayout title="Log In · Raconteur Pro" description="Your shelf missed you.">
+    <div class="pro-auth-wrap">
+        <div class="pro-card pro-auth-card" data-pro-reveal>
+            <p class="pro-browser-kicker">Welcome back</p>
+            <h1 class="pro-auth-title">Log in</h1>
+            <p class="pro-auth-sub">Your shelf missed you.</p>
+
+            <form id="loginForm" class="pro-auth-form">
+                <label for="email">Email</label>
+                <input type="email" id="email" class="pro-field" placeholder="you@example.com" required autocomplete="email" />
+                <label for="password">Password</label>
+                <div class="pro-pw-wrap">
+                    <input type="password" id="password" class="pro-field" placeholder="Your password" required autocomplete="current-password" />
+                    <button type="button" class="pro-pw-toggle" id="pwToggle" aria-label="Show password"><Icon name="eye" size={16} /></button>
+                </div>
+                <button type="submit" class="pro-btn pro-btn-amber pro-auth-btn">Log in</button>
+                <p class="pro-forgot"><a href="/pro/reset-password">Forgot password?</a></p>
+                <p class="pro-auth-msg" id="authMsg"></p>
+            </form>
+
+            <p class="pro-auth-alt">New here? <a href="/pro/signup">Create an account</a></p>
+        </div>
+    </div>
+</ProLayout>
+
+<script>
+    import { supabase } from '../../lib/supabase';
+    import { iconSvg } from '../../lib/icons';
+
+    const form = document.getElementById('loginForm') as HTMLFormElement;
+    const msg = document.getElementById('authMsg')!;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = (document.getElementById('email') as HTMLInputElement).value;
+        const password = (document.getElementById('password') as HTMLInputElement).value;
+        msg.textContent = 'Logging you in...';
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+            msg.textContent = error.message;
+        } else {
+            msg.textContent = 'Welcome back. Redirecting...';
+            setTimeout(() => (window.location.href = '/pro/dashboard'), 1200);
+        }
+    });
+    const pwInput = document.getElementById('password') as HTMLInputElement;
+    const pwToggle = document.getElementById('pwToggle');
+    pwToggle?.addEventListener('click', () => {
+        const isPassword = pwInput.type === 'password';
+        pwInput.type = isPassword ? 'text' : 'password';
+        pwToggle.innerHTML = isPassword ? iconSvg('eye-off', 16) : iconSvg('eye', 16);
+        pwToggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+    });
+</script>
+
+<style>
+    .pro-auth-wrap { min-height: 62vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
+
+    .pro-auth-card {
+        width: 100%;
+        max-width: 420px;
+        padding: 2.6rem 2.3rem;
+        text-align: center;
+    }
+
+    .pro-auth-title { font-family: var(--pro-font); font-size: 1.9rem; font-weight: 700; color: var(--pro-text); margin: 0.6rem 0 0.4rem; }
+    .pro-auth-sub { font-size: 0.9rem; color: var(--pro-text-2); margin: 0 0 1.8rem; }
+
+    .pro-auth-form { display: flex; flex-direction: column; text-align: left; }
+    .pro-auth-form label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--pro-amber); margin: 0.9rem 0 0.35rem; }
+
+    .pro-field {
+        width: 100%;
+        padding: 0.65rem 0.8rem;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: 10px;
+        color: var(--pro-text);
+        font-family: var(--pro-font);
+        font-size: 0.93rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .pro-field:focus { border-color: var(--pro-amber); }
+    .pro-field::placeholder { color: var(--pro-text-3); }
+
+    .pro-pw-wrap { position: relative; display: flex; align-items: center; }
+    .pro-pw-wrap input { flex: 1; padding-right: 3rem; }
+    .pro-pw-toggle {
+        position: absolute; right: 0.6rem;
+        background: transparent; border: none;
+        color: var(--pro-text-3); cursor: pointer;
+        padding: 0.2rem; opacity: 0.7; transition: opacity 0.2s;
+    }
+    .pro-pw-toggle:hover { opacity: 1; }
+
+    .pro-auth-btn { margin-top: 1.5rem; width: 100%; justify-content: center; }
+
+    .pro-forgot { text-align: center; margin-top: 1rem; }
+    .pro-forgot a { color: var(--pro-text-2); text-decoration: none; font-size: 0.85rem; }
+    .pro-forgot a:hover { color: var(--pro-amber); }
+
+    .pro-auth-msg { min-height: 1.2rem; margin-top: 0.9rem; font-size: 0.85rem; color: #e05a3a; text-align: center; }
+    .pro-auth-alt { margin-top: 1.4rem; font-size: 0.88rem; color: var(--pro-text-2); }
+    .pro-auth-alt a { color: var(--pro-amber); font-weight: 600; }
+</style>

@@ -1,0 +1,308 @@
+---
+// src/pages/pro/digest.astro — the Sunday paper (the dark desk).
+// Client logic is a faithful copy of classic /digest (feature parity):
+// followed-writers section, fresh poetry, most appreciated, subscribe toggle.
+import ProLayout from '../../layouts/ProLayout.astro';
+import Icon from '../../components/Icon.astro';
+---
+
+<ProLayout title="The Raconteur Weekly · Pro" description="The Sunday paper: new stories from writers you follow, fresh poetry, and the week's most appreciated works.">
+    <div class="pro-page pro-page-narrow">
+        <div id="authCheck" class="pro-empty-state">Setting the type...</div>
+
+        <article id="digestPaper" class="pro-card pro-paper" hidden>
+            <header class="pro-paper-masthead">
+                <p class="pro-paper-edition">Sunday Edition</p>
+                <h1 class="pro-paper-title">THE RACONTEUR WEEKLY</h1>
+                <p class="pro-paper-date" id="paperDate"></p>
+                <div class="pro-double-rule"></div>
+            </header>
+
+            <section id="followedSection" class="pro-paper-section" hidden>
+                <h2 class="pro-paper-section-head">From Writers You Follow</h2>
+                <div id="followedList" class="pro-paper-list"></div>
+            </section>
+
+            <section id="newPoemsSection" class="pro-paper-section" hidden>
+                <h2 class="pro-paper-section-head">Fresh Poetry</h2>
+                <div id="newPoemsList" class="pro-paper-list"></div>
+            </section>
+
+            <section id="appreciatedSection" class="pro-paper-section" hidden>
+                <h2 class="pro-paper-section-head">Most Appreciated This Week</h2>
+                <div id="appreciatedList" class="pro-paper-list"></div>
+            </section>
+
+            <footer class="pro-paper-colophon">
+                <div class="pro-double-rule"></div>
+                <p>Every story here was written to be remembered.</p>
+            </footer>
+        </article>
+
+        <div id="subBox" class="pro-sub-box" hidden>
+            <p id="subText" class="pro-sub-text">Get the Sunday Paper in your inbox, every week.</p>
+            <button id="subBtn" class="pro-btn pro-btn-amber" type="button"><Icon name="mail" size={14} /> Subscribe to the Weekly</button>
+        </div>
+
+        <div id="emptyState" hidden>
+            <div class="pro-card pro-paper-empty">
+                <p class="pro-paper-empty-title">A quiet week on the shelf.</p>
+                <p class="pro-paper-empty-sub">No new stories landed in the past seven days. Check back next Sunday.</p>
+                <a href="/pro/stories" class="pro-btn pro-btn-amber">Browse the Library</a>
+            </div>
+        </div>
+    </div>
+</ProLayout>
+
+<script>
+    // Sunday paper engine — faithful clone of classic /digest (links in-skin).
+    import { supabase } from '../../lib/supabase';
+    import { dvToast } from '../../lib/dialog';
+    import { iconSvg } from '../../lib/icons';
+    import { esc } from '../../lib/escape';
+
+    const authCheck = document.getElementById('authCheck')!;
+    const digestPaper = document.getElementById('digestPaper')!;
+    const paperDate = document.getElementById('paperDate')!;
+    const followedSection = document.getElementById('followedSection')!;
+    const followedList = document.getElementById('followedList')!;
+    const newPoemsSection = document.getElementById('newPoemsSection')!;
+    const newPoemsList = document.getElementById('newPoemsList')!;
+    const appreciatedSection = document.getElementById('appreciatedSection')!;
+    const appreciatedList = document.getElementById('appreciatedList')!;
+    const emptyState = document.getElementById('emptyState')!;
+
+    const DAY_MS = 86400000;
+    const sevenDaysAgo = new Date(Date.now() - 7 * DAY_MS).toISOString();
+
+    paperDate.textContent = new Date().toLocaleDateString(undefined, {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    function renderPaperItem(s: any, extra?: string) {
+        const date = new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        const meta = extra ? `${extra} · ${date}` : date;
+        return `
+            <a href="/pro/story/${esc(s.id)}" class="pro-paper-item">
+                <span class="pro-paper-item-title">${esc(s.title)}</span>
+                <span class="pro-paper-leader"></span>
+                <span class="pro-paper-item-meta">${esc(s.author_name)} · ${meta}</span>
+            </a>`;
+    }
+
+    async function initDigest() {
+        const { data: { session } } = await supabase.auth.getSession();
+        authCheck.hidden = true;
+
+        let hasContent = false;
+
+        // 1. From writers you follow
+        if (session) {
+            const { data: follows } = await supabase
+                .from('follows').select('followed_id')
+                .eq('follower_id', session.user.id);
+            const ids = (follows || []).map((f: any) => f.followed_id);
+
+            if (ids.length > 0) {
+                const { data: stories } = await supabase
+                    .from('stories')
+                    .select('id, title, author_name, created_at, kind, genre_tag')
+                    .in('author_id', ids)
+                    .eq('status', 'published')
+                    .gte('created_at', sevenDaysAgo)
+                    .order('created_at', { ascending: false });
+
+                if (stories && stories.length > 0) {
+                    followedSection.hidden = false;
+                    followedList.innerHTML = stories.map(s => renderPaperItem(s)).join('');
+                    hasContent = true;
+                }
+            }
+        }
+
+        // 2. Fresh poetry
+        const { data: poems } = await supabase
+            .from('stories')
+            .select('id, title, author_name, created_at, kind, genre_tag')
+            .eq('status', 'published')
+            .or('kind.eq.poem,genre_tag.eq.Poetry')
+            .gte('created_at', sevenDaysAgo)
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+        if (poems && poems.length > 0) {
+            newPoemsSection.hidden = false;
+            newPoemsList.innerHTML = poems.map(s => renderPaperItem(s, 'Poem')).join('');
+            hasContent = true;
+        }
+
+        // 3. Most appreciated
+        const { data: recentLikes } = await supabase
+            .from('likes').select('story_id')
+            .gte('created_at', sevenDaysAgo);
+
+        if (recentLikes && recentLikes.length > 0) {
+            const counts: Record<string, number> = {};
+            recentLikes.forEach((l: any) => { counts[l.story_id] = (counts[l.story_id] || 0) + 1; });
+            const topIds = Object.entries(counts)
+                .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id);
+
+            if (topIds.length > 0) {
+                const { data: topStories } = await supabase
+                    .from('stories')
+                    .select('id, title, author_name, created_at, kind, genre_tag')
+                    .in('id', topIds).eq('status', 'published');
+
+                if (topStories && topStories.length > 0) {
+                    const sorted = topStories.sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
+                    appreciatedSection.hidden = false;
+                    appreciatedList.innerHTML = sorted.map(s =>
+                        renderPaperItem(s, `${counts[s.id] || 0} appreciations`)
+                    ).join('');
+                    hasContent = true;
+                }
+            }
+        }
+
+        if (hasContent) {
+            digestPaper.hidden = false;
+        } else {
+            emptyState.hidden = false;
+        }
+    }
+
+    initDigest();
+
+    // --- Subscribe / unsubscribe ---
+    (async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const box = document.getElementById('subBox')!;
+        const btn = document.getElementById('subBtn')!;
+        const text = document.getElementById('subText')!;
+        box.hidden = false;
+        let row = await supabase.from('digest_subscribers')
+            .select('subscribed').eq('user_id', session.user.id).maybeSingle();
+        const paint = (on: boolean) => {
+            btn.innerHTML = on ? '✓ Subscribed · tap to unsubscribe' : iconSvg('mail', 14) + ' Subscribe to the Weekly';
+            text.textContent = on
+                ? 'The Sunday Paper will arrive in your inbox each week.'
+                : 'Get the Sunday Paper in your inbox, every week.';
+        };
+        paint(!!row.data?.subscribed);
+        btn.addEventListener('click', async () => {
+            const on = !row.data?.subscribed;
+            const { error } = await supabase.from('digest_subscribers').upsert(
+                { user_id: session.user.id, email: session.user.email!, subscribed: on },
+                { onConflict: 'user_id' }
+            );
+            if (error) { dvToast('Could not update subscription: ' + error.message, 'err'); return; }
+            row = { data: { subscribed: on } } as any;
+            paint(on);
+        });
+    })();
+</script>
+
+<style>
+    .pro-page {
+        position: relative;
+        z-index: 1;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 3.4rem 1.6rem 3rem;
+    }
+
+    .pro-page-narrow { max-width: 880px; }
+
+    .pro-empty-state {
+        text-align: center;
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-3);
+        padding: 3rem 0;
+    }
+
+    /* The Sunday paper on the dark sheet */
+    .pro-paper { padding: 3rem clamp(1.6rem, 4vw, 2.8rem); }
+
+    .pro-paper-masthead { text-align: center; margin-bottom: 2rem; }
+    .pro-paper-edition {
+        font-size: 0.68rem; font-weight: 600; letter-spacing: 0.22em;
+        color: var(--pro-amber); margin: 0 0 0.4rem;
+    }
+    .pro-paper-title {
+        font-family: var(--pro-font);
+        font-size: clamp(1.7rem, 5vw, 2.5rem);
+        font-weight: 700; letter-spacing: 0.12em;
+        color: var(--pro-text); line-height: 1.1; margin: 0 0 0.5rem;
+    }
+    .pro-paper-date { font-family: var(--pro-font-read); font-style: italic; font-size: 0.9rem; color: var(--pro-text-3); }
+    .pro-double-rule {
+        height: 4px;
+        border-top: 2px solid var(--pro-text);
+        border-bottom: 1px solid var(--pro-text);
+        margin: 0.8rem 0;
+    }
+
+    .pro-paper-section { margin-bottom: 2rem; }
+    .pro-paper-section-head {
+        font-family: var(--pro-font);
+        font-size: 0.78rem; font-weight: 600;
+        letter-spacing: 0.14em;
+        color: var(--pro-amber); margin: 0 0 1rem;
+        padding-bottom: 0.4rem;
+        border-bottom: 1px solid var(--pro-line);
+    }
+
+    :global(.pro-paper-item) {
+        display: flex; align-items: baseline; gap: 0.5rem;
+        padding: 0.5rem 0; text-decoration: none; color: inherit;
+        transition: opacity 0.2s;
+    }
+    :global(.pro-paper-item:hover) { opacity: 0.65; }
+    :global(.pro-paper-item:hover .pro-paper-item-title) { color: var(--pro-amber); }
+    :global(.pro-paper-item-title) {
+        font-family: var(--pro-font);
+        font-size: 1.02rem; font-weight: 600; color: var(--pro-text);
+        white-space: nowrap; flex-shrink: 0;
+    }
+    :global(.pro-paper-leader) {
+        flex: 1;
+        border-bottom: 1px dotted var(--pro-line-hi);
+        margin-bottom: 0.35rem;
+        min-width: 2rem;
+    }
+    :global(.pro-paper-item-meta) {
+        font-family: var(--pro-font-read); font-style: italic;
+        font-size: 0.82rem; color: var(--pro-text-3);
+        white-space: nowrap; flex-shrink: 0;
+    }
+
+    .pro-paper-colophon { text-align: center; margin-top: 1.5rem; }
+    .pro-paper-colophon p { font-family: var(--pro-font-read); font-style: italic; font-size: 0.82rem; color: var(--pro-text-3); margin: 0.8rem 0 0; }
+
+    .pro-sub-box { text-align: center; margin: 2.4rem auto 0; }
+    .pro-sub-text { color: var(--pro-text-2); font-family: var(--pro-font-read); font-style: italic; font-size: 0.95rem; margin: 0 0 0.8rem; }
+
+    .pro-paper-empty {
+        max-width: 460px;
+        margin: 2rem auto 0;
+        padding: 3rem 2.2rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .pro-paper-empty-title { font-family: var(--pro-font); font-weight: 600; font-size: 1.3rem; color: var(--pro-text); margin: 0; }
+    .pro-paper-empty-sub { font-family: var(--pro-font-read); font-style: italic; color: var(--pro-text-2); margin: 0 0 1.2rem; }
+
+    @media (max-width: 640px) {
+        .pro-page { padding: 2.2rem 1rem 2.4rem; }
+        .pro-paper { padding: 2rem 1.5rem; }
+        .pro-paper-title { letter-spacing: 0.06em; }
+        :global(.pro-paper-item) { flex-wrap: wrap; gap: 0.2rem; }
+        :global(.pro-paper-leader) { display: none; }
+        :global(.pro-paper-item-meta) { width: 100%; padding-left: 0.5rem; }
+    }
+</style>

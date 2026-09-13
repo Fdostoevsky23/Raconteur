@@ -143,7 +143,7 @@ import ProLayout from '../../layouts/ProLayout.astro';
 
     async function initDashboard() {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { window.location.href = '/login'; return; }
+        if (!session) { window.location.href = '/pro/login'; return; }
 
         authCheck.hidden = true;
         writeNewBtn.hidden = false;
@@ -655,7 +655,7 @@ import ProLayout from '../../layouts/ProLayout.astro';
             if (!(await dvConfirm({ title: 'Are you sure?', body: 'This permanently deletes your account, stories, bookmarks and follows.', danger: true }))) return;
             if (!(await dvConfirm({ title: 'Are you sure?', body: 'Really? This cannot be undone.', danger: true }))) return;
             const { data: { session: delSession } } = await supabase.auth.getSession();
-            if (!delSession) { window.location.href = '/login'; return; }
+            if (!delSession) { window.location.href = '/pro/login'; return; }
             const res = await fetch('/api/delete-account', {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${delSession.access_token}` },

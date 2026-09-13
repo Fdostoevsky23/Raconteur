@@ -83,7 +83,7 @@ import Icon from '../../components/Icon.astro';
 
     async function initAdmin() {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { window.location.href = '/login'; return; }
+        if (!session) { window.location.href = '/pro/login'; return; }
         const { data: prof } = await supabase.from('profiles').select('is_admin').eq('user_id', session.user.id).maybeSingle();
         if (!prof?.is_admin) { authCheck.textContent = 'Access denied. This page is for the editor only.'; return; }
         authCheck.hidden = true;

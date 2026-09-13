@@ -31,16 +31,15 @@ const { title, description = 'Literature you want to read.', ogImage = '' } = As
 // Canonical → classic counterpart (SEO: pro is a mirror skin, classic stays canonical)
 const canonical = Astro.url.href.replace('/pro', '');
 
-// NAV LINKS — pro pages exist only for the ones built; everything else
-// points at classic pages so nothing 404s mid-build.
+// NAV LINKS — the Pro build is complete; every route serves in-skin.
 const navHref = {
     stories: '/pro/stories',
-    about: '/about',
-    feed: '/feed',
-    login: '/login',
-    signup: '/signup',
-    dashboard: '/dashboard',
-    digest: '/digest',
+    about: '/pro/about',
+    feed: '/pro/feed',
+    login: '/pro/login',
+    signup: '/pro/signup',
+    dashboard: '/pro/dashboard',
+    digest: '/pro/digest',
 };
 
 // Home = the Desk. Full chrome lives here; inner pages get the quiet brand bar.
@@ -181,9 +180,9 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
                 <a href="/pro">Desk</a>
                 <a href={navHref.stories}>Library</a>
                 <a href={navHref.feed}>Feed</a>
-                <a href="/about">About</a>
+                <a href="/pro/about">About</a>
             </nav>
-            <p class="pro-footer-legal"><a href="/tos">Terms</a> · <a href="/privacy">Privacy</a></p>
+            <p class="pro-footer-legal"><a href="/pro/tos">Terms</a> · <a href="/pro/privacy">Privacy</a></p>
             <p class="pro-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur</p>
         </div>
     </footer>
@@ -296,7 +295,7 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
                 const safeName = esc(name);
                 const profileSlug = esc(name.toLowerCase().replace(/\s+/g, '-'));
                 authArea.innerHTML = `
-                    <a href="/dashboard" class="pro-auth-pill">My Shelf</a>
+                    <a href="/pro/dashboard" class="pro-auth-pill">My Shelf</a>
                     <a href="/pro/author/${profileSlug}" class="pro-auth-pill ghost" title="Your public writer page">${safeName}</a>
                     <span class="pro-notif-wrap">
                         <button id="notifBell" class="pro-notif-bell" type="button" aria-label="Notifications"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="notifDot" class="pro-notif-dot" hidden></span></button>
@@ -313,7 +312,7 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
                     window.location.href = '/pro';
                 });
             } else {
-                authArea.innerHTML = `<a href="/login" class="pro-auth-pill ghost">Log in</a><a href="/signup" class="pro-auth-pill">Sign up</a>`;
+                authArea.innerHTML = `<a href="/pro/login" class="pro-auth-pill ghost">Log in</a><a href="/pro/signup" class="pro-auth-pill">Sign up</a>`;
             }
         }
 
