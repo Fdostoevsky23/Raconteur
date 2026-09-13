@@ -611,6 +611,26 @@ main.mx-main { flex: 1; }
     .mx-card:hover .mx-card-cover img { transform: none; }
 }
 
+/* === 7b-2. INNER BRAND BAR — inner pages carry only the name + tagline === */
+.mx-inner-bar {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 2.2rem 1rem 1.6rem;
+    border-bottom: 1px solid var(--mx-line);
+    background: var(--mx-paper);
+}
+
+.mx-inner-brand { font-size: 1.9rem; }
+
+.mx-inner-tagline {
+    font-family: var(--mx-font-read);
+    font-style: italic;
+    font-size: 0.85rem;
+    color: var(--mx-ink-faint);
+    margin: 0.3rem 0 0;
+}
+
 /* === 7c. AUTH CHROME — global (rendered client-side into the home nav) === */
 .mx-toolbar-auth { display: flex; align-items: center; gap: 0.5rem; }
 

@@ -212,8 +212,9 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
                 ))}
             </h1>
             <p class="mx-hero-lede">
-                A quiet literary home on the internet. Drop caps, pull quotes, and room
-                to breathe: publishing for people who still believe in the sentence.
+                From a few hundred words to a forty-thousand-word novella and a library
+                of poetry, Raconteur is where writers publish, read, and gather around
+                the craft.
             </p>
             <div class="mx-hero-actions">
                 <a href="/max/stories" class="mx-btn mx-btn-ink">Enter the library</a>
@@ -369,17 +370,20 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
             <p class="mx-eyebrow">{shelfKicker}</p>
             <h2 class="mx-display mx-altar-title">The bookshelf</h2>
         </div>
-        <div class="mx-spine-row">
+        <div class="mx-altar-shelf">
             {shelfBooks.map((b: any, i: number) => (
                 <a
                     href={`/max/author/${b.authorSlug}`}
-                    class="mx-spine"
-                    style={`--spine-h: ${196 + (i % 3) * 26}px; --band: ${['#d8341c', '#c9a24b', '#1c1917', '#4a6b6b', '#a8763e'][i % 5]};`}
+                    class="mx-altar-book"
                     title={`${b.title} by ${b.authorName} · visit their page`}
                 >
-                    <span class="mx-spine-band"></span>
-                    <span class="mx-spine-title">{b.title}</span>
-                    <span class="mx-spine-author">{b.authorName}</span>
+                    {(b.cover_url || b.cover) ? (
+                        <img src={b.cover_url || b.cover} alt={`Cover of ${b.title}`} loading="lazy" />
+                    ) : (
+                        <div class="mx-altar-book-empty">{b.title}</div>
+                    )}
+                    <span class="mx-altar-book-title">{b.title}</span>
+                    <span class="mx-altar-book-author">{b.authorName}</span>
                 </a>
             ))}
             {(shelfBooks.length === 0) && (
@@ -1301,90 +1305,77 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         font-family: var(--mx-font-display); font-style: italic; font-size: 1.05rem; line-height: 1.55; color: var(--mx-ink);
     }
 
-    /* === THE BOOKSHELF — book spines on the ledge === */
+   /* === THE BOOKSHELF — covers standing on the ledge === */
     .mx-altar { padding: 4.5rem clamp(1.4rem, 5vw, 5rem) 3rem; border-top: 1px solid var(--mx-line); }
     .mx-altar-head { text-align: center; margin-bottom: 3rem; }
     .mx-altar-title { font-size: clamp(2rem, 4vw, 3.2rem); margin: 0.9rem 0 0; }
 
-    .mx-spine-row {
+    .mx-altar-shelf {
         display: flex;
         align-items: flex-end;
         justify-content: center;
-        gap: 0.55rem;
+        gap: 2.2rem;
         flex-wrap: wrap;
-        max-width: 900px;
+        max-width: 940px;
         margin: 0 auto;
         padding: 0 1rem;
     }
 
-    .mx-spine {
+    .mx-altar-book {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        width: 56px;
-        height: var(--spine-h, 210px);
-        background: #fffdf9;
-        border: 1px solid var(--mx-line-strong);
-        border-radius: 3px 3px 0 0;
+        gap: 0.55rem;
+        width: 158px;
         text-decoration: none;
         color: var(--mx-ink);
-        padding: 0 0 0.7rem;
-        box-shadow: 0 10px 26px rgba(28, 25, 23, 0.12);
-        transition: transform 0.35s var(--mx-ease), box-shadow 0.35s var(--mx-ease);
+        transition: transform 0.35s var(--mx-ease);
     }
 
-    .mx-spine:hover {
-        transform: translateY(-12px);
-        box-shadow: 0 24px 50px rgba(28, 25, 23, 0.2);
+    .mx-altar-book:hover { transform: translateY(-8px); }
+
+    .mx-altar-book img {
+        width: 158px;
+        height: 226px;
+        object-fit: cover;
+        object-position: top;
+        display: block;
+        border: 1px solid var(--mx-line-strong);
+        box-shadow: 0 16px 40px rgba(28, 25, 23, 0.18);
     }
 
-    .mx-spine-band {
-        width: 100%;
-        height: 12px;
-        flex-shrink: 0;
-        background: var(--band, var(--mx-vermilion));
-        margin-bottom: 0.6rem;
-    }
-
-    .mx-spine-title {
-        flex: 1;
-        min-height: 0;
-        writing-mode: vertical-rl;
-        text-orientation: mixed;
+    .mx-altar-book-empty {
+        width: 158px;
+        height: 226px;
         display: flex;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: center;
+        background: #fffdf9;
+        border: 1px solid var(--mx-line-strong);
+        font-family: var(--mx-font-display);
+        font-size: 0.82rem;
+        text-align: center;
+        padding: 0.9rem;
+        color: var(--mx-ink-soft);
+    }
+
+    .mx-altar-book-title {
         font-family: var(--mx-font-display);
         font-weight: 700;
-        font-size: 0.74rem;
-        letter-spacing: 0.05em;
-        color: var(--mx-ink);
-        overflow: hidden;
-        white-space: nowrap;
+        font-size: 0.88rem;
+        line-height: 1.25;
     }
 
-    .mx-spine-author {
-        writing-mode: vertical-rl;
-        text-orientation: mixed;
-        font-family: var(--mx-font-body);
-        font-size: 0.54rem;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--mx-ink-faint);
-        margin-top: 0.5rem;
-        max-height: 8em;
-        overflow: hidden;
-    }
+    .mx-altar-book-author { font-size: 0.7rem; color: var(--mx-ink-faint); }
 
-        .mx-spine-base {
-        max-width: 940px;
-        margin: 0 auto;
+    .mx-spine-base {
+        max-width: 980px;
+        margin: 1.6rem auto 0;
         height: 7px;
         border-top: 3px solid var(--mx-ink);
         border-bottom: 1px solid var(--mx-ink);
     }
 
-    /* === THE CANON — giants speak in their own words === */
+        /* === THE CANON — giants speak in their own words === */
     .mx-canon {
         padding: 4.5rem clamp(1.4rem, 5vw, 5rem);
         text-align: center;
