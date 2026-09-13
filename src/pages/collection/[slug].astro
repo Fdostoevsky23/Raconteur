@@ -26,7 +26,7 @@ const { data: storyRows } = storyIds.length > 0
 const storiesMap = new Map((storyRows || []).map((r: any) => [r.id, buildStoryFromDB(r)]));
 const stories = storyIds.map((id: string) => storiesMap.get(id)).filter(Boolean);
 ---
-<BaseLayout title={`${collection.title} — Raconteur`} description={collection.curator_note || `A curated collection on Raconteur.`}>
+<BaseLayout title={`${collection.title} · Raconteur`} description={collection.curator_note || `A curated collection on Raconteur.`}>
     <section class="collection-page">
     <div class="collection-bg">
     <header class="collection-header">
@@ -58,7 +58,7 @@ const stories = storyIds.map((id: string) => storiesMap.get(id)).filter(Boolean)
         </a>
       ))}
       {stories.length === 0 && (
-        <p class="collection-empty">This collection is being arranged — check back soon.</p>
+        <p class="collection-empty">This collection is being arranged. Check back soon.</p>
       )}
     </div>
     </div>

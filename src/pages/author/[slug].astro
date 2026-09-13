@@ -1,6 +1,7 @@
 ---
 // src/pages/author/[slug].astro — serves both static JSON authors AND live database writers
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import Icon from '../../components/Icon.astro';
 import authors from '../../data/authors.json';
 import { getVisibleStories } from '../../data/stories';
 import type { Story } from '../../data/stories';
@@ -148,7 +149,7 @@ if (isDbAuthor && (author as any).userId) {
 }
 ---
 
-<BaseLayout title={`${author.name} — Raconteur`} description={author.bio}>
+<BaseLayout title={`${author.name} · Raconteur`} description={author.bio}>
     <main class="author-page">
         {/* Hero: portrait + name + role */}
         <header class="author-hero">
@@ -208,7 +209,7 @@ if (isDbAuthor && (author as any).userId) {
              {author.userId && (
                 <div class="hero-actions">
                     <button id="followBtn" class="follow-btn" type="button">Follow</button>
-                    <a id="messageBtn" class="follow-btn message-btn" href={`/messages?with=${author.userId}`} style="display: none;">✉ Message</a>
+                    <a id="messageBtn" class="follow-btn message-btn" href={`/messages?with=${author.userId}`} style="display: none;"><Icon name="mail" size={14} /> Message</a>
                 </div>
             )}
         </header>
@@ -266,7 +267,7 @@ if (isDbAuthor && (author as any).userId) {
                 {/* Share this writer */}
         <div class="share-writer-row">
             <span class="share-writer-label">Share {author.name}'s shelf</span>
-            <button type="button" class="share-writer-btn" id="shareWriterCopy" title="Copy link">🔗 Copy</button>
+            <button type="button" class="share-writer-btn" id="shareWriterCopy" title="Copy link"><Icon name="link" size={13} /> Copy</button>
             <a class="share-writer-btn" id="shareWriterX" target="_blank" rel="noopener" title="Share on X">𝕏</a>
             <a class="share-writer-btn" id="shareWriterFb" target="_blank" rel="noopener" title="Share on Facebook">f</a>
             <a class="share-writer-btn" id="shareWriterWa" target="_blank" rel="noopener" title="Share on WhatsApp">WhatsApp</a>
@@ -352,7 +353,7 @@ if (isDbAuthor && (author as any).userId) {
                                 <div class="card-cover"><img src={c.cover_url} alt={`Cover of ${c.name}`} /></div>
                             ) : (
                                 <div class="card-cover collection-text-cover">
-                                    <span class="collection-icon">📚</span>
+                                    <span class="collection-icon"><Icon name="collection" size={26} /></span>
                                     <span class="collection-name">{c.name}</span>
                                 </div>
                             )}
@@ -396,6 +397,7 @@ if (isDbAuthor && (author as any).userId) {
 
         <script>
             import { supabase } from '../../lib/supabase';
+            import { iconSvg } from '../../lib/icons';
 
             const meta = { userId: document.getElementById('author-meta')?.getAttribute('data-userid') || null };
             const followBtn = document.getElementById('followBtn') as HTMLButtonElement | null;
@@ -484,7 +486,7 @@ if (isDbAuthor && (author as any).userId) {
                 try {
                     await navigator.clipboard.writeText(swUrl);
                     btn.textContent = '✓ Copied';
-                    setTimeout(() => { btn.textContent = '🔗 Copy'; }, 1800);
+                    setTimeout(() => { btn.innerHTML = iconSvg('link', 13) + ' Copy'; }, 1800);
                 } catch {
                     btn.textContent = 'Copy failed';
                 }

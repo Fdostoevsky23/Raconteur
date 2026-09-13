@@ -1,6 +1,7 @@
 ---
 // Dynamic story reader — serves both static .txt stories AND live database stories
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import Icon from '../../components/Icon.astro';
 import { getAllStorySlugs, getStoryBySlug, getVisibleStories } from '../../data/stories';
 import { supabase } from '../../lib/supabase';
 import { buildStoryFromDB } from '../../lib/storyLoader';
@@ -82,7 +83,7 @@ if (staticAuthor) {
         authorName = profile.pen_name || story.author;
         authorBio = profile.bio;
     } else {
-        authorBio = 'A new voice on Raconteur. Every story here was written to be remembered — this writer is just beginning theirs.';
+        authorBio = 'A new voice on Raconteur. Every story here was written to be remembered. This writer is just beginning theirs.';
     }
 }
 
@@ -129,7 +130,7 @@ function safeCover(c: any): string | null {
 }
 ---
 
-<BaseLayout title={`${story.title} — ${story.author} · Raconteur`} description={firstLine} ogImage={ogImage}>
+<BaseLayout title={`${story.title} · ${story.author} · Raconteur`} description={firstLine} ogImage={ogImage}>
     {safeCover(story.cover) && (
         <div class="story-backdrop" style={`background-image: url('${safeCover(story.cover)!.replace(/'/g, "%27")}')`}></div>
     )}
@@ -161,9 +162,9 @@ function safeCover(c: any): string | null {
 
         <!-- Three-mode switcher -->
         <div class="mode-switcher" role="group" aria-label="Reading mode">
-            <button type="button" data-mode="light" title="Light mode">☀️</button>
-            <button type="button" data-mode="sepia" title="Sepia mode">🌙</button>
-            <button type="button" data-mode="dark" title="Dark mode">🌑</button>
+            <button type="button" data-mode="light" title="Light mode" aria-label="Light mode"><Icon name="sun" size={15} /></button>
+            <button type="button" data-mode="sepia" title="Sepia mode" aria-label="Sepia mode"><Icon name="book" size={15} /></button>
+            <button type="button" data-mode="dark" title="Dark mode" aria-label="Dark mode"><Icon name="moon" size={15} /></button>
         </div>
     </div>
 </div>
@@ -310,11 +311,11 @@ function safeCover(c: any): string | null {
 
         <div class="like-row">
             <button id="likeBtn" class="like-btn" type="button" aria-label="Appreciate this story">
-                <span id="likeHeart" class="like-heart">♡</span>
+                <span id="likeHeart" class="like-heart"><Icon name="heart" size={16} /></span>
                 <span id="likeCount" class="like-count">0</span>
             </button>
             <button id="bookmarkBtn" class="like-btn" type="button" aria-label="Save for later">
-                <span>🔖</span>
+                <Icon name="bookmark" size={16} />
                 <span id="bookmarkLabel">Save</span>
             </button>
             <span id="likeHint" class="like-hint"></span>
@@ -322,6 +323,7 @@ function safeCover(c: any): string | null {
 
         <script>
             import { supabase } from '../../lib/supabase';
+            import { iconSvg } from '../../lib/icons';
 
             const likeBtn = document.getElementById('likeBtn')!;
             const likeHeart = document.getElementById('likeHeart')!;
@@ -407,7 +409,7 @@ function safeCover(c: any): string | null {
 
             function paint(liked: boolean) {
                 likeBtn.classList.toggle('liked', liked);
-                likeHeart.textContent = liked ? '♥' : '♡';
+                likeHeart.innerHTML = liked ? iconSvg('heart-filled', 16) : iconSvg('heart', 16);
             }
 
                     initLikes ();
@@ -486,6 +488,7 @@ function safeCover(c: any): string | null {
 
         <script>
             import { supabase } from '../../lib/supabase';
+            import { iconSvg } from '../../lib/icons';
 
             const slug = JSON.parse(document.getElementById('current-slug')?.textContent || '""');
             const isDbStory = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
@@ -531,13 +534,13 @@ function safeCover(c: any): string | null {
                     const replyBtn = (!isReply)
                         ? `<button class="reply-btn" data-id="${c.id}" data-name="${esc(name)}">Reply</button>` : '';
                     const delBtn = canDelete
-                        ? `<button class="del-btn" data-id="${c.id}">🗑️</button>` : '';
+                        ? `<button class="del-btn" data-id="${c.id}">${iconSvg("trash", 13)}</button>` : '';
                     const   reportBtn   =   `<button class="report-btn" data-id="${c.id}">⚑</button>`;
                     const replies: string = (byParent[c.id] || []).map((r: any) => renderOne(r, true)).join('');
                     
                     const isGuest = !c.user_id;
                     const avatarContent = isGuest 
-                        ? ['🦉', '🌙', '📚', '✨', '🍃'][Math.abs(c.id.charCodeAt(0)) % 5]
+                        ? `<span style="filter:hue-rotate(${(Math.abs(c.id.charCodeAt(0)) % 5) * 47}deg)">${iconSvg("feather", 14)}</span>`
                         : name.substring(0, 2).toUpperCase();
                     const avatarClass = isGuest ? 'comment-avatar guest' : 'comment-avatar';
 
@@ -556,7 +559,7 @@ function safeCover(c: any): string | null {
                       </div>`;
                 };
                 list.innerHTML = (byParent['root'] || []).map(c => renderOne(c, false)).join('')
-                    || '<p class="no-comments">No comments yet — be the first to leave one.</p>';
+                    || '<p class="no-comments">No comments yet. Be the first to leave one.</p>';
 
                 list.querySelectorAll('.del-btn').forEach(b => b.addEventListener('click', async () => {
                     const id = (b as HTMLElement).dataset.id!;
@@ -572,7 +575,7 @@ function safeCover(c: any): string | null {
                     bodyInput.value = `@${name} `;
                     bodyInput.focus();
                     bodyInput.dataset.replyTo = (b as HTMLElement).dataset.id!;
-                    hint.textContent = 'Replying — post to send.';
+                    hint.textContent = 'Replying. Post to send.';
                 }));
             }
 
@@ -680,7 +683,7 @@ function safeCover(c: any): string | null {
                        reason: reasonSel.value === 'other' ? `Other: ${(document.getElementById('reportDetails') as HTMLTextAreaElement).value.trim()}` : reasonSel.value,
                     });
                     if  ( error )  {  msg . textContent   =   'Something went wrong.' ;  msg . style . color   =   '#8b2635' ;  }
-                    else  {  msg . textContent   =   '✦ Thank you — we will look into it.' ;  msg . style . color   =   '#3d5a3c' ;  }
+                    else  {  msg . textContent   =   '✦ Thank you. We will look into it.' ;  msg . style . color   =   '#3d5a3c' ;  }
                     submitBtn . textContent   =   'Submit report' ;
                     setTimeout (()  =>   modal ! . classList . remove ( 'open' ),  1400 );
                 };
@@ -703,6 +706,7 @@ function safeCover(c: any): string | null {
 
                 <script>
             import { supabase } from '../../lib/supabase';
+            import { iconSvg } from '../../lib/icons';
             (async () => {
                 const slug = JSON.parse(document.getElementById('current-slug')?.textContent || '""');
                 const isDbStory = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
@@ -732,10 +736,10 @@ function safeCover(c: any): string | null {
 
             <div class="share-row">
                 <span class="share-label">Share this story</span>
-                <button type="button" class="share-btn" id="shareCopy" title="Copy link">🔗 Copy</button>
+                <button type="button" class="share-btn" id="shareCopy" title="Copy link"><Icon name="link" size={14} /> Copy</button>
                 <a class="share-btn" id="shareX" target="_blank" rel="noopener" title="Share on X" href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(Astro.url.href)}&text=${encodeURIComponent(story.title)}`}>𝕏</a>
                 <a class="share-btn" id="shareFb" target="_blank" rel="noopener" title="Share on Facebook" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(Astro.url.href)}`}>f</a>
-                <a class="share-btn" id="shareMail" target="_blank" rel="noopener" title="Share by email (Gmail)" href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(story.title)}&body=${encodeURIComponent('I thought you might enjoy this on Raconteur: ' + Astro.url.href)}`}>✉</a>
+                <a class="share-btn" id="shareMail" target="_blank" rel="noopener" title="Share by email (Gmail)" href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(story.title)}&body=${encodeURIComponent('I thought you might enjoy this on Raconteur: ' + Astro.url.href)}`}><Icon name="mail" size={15} /></a>
                 <a class="share-btn" id="shareWa" target="_blank" rel="noopener" title="Share on WhatsApp" href={`https://wa.me/?text=${encodeURIComponent(story.title + ' ' + Astro.url.href)}`}>WhatsApp</a>
             </div>
 
@@ -744,7 +748,7 @@ function safeCover(c: any): string | null {
 
         <script is:inline>
             const shareUrl = window.location.href;
-            const shareTitle = document.title.replace(' — Raconteur', '');
+            const shareTitle = document.title.replace(' · Raconteur', '');
             const enc = encodeURIComponent;
             const elX = document.getElementById('shareX');
             if (elX) elX.setAttribute('href', `https://twitter.com/intent/tweet?url=${enc(shareUrl)}&text=${enc(shareTitle)}`);
@@ -760,7 +764,7 @@ function safeCover(c: any): string | null {
                 try {
                     await navigator.clipboard.writeText(shareUrl);
                     btn.textContent = '✓ Copied';
-                    setTimeout(() => { btn.textContent = '🔗 Copy'; }, 1800);
+                    setTimeout(() => { btn.innerHTML = iconSvg('link', 14) + ' Copy'; }, 1800);
                 } catch {
                     btn.textContent = 'Copy failed';
                 }
@@ -1876,6 +1880,7 @@ function safeCover(c: any): string | null {
 </script>
 <script>
   import { supabase } from '../../lib/supabase';
+  import { iconSvg } from '../../lib/icons';
   import { esc } from '../../lib/escape';
   (async () => {
     const { data: { session } } = await supabase.auth.getSession();

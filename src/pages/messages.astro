@@ -2,7 +2,7 @@
 // src/pages/messages.astro — quiet private messaging between writers
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
-<BaseLayout title="Messages — Raconteur">
+<BaseLayout title="Messages · Raconteur">
     <main class="messages-page">
         <div id="authGate" class="loading-state">Checking login status...</div>
 
@@ -41,6 +41,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     <script>
         import { supabase } from '../lib/supabase';
+        import { dvConfirm, dvToast } from '../lib/dialog';
 
         const authGate = document.getElementById('authGate')!;
         const app = document.getElementById('messagesApp')!;
@@ -105,7 +106,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             }
 
             if (ids.length === 0) {
-                convList.innerHTML = '<p class="conv-empty">No conversations yet. Visit a writer\'s page and hit ✉ Message to start one.</p>';
+                convList.innerHTML = '<p class="conv-empty">No conversations yet. Visit a writer\'s page and hit the Message button to start one.</p>';
             } else {
                 const sorted = ids.sort((a, b) =>
                     new Date(convs[b].last.created_at).getTime() - new Date(convs[a].last.created_at).getTime());
@@ -119,7 +120,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                         ${dot}
                     </button>`;
                 }).join('');
-                convList.querySelectorAll('.conv-item').forEach(el => el.addEventListener('click', () => {
+                convList.querySelectorAll('.conv-item').forEach(el => el.addEventListener('click', async () => {
                     openThread((el as HTMLElement).dataset.id!);
                 }));
             }
@@ -151,7 +152,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 .order('created_at', { ascending: true });
             const all = rows || [];
             threadBody.innerHTML = all.length === 0
-                ? '<p class="thread-start">Say hello. This conversation is private — only the two of you can see it.</p>'
+                ? '<p class="thread-start">Say hello. This conversation is private. Only the two of you can see it.</p>'
                 : all.map(m => `
                     <div class="bubble ${m.sender_id === me.id ? 'mine' : 'theirs'}">
                         <p>${esc(m.body)}</p>
@@ -167,7 +168,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             const { error: sendErr } = await supabase.from('messages').insert({
                 sender_id: me.id, recipient_id: activeWith, body,
             });
-            if (sendErr) { alert('Could not send: ' + sendErr.message); return; }
+            if (sendErr) { dvToast('Could not send: ' + sendErr.message, 'err'); return; }
             await supabase.from('notifications').insert({
                 user_id: activeWith, actor_id: me.id, type: 'message', body_preview: body.slice(0, 60),
             });

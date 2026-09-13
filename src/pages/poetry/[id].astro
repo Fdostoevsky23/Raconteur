@@ -31,7 +31,7 @@ const authorSlug = String(authorName).toLowerCase().replace(/\s+/g, '-');
 const poemCount = (poems || []).length;
 ---
 
-<BaseLayout title={`${collection.name} — ${authorName} · Raconteur`}>
+<BaseLayout title={`${collection.name} · ${authorName} · Raconteur`}>
    <main class="coll-page">
     <div id="coll-owner" data-owner={collection.owner_id} hidden></div>
     <a href={`/author/${authorSlug}`} class="coll-back">← {authorName}</a>
@@ -99,6 +99,8 @@ const poemCount = (poems || []).length;
   </style>
     <script>
     import { supabase } from '../../lib/supabase';
+    import { dvConfirm, dvToast } from '../../lib/dialog';
+    import { iconSvg } from '../../lib/icons';
 
     (async () => {
       const ownerId = document.getElementById('coll-owner')?.getAttribute('data-owner') || '';
@@ -115,12 +117,12 @@ const poemCount = (poems || []).length;
         edit.className = 'edit-btn';
         edit.href = `/submit?edit=${id}`;
         edit.title = 'Edit';
-        edit.textContent = '✎';
+        edit.innerHTML = iconSvg('edit', 14);
 
         const exp = document.createElement('button');
         exp.className = 'export-btn';
         exp.title = 'Download as .md';
-        exp.textContent = '⬇';
+        exp.innerHTML = iconSvg('download', 14);
         exp.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -151,13 +153,13 @@ const poemCount = (poems || []).length;
         const del = document.createElement('button');
         del.className = 'delete-btn';
         del.title = 'Delete';
-        del.textContent = '🗑️';
+        del.innerHTML = iconSvg('trash', 14);
         del.addEventListener('click', async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          if (!confirm('Permanently delete this poem? This cannot be undone.')) return;
+          if (!(await dvConfirm({ title: 'Delete this poem?', body: 'It will be removed permanently. This cannot be undone.', confirmLabel: 'Delete', danger: true }))) return;
           const { error } = await supabase.from('stories').delete().eq('id', id);
-          if (error) alert('Error: ' + error.message);
+          if (error) dvToast('Error: ' + error.message, 'err');
           else window.location.reload();
         });
 

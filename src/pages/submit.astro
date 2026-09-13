@@ -4,7 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import TiptapEditor from '../components/TiptapEditor.astro';
 ---
 
-<BaseLayout title="Write a Story — Raconteur">
+<BaseLayout title="Write a Story · Raconteur">
     <main class="submit">
         <p class="eyebrow">Writing Desk</p>
         <h1 id="pageTitle">Publish Your Work</h1>
@@ -74,13 +74,13 @@ import TiptapEditor from '../components/TiptapEditor.astro';
                 </div>
 
                 <div class="form-group">
-                    <label for="storyCover">Cover image <span class="word-count-display">(optional — a book-jacket portrait looks best)</span></label>
+                    <label for="storyCover">Cover image <span class="word-count-display">(optional: a book-jacket portrait looks best)</span></label>
                     <input type="file" id="storyCover" accept="image/*" />
                     <img id="coverPreview" alt="" hidden style="max-width: 140px; margin-top: 0.75rem; border-radius: 6px; border: 1px solid #3d5a3c;" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Your Story <span class="word-count-display">(tip — start each chapter with a line like "Chapter 1" and it will automatically get its own page, like an ebook)</span></label>
+                    <label>Your Story <span class="word-count-display">(tip: start each chapter with a line like "Chapter 1" and it will automatically get its own page, like an ebook)</span></label>
                     <input type="hidden" id="storyContent" />
                     <TiptapEditor />
                 </div>
@@ -434,7 +434,7 @@ import TiptapEditor from '../components/TiptapEditor.astro';
                 } else {
                     const words = content.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length;
                     if (words > 40000) {
-                        formStatus.textContent = 'Raconteur hosts stories up to 40,000 words — the novella ceiling.';
+                        formStatus.textContent = 'Raconteur hosts stories up to 40,000 words. The novella ceiling.';
                         formStatus.style.color = '#ff6b6b';
                         return;
                     }

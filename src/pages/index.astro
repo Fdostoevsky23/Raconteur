@@ -271,7 +271,7 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
             ))}
         </div>
         {proseShelf.length === 0 && featuredPoems.length === 0 && (
-            <p class="notes-empty">The shelf is being curated — check back soon. Meanwhile, <a href="/stories" style="color:#a8b89c">browse the full archive</a>.</p>
+            <p class="notes-empty">The shelf is being curated. Check back soon. Meanwhile, <a href="/stories" style="color:#a8b89c">browse the full archive</a>.</p>
         )}
     </section>
 
@@ -337,7 +337,7 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
                 <h2 class="shelf-title">On the bookshelf today</h2>
                 <div class="shelf-books">
                     {shelfBooks.map((b: any) => (
-                        <a href={`/author/${b.authorSlug}`} class="shelf-book" title={`${b.title} by ${b.authorName} — visit their page`}>
+                        <a href={`/author/${b.authorSlug}`} class="shelf-book" title={`${b.title} by ${b.authorName} · visit their page`}>
                             {(b.cover_url || b.cover) ? (
                                 <img src={b.cover_url || b.cover} alt={`Cover of ${b.title}`} loading="lazy" />
                             ) : (
@@ -391,10 +391,10 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
             <!-- Left: Whispers from the Shelf -->
             <div class="room-half">
                 <h3 class="room-half-title">Whispers from the Shelf</h3>
-                <p class="room-half-sub">Short thoughts, passing through — gone in 7 days.</p>
+                <p class="room-half-sub">Short thoughts, passing through. Gone in 7 days.</p>
                 <div id="whispersList" class="notes-list"></div>
                 <form id="whisperForm" class="note-form">
-                    <input type="text" id="whisperName" class="note-name-input" placeholder="Your name (optional — leave blank for a random visitor name)" maxlength="40" />
+                    <input type="text" id="whisperName" class="note-name-input" placeholder="Your name (optional: leave blank for a random visitor name)" maxlength="40" />
                     <textarea id="whisperInput" class="note-input" rows="2" maxlength="140" placeholder="Share a whisper…"></textarea>
                      <span id="whisperHint" class="note-hint"></span>
                     <button type="submit" class="note-submit">Post Whisper</button>
@@ -404,10 +404,10 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
             <!-- Right: Notes Left Behind -->
             <div class="room-half">
                 <h3 class="room-half-title">Notes Left Behind</h3>
-                <p class="room-half-sub">Longer thoughts, gratitude, questions — kept for 30 days.</p>
+                <p class="room-half-sub">Longer thoughts, gratitude, questions. Kept for 30 days.</p>
                 <div id="notesList" class="notes-list"></div>
                 <form id="noteForm" class="note-form">
-                    <input type="text" id="noteName" class="note-name-input" placeholder="Your name (optional — leave blank for a random visitor name)" maxlength="40" />
+                    <input type="text" id="noteName" class="note-name-input" placeholder="Your name (optional: leave blank for a random visitor name)" maxlength="40" />
                     <textarea id="noteInput" class="note-input" rows="3" maxlength="500" placeholder="Leave a note…"></textarea>
                     <span id="noteHint" class="note-hint"></span>
                     <button type="submit" class="note-submit">Post Note</button>
@@ -1677,6 +1677,8 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
 </script>
 <script>
     import { supabase } from '../lib/supabase';
+    import { dvConfirm, dvToast } from '../lib/dialog';
+    import { iconSvg } from '../lib/icons';
     import { esc } from '../lib/escape';
 
     async function loadNotes(type: 'whisper' | 'note', listId: string) {
@@ -1688,7 +1690,7 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
             .order('created_at', { ascending: true });
         const list = document.getElementById(listId)!;
         if (!notes || notes.length === 0) {
-            list.innerHTML = `<p class="notes-empty">No ${type === 'whisper' ? 'whispers' : 'notes'} yet — be the first.</p>`;
+            list.innerHTML = `<p class="notes-empty">No ${type === 'whisper' ? 'whispers' : 'notes'} yet. Be the first.</p>`;
             return;
         }
         const byParent: Record<string, any[]> = {};
@@ -1701,7 +1703,7 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
             const replyBtn = (!isReply && type === 'note')
                 ? `<button class="note-reply-btn" data-id="${esc(n.id)}" data-name="${esc(n.display_name)}">Reply</button>`
                 : '';
-            const reportBtn = `<button class="note-report-btn" data-id="${esc(n.id)}" data-type="${type}">⚑</button>`;
+            const reportBtn = `<button class="note-report-btn" data-id="${esc(n.id)}" data-type="${type}">${iconSvg("flag", 12)}</button>`;
             return `
                 <div class="note-card ${isReply ? 'note-reply' : ''}" data-id="${esc(n.id)}">
                     <p class="note-body">${esc(n.body)}</p>
@@ -1721,7 +1723,7 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
         });
         if (type === 'note') {
             list.querySelectorAll('.note-reply-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', async () => {
                     const noteId = (btn as HTMLElement).dataset.id!;
                     const name = (btn as HTMLElement).dataset.name!;
                     const input = document.getElementById('noteInput') as HTMLTextAreaElement;
@@ -1729,7 +1731,7 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
                     input.focus();
                     input.dataset.replyTo = noteId;
                     const hint = document.getElementById('noteHint');
-                    if (hint) hint.textContent = 'Replying — post to send.';
+                    if (hint) hint.textContent = 'Replying. Post to send.';
                 });
             });
         }
@@ -1760,7 +1762,7 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
         const body = input.value.trim();
         if (!body) return false;
         if (isVulgar(body)) {
-            alert('Please keep it kind — Raconteur is a quiet place.');
+            dvToast('Please keep it kind. Raconteur is a quiet place.');
             return false;
         }
         const nameEl = document.getElementById(type === 'whisper' ? 'whisperName' : 'noteName') as HTMLInputElement;
@@ -1776,7 +1778,7 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
         const parentId = (input as any).dataset.replyTo || null;
         if (parentId) payload.parent_id = parentId;
         const { error } = await supabase.from('community_notes').insert(payload);
-        if (error) { console.error('postNote error:', error); alert('Something went wrong. Please try again.'); return false; }
+        if (error) { console.error('postNote error:', error); dvToast('Something went wrong. Please try again.'); return false; }
         delete (input as any).dataset.replyTo;
         const hint = document.getElementById(type === 'whisper' ? 'whisperHint' : 'noteHint');
         if (hint) hint.textContent = '';
@@ -1878,7 +1880,7 @@ const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the
                 reason: reasonSel.value,
             });
             if (error) { msg.textContent = 'Something went wrong.'; msg.style.color = '#8b2635'; }
-            else { msg.textContent = '✦ Thank you — we will look into it.'; msg.style.color = '#3d5a3c'; }
+            else { msg.textContent = 'Thank you. We will look into it.'; msg.style.color = '#3d5a3c'; }
             submitBtn.textContent = 'Submit report';
             setTimeout(() => modal!.classList.remove('open'), 1400);
         };

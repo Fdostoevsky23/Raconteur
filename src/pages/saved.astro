@@ -2,7 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { supabase } from '../lib/supabase';
 ---
-<BaseLayout title="Saved for Later — Raconteur">
+<BaseLayout title="Saved for Later · Raconteur">
     <main class="saved-container">
         <header class="saved-header">
             <h1>Saved for Later</h1>
@@ -12,7 +12,7 @@ import { supabase } from '../lib/supabase';
         <div id="savedGrid" class="stories-grid" style="display: none;"></div>
         <div id="emptyState" class="empty-state" style="display: none;">
             <p>No saved stories yet.</p>
-            <p class="subtext">Tap the 🔖 on any story to save it here.</p>
+            <p class="subtext">Tap the bookmark on any story to save it here.</p>
             <a href="/stories" class="btn-primary">Browse the Shelf</a>
         </div>
     </main>

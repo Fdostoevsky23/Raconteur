@@ -2,7 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { supabase } from '../lib/supabase';
 ---
-<BaseLayout title="Your Feed — Raconteur">
+<BaseLayout title="Your Feed · Raconteur">
     <main class="feed-container">
         <header class="feed-header">
             <p class="section-eyebrow">From writers you follow</p>
@@ -12,7 +12,7 @@ import { supabase } from '../lib/supabase';
         <div id="feedList" class="feed-grid" style="display: none;"></div>
         <div id="emptyState" class="empty-state" style="display: none;">
             <p>You're not following anyone yet.</p>
-            <p class="subtext">Visit a writer's page and tap Follow — their new stories will appear here.</p>
+            <p class="subtext">Visit a writer's page and tap Follow, and their new stories will appear here.</p>
             <a href="/stories" class="btn-primary">Browse the Shelf</a>
         </div>
     </main>

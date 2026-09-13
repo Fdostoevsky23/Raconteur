@@ -1,4 +1,5 @@
 ---
+import Icon from './Icon.astro';
 interface Props {
   admin: {
     name: string;
@@ -48,13 +49,13 @@ const { admin, writers } = Astro.props;
       {admin.socialLinks && (
         <div class="trio-socials">
           {admin.socialLinks.x && <a href={admin.socialLinks.x} target="_blank" rel="noopener" title="X">𝕏</a>}
-          {admin.socialLinks.instagram && <a href={admin.socialLinks.instagram} target="_blank" rel="noopener" title="Instagram">📷</a>}
+          {admin.socialLinks.instagram && <a href={admin.socialLinks.instagram} target="_blank" rel="noopener" title="Instagram"><Icon name="camera" size={16} /></a>}
           {admin.socialLinks.facebook && <a href={admin.socialLinks.facebook} target="_blank" rel="noopener" title="Facebook">f</a>}
-          {admin.socialLinks.email && <a href={`mailto:${admin.socialLinks.email}`} title="Email">✉</a>}
+          {admin.socialLinks.email && <a href={`mailto:${admin.socialLinks.email}`} title="Email"><Icon name="mail" size={16} /></a>}
         </div>
       )}
       {admin.favoriteBook && (
-        <p class="trio-fav-book">📚 Favorite book: {admin.favoriteBook}</p>
+        <p class="trio-fav-book"><Icon name="book" size={14} /> Favorite book: {admin.favoriteBook}</p>
       )}
       <p class="trio-bio">{admin.bio}</p>
       <blockquote class="trio-line">
@@ -82,13 +83,13 @@ const { admin, writers } = Astro.props;
         <a href={`/author/${w.name.toLowerCase().replace(/\s+/g, '-')}`} class="trio-name-link"><h3 class="trio-name">{w.name}</h3></a>
         <p class="trio-role">{w.role}</p>
         {w.favoriteBook && (
-          <p class="trio-fav-book">📚 Favorite book: {w.favoriteBook}</p>
+          <p class="trio-fav-book"><Icon name="book" size={14} /> Favorite book: {w.favoriteBook}</p>
         )}
         <p class="trio-meta">
-          <span>📍 {w.location}</span>
+          <span><Icon name="map-pin" size={14} /> {w.location}</span>
           <span>✦ Joined {w.joinedDate}</span>
-          <span>📖 {w.storyCount} {w.storyCount === 1 ? 'story' : 'stories'} published</span>
-          <span>✎ {w.totalWords.toLocaleString()} words written</span>
+          <span><Icon name="book" size={14} /> {w.storyCount} {w.storyCount === 1 ? 'story' : 'stories'} published</span>
+          <span><Icon name="edit" size={14} /> {w.totalWords.toLocaleString()} words written</span>
         </p>
         <p class="trio-bio">{w.bio}</p>
         <blockquote class="trio-line">

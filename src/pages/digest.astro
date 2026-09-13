@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
 import { supabase } from '../lib/supabase';
 ---
 <BaseLayout title="The Raconteur Weekly">
@@ -37,7 +38,7 @@ import { supabase } from '../lib/supabase';
 
         <div id="subBox" class="sub-box" style="display: none;">
             <p id="subText" class="sub-text">Get the Sunday Paper in your inbox, every week.</p>
-            <button id="subBtn" class="sub-btn" type="button">✉ Subscribe to the Weekly</button>
+            <button id="subBtn" class="sub-btn" type="button"><Icon name="mail" size={14} /> Subscribe to the Weekly</button>
         </div>
 
         <div id="emptyState" class="empty-state" style="display: none;">
@@ -167,6 +168,8 @@ import { supabase } from '../lib/supabase';
 
     <script>
         import { supabase } from '../lib/supabase';
+        import { dvConfirm, dvToast } from '../lib/dialog';
+        import { iconSvg } from '../lib/icons';
         import { esc } from '../lib/escape';
 
         const authCheck = document.getElementById('authCheck')!;
@@ -291,7 +294,7 @@ import { supabase } from '../lib/supabase';
             let row = await supabase.from('digest_subscribers')
                 .select('subscribed').eq('user_id', session.user.id).maybeSingle();
             const paint = (on: boolean) => {
-                btn.textContent = on ? '✓ Subscribed — tap to unsubscribe' : '✉ Subscribe to the Weekly';
+                btn.innerHTML = on ? '✓ Subscribed · tap to unsubscribe' : iconSvg('mail', 13) + ' Subscribe to the Weekly';
                 text.textContent = on
                     ? 'The Sunday Paper will arrive in your inbox each week.'
                     : 'Get the Sunday Paper in your inbox, every week.';
@@ -303,7 +306,7 @@ import { supabase } from '../lib/supabase';
                     { user_id: session.user.id, email: session.user.email!, subscribed: on },
                     { onConflict: 'user_id' }
                 );
-                if (error) { alert('Could not update subscription: ' + error.message); return; }
+                if (error) { dvToast('Could not update subscription: ' + error.message, 'err'); return; }
                 row = { data: { subscribed: on } } as any;
                 paint(on);
             });
