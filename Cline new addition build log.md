@@ -20,6 +20,42 @@
 3. **It's a bake-off.** All four homepages (and their pages) stay alive side by side so the boss can compare which is better; the losers get removed at the END. Don't delete or "consolidate" skins prematurely — and don't merge one skin's look into another.
 4. **This vision governs every future build.** When starting any new chunk/page/feature: first ask "does this preserve classic feature parity while expressing it in THIS skin's own design?" If not, you're off course.
 
+## 1c. 🚫 THE DE-VIBE DIRECTIVE (boss mandate, Session 23 — READ WITH §1b BEFORE EVERY BUILD)
+
+> **"Before we ship, the project must not look like a vibe-coded project. It must look like it was made by a professional. From now on every build goes through the de-vibe list test. Never make these features again."** — THE BOSS, 2026-09-13
+
+**THE LIST — the vibe-code giveaways (compiled from the published audits: Developers Digest "AI Design Slop 16 patterns", Fountain Institute "7 signs", plus code-level tells). If a new build adds ANY of these, it fails the test:**
+
+*Design tells:* 1. Inter (or Geist/Space Grotesk) as the only/default font · 2. The recycled AI font combos (Instrument Serif accents, Space Grotesk+Inter, etc.) · 3. One italic-serif accent word in an otherwise sans hero · 4. "VibeCode purple"/lavender · 5. Permanent dark mode with medium-grey body text · 6. Body text failing WCAG AA contrast · 7. Gradients everywhere · 8. Decorative colored glows / aurora / bloom backgrounds that respond to nothing · 9. Centered hero in a generic sans · 10. Badge/eyebrow pill sitting directly above the hero H1 · 11. Colored card borders (top/left accent bars on cards) · 12. Identical icon-topped feature-card grids · 13. Numbered 1-2-3 step sections · 14. Big-number stat banner rows · 15. Emoji as icons/nav/bullets · 16. All-caps headings & section labels everywhere · 17. shadcn/ui default styling · 18. Glassmorphism as the default surface · 19. 5-6 competing saturated colors with no hierarchy · 20. Cards wrapped around every block (3-4 levels of nested containers) · 21. Multicolored side-tabs/bars so nothing reads as emphasized · 22. Meaningless status dots not mapped to real state.
+
+*Product/copy tells:* 23. Lorem/placeholder/"coming soon" text · 24. Generic AI copy ("Crafted with passion", "Unleash your…") · 25. Dead links / buttons that do nothing · 26. Fake stats or testimonials · 27. Footer "Made with ❤️" / "Powered by X" · 28. Default favicon/logo · 29. Missing OG meta / generic page titles.
+
+*Code tells:* 30. `alert()` / `confirm()` / `prompt()` native dialogs · 31. `console.log` shipped · 32. Emoji inside button labels/toasts · 33. TODO/FIXME comments in shipped code · 34. Copy-paste logic drift between pages · 35. Inconsistent spacing scale.
+
+**Audit rule:** every chunk commit runs a self-check against THE LIST (new code must add zero items; existing items only shrink, never grow). Flagged-but-not-yet-fixed items live in the De-Vibe Tracker (§6b) and get burned down in de-vibe phases.
+
+## 6b. DE-VIBE TRACKER (audit 2026-09-13 — everything the project currently FAILS on)
+
+Severity: 🔴 unambiguous tell · 🟡 flagged, needs judgment (could be defended as deliberate editorial style)
+| # | Item (list #) | Where it lives | Sev |
+|---|---|---|---|
+| A1 | Emoji as UI icons (15/32/24) | All 4 layouts: 🔔 bell, 👤 search writers, ✉ notif msg, ♥/💬 notif icons; story readers (classic 24, max 21: like ♥, ⌕, share, ✓); dashboard 20; classic home 18; FeaturedAuthor 13; ShelfMark 7; poetry owner buttons ✎⬇🗑️ (classic + max) | 🔴 |
+| A2 | Native alert/confirm/prompt (30) | 7 files: dashboard, admin, digest, classic home, messages, poetry/[id], max/poetry/[id] | 🔴 |
+| A3 | Inter as body font of all 3 new skins (1) | MaxLayout/PlusLayout/ProLayout font stacks; BaseLayout loads Inter too | 🔴 |
+| A4 | The flagged font combo: Instrument Sans + Instrument Serif (2) | Plus skin type stack | 🔴 |
+| A5 | Italic-serif accent word in hero (3) | Max hero "with you." italic em; Plus hero rotating accent word | 🟡 |
+| A6 | Glassmorphism as default surface (18) | Plus inner pages, Pro bento, Max inner pages all glass | 🟡 (it IS the skins' identity — boss call) |
+| A7 | Decorative colour-field glows (8) | Plus silk mesh (4 mixtures), Max glass fields (3 drifting blobs), Pro ambient orange/mint glows | 🟡 |
+| A8 | Stat banner rows (14) | Plus stats band, Pro stats strip, Max stats band (real data, but the *pattern* is the tell) | 🟡 |
+| A9 | Badge/eyebrow above hero H1 (10) + all-caps labels (16) | .mx-eyebrow, .ph mono eyebrows, pro labels; ~13 uppercase rules across css | 🟡 |
+| A10 | Colored card borders / border-top genre bars (11, 21) | Classic story cards border-top 3px genre colors; collection card border-left; plus/pro/max variants | 🟡 |
+| A11 | Numbered sections (13) | Plus "01 — Fresh from the desk" sections; Max numbered shelf list | 🟡 (editorial print style — boss call) |
+| A12 | TODO comments in shipped layout (33) | PlusLayout nav TODO(Chunk N) swap registry lines 37-40 (also serve as build registry) | 🟡 |
+| A13 | Contrast risk (6) | --mx-ink-faint #9a918a small caps labels on white glass ≈3.2:1; plus ink-faint on obsidian smalls | 🔴 |
+| A14 | Meaningless-ish dots (22) | Pro "Open Call" pulsing mint dot (maps to open window — near-legit); no other violations found | 🟢 |
+| — | CLEAN | favicon custom ❝, README real, no console.log, no lorem/coming-soon, no "made with/powered by", stats use real data, OG/canonical meta present, 404 custom | ✅ |
+
+
 ## 2. Resume protocol (every new session)
 1. Read this file top to bottom.
 2. Run `git status` â€” if there are UNCOMMITTED changes from a session that died mid-chunk, finish/verify that chunk first (see Â§8 notes), commit it, then continue.
