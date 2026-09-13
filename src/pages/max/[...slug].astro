@@ -1,0 +1,41 @@
+---
+// src/pages/max/[...slug].astro — 404 catch-all for unmatched /max/* routes.
+import MaxLayout from '../../layouts/MaxLayout.astro';
+---
+
+<MaxLayout title="Page not found · Raconteur Max" description="This page has wandered off.">
+    <div class="mx-page mx-notfound">
+        <div class="mx-glass mx-notfound-card" data-mx-reveal>
+            <p class="mx-eyebrow">Error 404</p>
+            <h1 class="mx-display mx-notfound-title">This page has wandered off.</h1>
+            <p class="mx-notfound-msg">
+                Like a character who leaves the story mid-chapter, the page you were looking
+                for is no longer here. Perhaps it was never written. Perhaps it's still being
+                drafted, somewhere quiet.
+            </p>
+            <a href="/max" class="mx-btn mx-btn-ink">Return to the Max edition</a>
+        </div>
+    </div>
+</MaxLayout>
+
+<style>
+    .mx-notfound { display: flex; justify-content: center; padding-top: 4rem; }
+
+    .mx-notfound-card {
+        max-width: 560px;
+        width: 100%;
+        padding: 3.4rem 2.6rem;
+        text-align: center;
+    }
+
+    .mx-notfound-title { font-size: clamp(1.9rem, 4.5vw, 2.8rem); margin: 1rem 0; }
+
+    .mx-notfound-msg {
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        font-size: 1.08rem;
+        line-height: 1.75;
+        color: var(--mx-ink-soft);
+        margin: 0 0 2.2rem;
+    }
+</style>

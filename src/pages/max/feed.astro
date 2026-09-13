@@ -36,7 +36,7 @@ import MaxLayout from '../../layouts/MaxLayout.astro';
 
     async function initFeed() {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { window.location.href = '/login'; return; }
+        if (!session) { window.location.href = '/max/login'; return; }
         authCheck.hidden = true;
 
         // Who do I follow?

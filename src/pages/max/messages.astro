@@ -181,7 +181,7 @@ import MaxLayout from '../../layouts/MaxLayout.astro';
 
     async function init() {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { window.location.href = '/login'; return; }
+        if (!session) { window.location.href = '/max/login'; return; }
         me = session.user;
         authGate.hidden = true;
         app.hidden = false;

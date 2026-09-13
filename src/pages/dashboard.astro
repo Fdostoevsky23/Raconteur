@@ -483,7 +483,7 @@ import { supabase } from '../lib/supabase';
 
   <script>
     import { supabase } from '../lib/supabase';
-    import { dvConfirm, dvToast } from '../lib/dialog';
+    import { dvConfirm, dvToast, dvPick } from '../lib/dialog';
     import { iconSvg } from '../lib/icons';
     import { esc } from '../lib/escape';
 
@@ -854,14 +854,9 @@ import { supabase } from '../lib/supabase';
           }
 
           const options = ['None (remove from collection)'].concat(collections.map((c: any) => c.name));
-          const choice = prompt('Move this poem to:\n' + options.map((o, i) => `${i}. ${o}`).join('\n') + '\n\nEnter the number:');
-          if (choice === null) return;
+          const index = await dvPick('Move this poem to:', options);
+          if (index === null) return;
 
-          const index = parseInt(choice, 10);
-          if (isNaN(index) || index < 0 || index >= options.length) {
-            dvToast('Invalid choice.', 'err');
-            return;
-          }
 
           const collectionId = index === 0 ? null : collections[index - 1].id;
           const { error } = await supabase

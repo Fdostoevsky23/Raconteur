@@ -448,7 +448,7 @@ if (isDbAuthor && author.userId) {
 
         followBtn.addEventListener('click', async () => {
             const { data: { session: s } } = await supabase.auth.getSession();
-            if (!s) { window.location.href = '/login'; return; }
+            if (!s) { window.location.href = '/max/login'; return; }
             if (following) {
                 await supabase.from('follows').delete()
                     .eq('follower_id', s.user.id)

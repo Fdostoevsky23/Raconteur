@@ -1,0 +1,85 @@
+---
+// src/pages/max/privacy.astro — Privacy Policy (bright glassmorphism).
+// Text is a faithful copy of classic /privacy.
+import MaxLayout from '../../layouts/MaxLayout.astro';
+---
+
+<MaxLayout title="Privacy Policy · Raconteur Max" description="Your data, your trust.">
+    <div class="mx-page mx-page-narrow">
+        <article class="mx-glass mx-sheet" data-mx-reveal>
+            <header class="mx-sheet-head">
+                <p class="mx-eyebrow">Your Data, Your Trust</p>
+                <h1 class="mx-display mx-page-title">Privacy Policy</h1>
+                <p class="mx-legal-date">Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+            </header>
+
+            <div class="mx-sheet-body">
+                <h2>The Short Version</h2>
+                <p>Raconteur collects only what's necessary to run the site. We don't track you, sell your data, or share it with anyone. You own your words; we just give them a shelf.</p>
+
+                <h2>What We Store</h2>
+                <p><strong>Account data (required):</strong> Your email address and a hashed password (managed securely by Supabase, we never see your password). A timestamp of when you signed up.</p>
+                <p><strong>Profile data (you choose):</strong> Pen name, bio, avatar image, social links (X/Instagram/Facebook), public email (optional, shown on your page), top-5 book recommendations (optional).</p>
+                <p><strong>Content you create:</strong> Stories and poems (title, body, cover image, genre, length), comments, Reading Room notes and whispers, bookmarks, likes, follows.</p>
+                <p><strong>System data (automatic):</strong> Timestamps (created/updated), curation flags (featured, on-homepage), work counts for badges, and which stories are recommended to you.</p>
+
+                <h2>What We Do NOT Collect</h2>
+                <ul>
+                    <li>No analytics or tracking cookies</li>
+                    <li>No third-party ad networks</li>
+                    <li>No behavioral profiling or fingerprinting</li>
+                    <li>No selling or sharing of data with anyone, ever</li>
+                    <li>No reading history beyond what you explicitly bookmark</li>
+                </ul>
+
+                <h2>Why We Store It</h2>
+                <p>To let you log in, publish your work, follow writers, leave comments, and see personalized recommendations. That's it. Every piece of data serves the reader or the writer, never an advertiser.</p>
+
+                <h2>How Long We Keep It</h2>
+                <p>Until you delete your account. When you do, your stories, comments, bookmarks, profile, and all associated data are permanently removed from our database. We keep no backups, no archives, no shadows of your work. Reading Room whispers fade after 7 days; notes after 30 days, automatically.</p>
+
+                <h2>Your Rights</h2>
+                <ul>
+                    <li><strong>Edit:</strong> Change your pen name, bio, avatar, and social links anytime in your dashboard.</li>
+                    <li><strong>Export:</strong> Your stories live in your dashboard; copy them whenever you like. (A formal export button is coming soon.)</li>
+                    <li><strong>Delete:</strong> Remove your account and all your data with one click in your dashboard. It's instant and irreversible.</li>
+                    <li><strong>Change email:</strong> Update your login email in your profile editor; a confirmation link goes to the new address.</li>
+                </ul>
+
+                <h2>Email Communications</h2>
+                <p>We send you a confirmation email when you sign up or change your email address. If you opt into the weekly digest, you'll receive a Sunday summary of new stories from writers you follow. You can unsubscribe anytime. We never send marketing spam.</p>
+
+                <h2>Children's Privacy</h2>
+                <p>Raconteur is intended for writers and readers aged 13 and older. We don't knowingly collect data from children under 13. If you believe a child has created an account, contact us and we'll delete it immediately.</p>
+
+                <h2>Changes to This Policy</h2>
+                <p>If we update this policy, we'll post the new version here and note the date at the top. Material changes will be announced in the Reading Room. Your continued use of Raconteur after changes means you accept the updated policy.</p>
+
+                <h2>Contact</h2>
+                <p>Questions about your data or this policy? Write to us at the email on the About page. We read every message and respond within a few days.</p>
+
+                <p class="mx-legal-footer">We built Raconteur because we believe stories deserve a quiet home, and so does your trust.</p>
+            </div>
+        </article>
+    </div>
+</MaxLayout>
+
+<style>
+    .mx-sheet { padding: 3rem clamp(1.6rem, 4vw, 3rem); }
+    .mx-sheet-head { text-align: center; margin-bottom: 2rem; padding-bottom: 1.6rem; border-bottom: 1px solid var(--mx-line); }
+    .mx-legal-date { font-family: var(--mx-font-read); font-size: 0.85rem; font-style: italic; color: var(--mx-ink-faint); margin: 0.4rem 0 0; }
+
+    .mx-sheet-body h2 {
+        font-family: var(--mx-font-display);
+        font-size: 1.2rem;
+        font-weight: 900;
+        color: var(--mx-vermilion);
+        margin: 2rem 0 0.7rem;
+    }
+    .mx-sheet-body p, .mx-sheet-body li { font-size: 0.94rem; line-height: 1.7; color: var(--mx-ink-soft); margin-bottom: 0.9rem; }
+    .mx-sheet-body ul { padding-left: 1.4rem; }
+    .mx-sheet-body li { margin-bottom: 0.5rem; }
+    .mx-sheet-body strong { color: var(--mx-ink); }
+
+    .mx-legal-footer { margin-top: 2.6rem; padding-top: 1.4rem; border-top: 1px solid var(--mx-line); font-family: var(--mx-font-read); font-style: italic; color: var(--mx-ink-faint); text-align: center; }
+</style>

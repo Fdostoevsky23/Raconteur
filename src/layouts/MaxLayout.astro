@@ -40,12 +40,12 @@ const canonical = Astro.url.href.replace('/max', '');
 // points at classic pages so nothing 404s mid-build.
 const navHref = {
     stories: '/max/stories',
-    about: '/about',
+    about: '/max/about',
     feed: '/max/feed',
     login: '/max/login',
     signup: '/max/signup',
     dashboard: '/max/dashboard',
-    digest: '/digest',
+    digest: '/max/digest',
 };
 ---
 
@@ -174,9 +174,9 @@ const navHref = {
             <a href="/max">Home</a>
             <a href="/max/stories">Library</a>
             <a href={navHref.feed}>Feed</a>
-            <a href="/about">About</a>
-            <a href="/tos">Terms</a>
-            <a href="/privacy">Privacy</a>
+            <a href="/max/about">About</a>
+            <a href="/max/tos">Terms</a>
+            <a href="/max/privacy">Privacy</a>
         </nav>
         <p class="mx-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur</p>
     </footer>
@@ -324,7 +324,7 @@ import { iconSvg } from '../lib/icons';
                     window.location.href = '/max';
                 });
             } else {
-                authArea.innerHTML = `<a href="/login" class="mx-auth-link">Log in</a><a href="/signup" class="mx-btn mx-btn-ink mx-auth-cta">Sign up</a>`;
+                authArea.innerHTML = `<a href="/max/login" class="mx-auth-link">Log in</a><a href="/max/signup" class="mx-btn mx-btn-ink mx-auth-cta">Sign up</a>`;
             }
         }
 
