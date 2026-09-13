@@ -46,6 +46,60 @@
 
 /* === 2. BASE === */
 body.max-skin {
+    background-color: var(--scene-paper);
+    /* colour-cycle scenes — JS advances body.scene-N every 60s; 2.5s crossfade */
+    --scene-paper: #faf6ef;
+    --scene-paper-deep: #f2ecdf;
+    --scene-rule: rgba(28, 25, 23, 0.05);
+    --scene-margin: rgba(216, 52, 28, 0.22);
+    --scene-ghost: rgba(28, 25, 23, 0.045);
+    --scene-ghost-accent: rgba(216, 52, 28, 0.04);
+    transition: background-color 2.5s ease;
+}
+
+body.max-skin.scene-1 { /* Dawn Rose — bright */
+    --scene-paper: #fdf0ea; --scene-paper-deep: #f7e4da;
+    --scene-rule: rgba(122, 44, 40, 0.06); --scene-margin: rgba(216, 52, 28, 0.26);
+    --scene-ghost: rgba(122, 44, 40, 0.05); --scene-ghost-accent: rgba(216, 52, 28, 0.05);
+}
+
+body.max-skin.scene-2 { /* Sage Morning — bright */
+    --scene-paper: #edf2e7; --scene-paper-deep: #dfe8d3;
+    --scene-rule: rgba(46, 74, 42, 0.06); --scene-margin: rgba(61, 90, 60, 0.28);
+    --scene-ghost: rgba(46, 74, 42, 0.05); --scene-ghost-accent: rgba(168, 118, 62, 0.05);
+}
+
+body.max-skin.scene-3 { /* Sea Letter — bright */
+    --scene-paper: #e9f1f4; --scene-paper-deep: #d9e6ea;
+    --scene-rule: rgba(30, 70, 88, 0.06); --scene-margin: rgba(38, 102, 127, 0.3);
+    --scene-ghost: rgba(30, 70, 88, 0.05); --scene-ghost-accent: rgba(38, 102, 127, 0.05);
+}
+
+body.max-skin.scene-4 { /* Lilac Dusk — bright */
+    --scene-paper: #f1ecf4; --scene-paper-deep: #e5dcea;
+    --scene-rule: rgba(84, 52, 94, 0.06); --scene-margin: rgba(122, 74, 111, 0.28);
+    --scene-ghost: rgba(84, 52, 94, 0.05); --scene-ghost-accent: rgba(201, 162, 75, 0.06);
+}
+
+body.max-skin.scene-5 { /* Olive Dusk — deep */
+    --scene-paper: #e7e5d2; --scene-paper-deep: #dcd9c2;
+    --scene-rule: rgba(74, 72, 40, 0.07); --scene-margin: rgba(168, 118, 62, 0.32);
+    --scene-ghost: rgba(74, 72, 40, 0.055); --scene-ghost-accent: rgba(216, 52, 28, 0.045);
+}
+
+body.max-skin.scene-6 { /* Storm Slate — deep */
+    --scene-paper: #dfe2e5; --scene-paper-deep: #cfd4d9;
+    --scene-rule: rgba(38, 52, 64, 0.07); --scene-margin: rgba(40, 76, 102, 0.3);
+    --scene-ghost: rgba(38, 52, 64, 0.055); --scene-ghost-accent: rgba(216, 52, 28, 0.045);
+}
+
+body.max-skin.scene-7 { /* Ember Dusk — deep warm */
+    --scene-paper: #f2e3d6; --scene-paper-deep: #e9d3c0;
+    --scene-rule: rgba(122, 62, 30, 0.06); --scene-margin: rgba(216, 52, 28, 0.3);
+    --scene-ghost: rgba(122, 62, 30, 0.05); --scene-ghost-accent: rgba(216, 52, 28, 0.05);
+}
+
+body.max-skin {
     background-color: var(--mx-paper);
     color: var(--mx-ink);
     font-family: var(--mx-font-body);
@@ -745,8 +799,9 @@ main.mx-main { flex: 1; position: relative; z-index: 1; }
     background-image: repeating-linear-gradient(
         to bottom,
         transparent 0 31px,
-        rgba(28, 25, 23, 0.05) 31px 32px
+        var(--scene-rule) 31px 32px
     );
+    transition: background-image 2.5s ease;
 }
 
 /* the editor's red margin line */
@@ -756,7 +811,8 @@ main.mx-main { flex: 1; position: relative; z-index: 1; }
     bottom: 0;
     left: clamp(2.4rem, 6vw, 6rem);
     width: 1px;
-    background: rgba(216, 52, 28, 0.22);
+    background: var(--scene-margin);
+    transition: background 2.5s ease;
 }
 
 /* giant letterpress words drifting behind everything */
@@ -767,13 +823,14 @@ main.mx-main { flex: 1; position: relative; z-index: 1; }
     font-size: clamp(7rem, 24vw, 22rem);
     line-height: 1;
     letter-spacing: -0.02em;
-    color: rgba(28, 25, 23, 0.045);
+    color: var(--scene-ghost);
     white-space: nowrap;
     opacity: 0;
+    transition: color 2.5s ease;
     animation: mx-ghost-drift var(--dur, 90s) ease-in-out forwards;
 }
 
-.mx-ghost-word.is-vermilion { color: rgba(216, 52, 28, 0.04); }
+.mx-ghost-word.is-vermilion { color: var(--scene-ghost-accent); }
 
 @keyframes mx-ghost-drift {
     0%   { opacity: 0; transform: translate(0, 0) rotate(var(--rot, 0deg)); }
@@ -793,8 +850,9 @@ main.mx-main { flex: 1; position: relative; z-index: 1; }
     overflow: hidden;
     margin-top: 11rem;
     border-top: 1px solid var(--mx-line);
-    background: var(--mx-paper-deep);
+    background: var(--scene-paper-deep);
     padding: 5.5rem 2rem 3.5rem;
+    transition: background 2.5s ease;
     text-align: center;
 }
 

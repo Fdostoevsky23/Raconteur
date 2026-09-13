@@ -286,6 +286,21 @@ const navHref = {
         })();
     </script>
 
+    <script>
+        // The colour cycle — the manuscript turns to a new ink mood every 60 seconds.
+        // 8 hand-picked scenes: airy brights and deep dusks, always readable ink-on-paper.
+        (() => {
+            const SCENES = 8;
+            const SECONDS = 60;
+            let current = 0;
+            setInterval(() => {
+                document.body.classList.remove('scene-' + current);
+                current = (current + 1) % SCENES;
+                if (current !== 0) document.body.classList.add('scene-' + current);
+            }, SECONDS * 1000);
+        })();
+    </script>
+
     <script is:inline>
         // Service worker disabled — same policy as classic (unregister + clear caches)
         if ('serviceWorker' in navigator) {
