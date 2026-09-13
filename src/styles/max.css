@@ -36,7 +36,7 @@
 
     /* Type */
     --mx-font-display: 'Fraunces', Georgia, serif;
-    --mx-font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --mx-font-body: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif;
     --mx-font-read: 'Newsreader', Georgia, serif;
 
     /* Motion */
@@ -129,10 +129,9 @@ main.mx-main { flex: 1; }
 /* === 4. EDITORIAL PRIMITIVES (home mode) === */
 .mx-eyebrow {
     font-family: var(--mx-font-body);
-    font-size: 0.68rem;
+    font-size: 0.78rem;
     font-weight: 600;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
+    letter-spacing: 0.12em;
     color: var(--mx-vermilion);
 }
 
@@ -159,8 +158,9 @@ main.mx-main { flex: 1; }
 }
 
 .mx-display em {
-    font-style: italic;
+    font-style: normal;
     color: var(--mx-vermilion);
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 9" preserveAspectRatio="none"><path d="M3 7 Q 30 2 60 5 T 117 4" fill="none" stroke="%23d8341c" stroke-width="3" stroke-linecap="round"/></svg>') no-repeat left 90%/100% 0.14em;
 }
 
 /* Buttons — ink pill (primary) and hairline ghost */
