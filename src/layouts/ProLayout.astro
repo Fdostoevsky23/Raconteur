@@ -167,12 +167,6 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
         </header>
     )}
 
-    {/* Skin switch — PRO HOME ONLY (SkinToggle also self-guards to home paths) */}
-    {Astro.url.pathname === '/pro' && (
-        <div class="pro-toggle-row">
-            <SkinToggle variant="regal" />
-        </div>
-    )}
 
     <main class="pro-main">
         <slot />
@@ -512,6 +506,33 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
     }
     .pro-toolbar-search { justify-self: start; }
     .pro-toolbar-auth { justify-self: end; display: flex; align-items: center; gap: 0.5rem; }
+
+    .pro-pillnav {
+        display: flex;
+        gap: 0.25rem;
+        padding: 0.28rem;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: 999px;
+    }
+
+    .pro-pill-link {
+        padding: 0.42rem 1.05rem;
+        border-radius: 999px;
+        font-size: 0.88rem;
+        font-weight: 500;
+        color: var(--pro-text-2);
+        text-decoration: none;
+        transition: color 0.2s, background 0.2s;
+    }
+
+    .pro-pill-link:hover { color: var(--pro-text); background: rgba(255, 255, 255, 0.05); }
+
+    .pro-pill-link.active {
+        color: #1a0d00;
+        background: var(--pro-amber);
+        font-weight: 600;
+    }
 
     /* === INNER BRAND BAR === */
     .pro-inner-bar {

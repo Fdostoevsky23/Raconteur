@@ -183,15 +183,13 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
 ---
 
 <ProLayout title="Raconteur Pro · The Reader's Desk" description="Literature you want to read. The Raconteur Pro desk.">
-    {/* ===== HERO — rotating words left, looping plates right ===== */}
+    {/* ===== HERO — the desk briefing: centered words, plate filmstrip beneath ===== */}
     <section class="pro-hero">
-        <div class="pro-hero-type">
+        <div class="pro-hero-core" data-pro-reveal>
             <p class="pro-hero-kicker">A quiet place for writers</p>
             <h1 class="pro-hero-headline">
                 {heroHeadlines.map((lines, i) => (
-                    <span class={`pro-hero-line ${i === 0 ? 'active' : ''}`}>
-                        {lines[0]}<br />{lines[1]}
-                    </span>
+                    <span class={`pro-hero-word ${i === 0 ? 'active' : ''}`}>{lines[0]} {lines[1]}</span>
                 ))}
             </h1>
             <p class="pro-hero-lede">
@@ -207,14 +205,17 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
                 {stories.length} works · {totalWords.toLocaleString()} words · EST. 2026
             </p>
         </div>
-        <div class="pro-hero-plate-side">
-            <div class="pro-plate">
-                <div class="pro-plate-stack">
-                    {heroPlates.map((src, i) => (
-                        <img src={src} alt="Editorial plate" class={`pro-plate-img ${i === 0 ? 'active' : ''}`} data-idx={i} loading={i === 0 ? 'eager' : 'lazy'} />
-                    ))}
-                </div>
-                <span class="pro-plate-caption">Plate of the day</span>
+        <div class="pro-filmstrip" data-pro-reveal>
+            <p class="pro-strip-caption">Plate of the day · cycling every 10 seconds</p>
+            <div class="pro-strip-stage">
+                <img id="proStripStage" src={heroPlates[0]} alt="Plate of the day" />
+            </div>
+            <div class="pro-strip-row" id="proFilmstrip">
+                {heroPlates.map((src, i) => (
+                    <button class={`pro-strip-thumb ${i === 0 ? 'active' : ''}`} data-idx={i} aria-label={`Plate ${i + 1}`}>
+                        <img src={src} alt="" loading={i < 4 ? 'eager' : 'lazy'} />
+                    </button>
+                ))}
             </div>
         </div>
     </section>
@@ -251,7 +252,6 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
                         ) : (
                             <span class="pro-work-star" aria-hidden="true"><Icon name="sparkle" size={30} /></span>
                         )}
-                        {story.author === 'Nzan Kikon' && <span class="pro-work-reserved">Editor's pick</span>}
                     </div>
                     <div class="pro-work-body">
                         <span class="pro-work-genre">{story.genre}</span>
@@ -293,7 +293,6 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
                             ) : (
                                 <span class="pro-work-quote">“{(story.excerpt || '').replace(/<[^>]+>/g, ' ').substring(0, 90)}…”</span>
                             )}
-                            {story.author === 'Nzan Kikon' && <span class="pro-work-reserved">Editor's pick</span>}
                         </div>
                         <div class="pro-work-body">
                             <span class="pro-work-genre poem">Poetry</span>
@@ -327,7 +326,7 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
                 <div class="pro-writer-body">
                     <div class="pro-writer-namebar">
                         <h3 class="pro-writer-name">{adminAuthor.name}</h3>
-                        <span class="pro-writer-tag">Editor</span>
+                        <span class="pro-writer-tag">Admin</span>
                     </div>
                     <p class="pro-writer-place">{adminAuthor.place}</p>
                     <p class="pro-writer-bio">{adminAuthor.bio}</p>
@@ -348,7 +347,6 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
                     <div class="pro-writer-body">
                         <div class="pro-writer-namebar">
                             <h3 class="pro-writer-name">{w.name}</h3>
-                            <span class="pro-writer-tag mint">{w.role}</span>
                         </div>
                         <p class="pro-writer-place">{w.place} · Joined {w.joinedDate}</p>
                         <p class="pro-writer-bio">{w.bio}</p>
@@ -459,20 +457,6 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
         </div>
     </section>
 
-    {/* ===== FROM THE EDITOR'S DESK ===== */}
-    <section class="pro-desknote" data-pro-reveal>
-        <div class="pro-desknote-card">
-            <p class="pro-browser-kicker">From the editor's desk</p>
-            <p class="pro-desknote-body">
-                Raconteur began with a simple conviction: that a story deserves a quiet room. No
-                recommendation engines shouting over the prose, no infinite scroll pulling you away
-                from the last page. Just writing, typeset with care, waiting for the reader it was
-                written for. Arrive weekly or once a season; the shelf keeps.
-            </p>
-            <p class="pro-desknote-sign">The Editor · Kohima</p>
-        </div>
-    </section>
-
     {/* ===== THE READING ROOM — whispers + notes, desk language ===== */}
     <section class="pro-room" data-pro-reveal>
         <header class="pro-browser-head" data-pro-reveal>
@@ -511,318 +495,44 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
 <script type="application/json" id="pro-giants-data" set:html={JSON.stringify(todaysGiants).replace(/</g, '\u003c')} />
 
 <script>
-    // Hero plates — the 13-image library, crossfading every 10 seconds
-    const proPlates = Array.from(document.querySelectorAll<HTMLElement>('.pro-plate-img'));
-    if (proPlates.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // Plate filmstrip — 13 images, the stage swaps every 10 seconds
+    const stripThumbs = Array.from(document.querySelectorAll<HTMLElement>('.pro-strip-thumb'));
+    const stripStage = document.getElementById('proStripStage') as HTMLImageElement | null;
+    const plateSrcs = stripThumbs.map(t => t.querySelector('img')?.src || '');
+    if (stripThumbs.length && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         let plateIdx = 0;
         setInterval(() => {
-            proPlates[plateIdx].classList.remove('active');
-            plateIdx = (plateIdx + 1) % proPlates.length;
-            proPlates[plateIdx].classList.add('active');
+            plateIdx = (plateIdx + 1) % stripThumbs.length;
+            stripThumbs.forEach((t, i) => t.classList.toggle('active', i === plateIdx));
+            if (stripStage) stripStage.src = plateSrcs[plateIdx];
         }, 10000);
     }
+    stripThumbs.forEach((t, i) => t.addEventListener('click', () => {
+        stripThumbs.forEach((x, xi) => x.classList.toggle('active', xi === i));
+        if (stripStage) stripStage.src = plateSrcs[i];
+    }));
 
-    // Hero headline rotator — the classic words, every 7 seconds
-    const heroLines = Array.from(document.querySelectorAll<HTMLElement>('.pro-hero-line'));
-    if (heroLines.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        let lineIdx = 0;
+    // Hero word rotator — the classic lines, every 7 seconds
+    const heroWords = Array.from(document.querySelectorAll<HTMLElement>('.pro-hero-word'));
+    if (heroWords.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        let wordIdx = 0;
         setInterval(() => {
-            heroLines[lineIdx].classList.remove('active');
-            lineIdx = (lineIdx + 1) % heroLines.length;
-            heroLines[lineIdx].classList.add('active');
+            heroWords[wordIdx].classList.remove('active');
+            wordIdx = (wordIdx + 1) % heroWords.length;
+            heroWords[wordIdx].classList.add('active');
         }, 7000);
-    }
-
-    // Quote interlude — rotates every 8 seconds
-    const quotes = JSON.parse(document.getElementById('pro-quotes-data')?.textContent || '[]');
-    const quoteEl = document.getElementById('proQuote');
-    const citeEl = document.getElementById('proCite');
-    if (quoteEl && citeEl && quotes.length > 1) {
-        let qIndex = Math.floor(Math.random() * quotes.length);
-        setInterval(() => {
-            qIndex = (qIndex + 1) % quotes.length;
-            quoteEl.style.opacity = '0';
-            citeEl.style.opacity = '0';
-            setTimeout(() => {
-                quoteEl.textContent = quotes[qIndex].text;
-                citeEl.textContent = '— ' + quotes[qIndex].cite;
-                quoteEl.style.opacity = '1';
-                citeEl.style.opacity = '1';
-            }, 600);
-        }, 8000);
-    }
-
-    // Giants dossier modal
-    const giantsData = JSON.parse(document.getElementById('pro-giants-data')?.textContent || '[]');
-    const giantModal = document.getElementById('proGiantModal');
-    function fillGiant(i: number) {
-        const g = giantsData[i];
-        if (!g || !giantModal) return;
-        giantModal.querySelector('.pro-gm-name')!.textContent = g.name;
-        giantModal.querySelector('.pro-gm-years')!.textContent = `${g.born} – ${g.died} · Active ${g.active}`;
-        giantModal.querySelector('.pro-gm-bio')!.textContent = g.bio;
-        giantModal.querySelector('.pro-gm-opus')!.textContent = g.magnumOpus;
-        giantModal.querySelector('.pro-gm-years-inline')!.textContent = g.active;
-        giantModal.querySelector('.pro-gm-books')!.textContent = g.books.join(' · ');
-        giantModal.querySelector('.pro-gm-fact')!.textContent = g.unknownFact;
-        giantModal.querySelector('.pro-gm-line')!.textContent = '“' + g.greatestLine + '”';
-    }
-    document.querySelectorAll('.pro-giant-card').forEach((tile, i) => {
-        tile.addEventListener('click', () => {
-            fillGiant(i);
-            giantModal?.removeAttribute('hidden');
-            document.body.style.overflow = 'hidden';
-        });
-    });
-    function closeGiant() {
-        giantModal?.setAttribute('hidden', '');
-        document.body.style.overflow = '';
-    }
-    giantModal?.querySelector('.pro-modal-close')?.addEventListener('click', closeGiant);
-    giantModal?.addEventListener('click', (e) => { if (e.target === giantModal) closeGiant(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGiant(); });
-
-    // Stats count-up when scrolled into view
-    const statNums = document.querySelectorAll<HTMLElement>('.pro-stats-band .pro-stat-num[data-target]');
-    if ('IntersectionObserver' in window && statNums.length) {
-        const statsIO = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-                if (!entry.isIntersecting) return;
-                const el = entry.target as HTMLElement;
-                const target = parseInt(el.dataset.target || '0', 10);
-                const start = performance.now();
-                const tick = (now: number) => {
-                    const progress = Math.min((now - start) / 1400, 1);
-                    const eased = 1 - Math.pow(1 - progress, 3);
-                    el.textContent = Math.round(target * eased).toLocaleString();
-                    if (progress < 1) requestAnimationFrame(tick);
-                };
-                requestAnimationFrame(tick);
-                statsIO.unobserve(el);
-            });
-        }, { threshold: 0.5 });
-        statNums.forEach((el) => statsIO.observe(el));
-    }
-
-    // ===== The Reading Room — whispers + notes (faithful clone of classic) =====
-    const DAY_MS = 86400000;
-    import { supabase } from '../../lib/supabase';
-    import { dvToast } from '../../lib/dialog';
-    import { iconSvg } from '../../lib/icons';
-    import { esc } from '../../lib/escape';
-
-    function timeAgo(iso: string): string {
-        const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-        if (m < 1) return 'just now';
-        if (m < 60) return m + 'm ago';
-        const h = Math.floor(m / 60);
-        if (h < 24) return h + 'h ago';
-        return Math.floor(h / 24) + 'd ago';
-    }
-
-    const BLOCKED_WORDS = ['fuck','shit','ass','bitch','cunt','dick','pussy','nigger','faggot','retard'];
-    function isVulgar(text: string): boolean {
-        const words: string[] = (text.toLowerCase().match(/[a-z']+/g) || []);
-        return BLOCKED_WORDS.some(w => words.includes(w));
-    }
-
-    const VISITOR_NAMES = ['Wandering Reader','Quiet Guest','Night Owl','Book Wanderer','Shelf Browser','Page Turner','Ink Dreamer','Story Seeker'];
-
-    async function loadNotes(type: 'whisper' | 'note', listId: string) {
-        const { data: notes } = await supabase
-            .from('community_notes')
-            .select('*')
-            .eq('note_type', type)
-            .gt('expires_at', new Date().toISOString())
-            .order('created_at', { ascending: true });
-        const list = document.getElementById(listId)!;
-        if (!notes || notes.length === 0) {
-            list.innerHTML = `<p class="pro-notes-empty">No ${type === 'whisper' ? 'whispers' : 'notes'} yet. Be the first.</p>`;
-            return;
-        }
-        const byParent: Record<string, any[]> = {};
-        notes.forEach(n => {
-            const key = n.parent_id || 'root';
-            (byParent[key] ||= []).push(n);
-        });
-        const renderNote = (n: any, isReply: boolean): string => {
-            const replies = (byParent[n.id] || []).map(r => renderNote(r, true)).join('');
-            const replyBtn = (!isReply && type === 'note')
-                ? `<button class="pro-note-reply" data-id="${esc(n.id)}" data-name="${esc(n.display_name)}">Reply</button>`
-                : '';
-            const reportBtn = `<button class="pro-note-report" data-id="${esc(n.id)}" data-type="${type}" aria-label="Report">${iconSvg('flag', 12)}</button>`;
-            return `
-                <div class="pro-note-card ${isReply ? 'reply' : ''}" data-id="${esc(n.id)}">
-                    <p class="pro-note-body">${esc(n.body)}</p>
-                    <div class="pro-note-meta">
-                        <span class="pro-note-author">— ${esc(n.display_name)}</span>
-                        <span class="pro-note-time">${timeAgo(n.created_at)}</span>
-                        ${replyBtn}${reportBtn}
-                    </div>
-                    ${replies ? `<div class="pro-note-replies">${replies}</div>` : ''}
-                </div>`;
-        };
-        const topLevel = (byParent['root'] || []).reverse();
-        list.innerHTML = topLevel.map(n => renderNote(n, false)).join('');
-        list.querySelectorAll('.pro-note-report').forEach(btn => {
-            btn.addEventListener('click', () => openReportModal((btn as HTMLElement).dataset.id!, (btn as HTMLElement).dataset.type!));
-        });
-        if (type === 'note') {
-            list.querySelectorAll('.pro-note-reply').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const input = document.getElementById('noteInput') as HTMLTextAreaElement;
-                    input.value = `@${(btn as HTMLElement).dataset.name} `;
-                    input.focus();
-                    input.dataset.replyTo = (btn as HTMLElement).dataset.id!;
-                    const hint = document.getElementById('noteHint');
-                    if (hint) hint.textContent = 'Replying. Post to send.';
-                });
-            });
-        }
-    }
-
-    async function postNote(type: 'whisper' | 'note', inputId: string, listId: string): Promise<boolean> {
-        const input = document.getElementById(inputId) as HTMLTextAreaElement;
-        const body = input.value.trim();
-        if (!body) return false;
-        if (isVulgar(body)) {
-            dvToast('Please keep it kind. Raconteur is a quiet place.');
-            return false;
-        }
-        const nameEl = document.getElementById(type === 'whisper' ? 'whisperName' : 'noteName') as HTMLInputElement;
-        const displayName = (nameEl && nameEl.value.trim()) ? nameEl.value.trim()
-            : (type === 'whisper' ? 'Anonymous' : VISITOR_NAMES[Math.floor(Math.random() * VISITOR_NAMES.length)]);
-        const days = type === 'whisper' ? 7 : 30;
-        const payload: any = {
-            note_type: type,
-            body,
-            display_name: displayName,
-            expires_at: new Date(Date.now() + days * 86400000).toISOString(),
-        };
-        const parentId = (input as any).dataset.replyTo || null;
-        if (parentId) payload.parent_id = parentId;
-        const { error } = await supabase.from('community_notes').insert(payload);
-        if (error) { console.error('postNote error:', error); dvToast('Something went wrong. Please try again.'); return false; }
-        delete (input as any).dataset.replyTo;
-        const hint = document.getElementById(type === 'whisper' ? 'whisperHint' : 'noteHint');
-        if (hint) hint.textContent = '';
-        input.value = '';
-        if (nameEl) nameEl.value = '';
-        loadNotes(type, listId);
-        return true;
-    }
-
-    loadNotes('whisper', 'whispersList');
-    loadNotes('note', 'notesList');
-
-    let lastWhisper = 0;
-    const WHISPER_COOLDOWN = 15000;
-    document.getElementById('whisperForm')!.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const now = Date.now();
-        const btn = document.querySelector('#whisperForm button[type="submit"]') as HTMLButtonElement;
-        const hint = document.getElementById('whisperHint');
-        if (now - lastWhisper < WHISPER_COOLDOWN) {
-            const wait = Math.ceil((WHISPER_COOLDOWN - (now - lastWhisper)) / 1000);
-            if (hint) hint.textContent = `Wait ${wait}s before another whisper.`;
-            return;
-        }
-        if (btn) { btn.disabled = true; btn.textContent = 'Wait a moment…'; }
-        const ok = await postNote('whisper', 'whisperInput', 'whispersList');
-        if (ok) {
-            lastWhisper = now;
-            setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = 'Post Whisper'; } if (hint) hint.textContent = ''; }, WHISPER_COOLDOWN);
-        } else {
-            if (btn) { btn.disabled = false; btn.textContent = 'Post Whisper'; }
-        }
-    });
-
-    let lastNote = 0;
-    const NOTE_COOLDOWN = 15000;
-    document.getElementById('noteForm')!.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const now = Date.now();
-        const btn = document.querySelector('#noteForm button[type="submit"]') as HTMLButtonElement;
-        const hint = document.getElementById('noteHint');
-        if (now - lastNote < NOTE_COOLDOWN) {
-            const wait = Math.ceil((NOTE_COOLDOWN - (now - lastNote)) / 1000);
-            if (hint) hint.textContent = `Wait ${wait}s before another note.`;
-            return;
-        }
-        if (btn) { btn.disabled = true; btn.textContent = 'Wait a moment…'; }
-        const ok = await postNote('note', 'noteInput', 'notesList');
-        if (ok) {
-            lastNote = now;
-            setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = 'Post Note'; } if (hint) hint.textContent = ''; }, NOTE_COOLDOWN);
-        } else {
-            if (btn) { btn.disabled = false; btn.textContent = 'Post Note'; }
-        }
-    });
-
-    // Report modal — dark glass
-    function openReportModal(targetId: string, targetType: string) {
-        let modal = document.getElementById('proRoomReportModal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'proRoomReportModal';
-            modal.className = 'pro-modal';
-            modal.innerHTML = `
-                <div class="pro-modal-backdrop"></div>
-                <div class="pro-modal-card">
-                    <button class="pro-modal-close" aria-label="Close">×</button>
-                    <h3 class="pro-gm-name" style="font-size:1.2rem;">Report this ${targetType}</h3>
-                    <p class="pro-report-sub">Help keep Raconteur quiet and kind.</p>
-                    <select id="proReportReason" class="pro-field">
-                        <option value="spam">Spam or advertising</option>
-                        <option value="harassment">Harassment or abuse</option>
-                        <option value="other">Something else</option>
-                    </select>
-                    <div class="pro-report-actions">
-                        <button id="proReportCancel" class="pro-btn pro-btn-ghost">Cancel</button>
-                        <button id="proReportSubmit" class="pro-btn pro-btn-amber">Submit report</button>
-                    </div>
-                    <p id="proReportMsg" class="pro-report-msg"></p>
-                </div>`;
-            document.body.appendChild(modal);
-            modal.querySelector('.pro-modal-close')!.addEventListener('click', () => modal!.setAttribute('hidden', ''));
-            modal.querySelector('.pro-modal-backdrop')!.addEventListener('click', () => modal!.setAttribute('hidden', ''));
-        }
-        const reasonSel = document.getElementById('proReportReason') as HTMLSelectElement;
-        const msg = document.getElementById('proReportMsg')!;
-        const submitBtn = document.getElementById('proReportSubmit')!;
-        reasonSel.value = 'spam';
-        msg.textContent = '';
-        modal.removeAttribute('hidden');
-        submitBtn.onclick = async () => {
-            submitBtn.textContent = 'Sending...';
-            const { data: { session } } = await supabase.auth.getSession();
-            const { error } = await supabase.from('reports').insert({
-                reporter_id: session?.user.id || null,
-                target_type: targetType,
-                target_id: targetId,
-                reason: reasonSel.value,
-            });
-            if (error) { msg.textContent = 'Something went wrong.'; msg.style.color = '#ff6b6b'; }
-            else { msg.textContent = 'Thank you. We will look into it.'; msg.style.color = '#2ee6a8'; }
-            submitBtn.textContent = 'Submit report';
-            setTimeout(() => modal!.setAttribute('hidden', ''), 1400);
-        };
     }
 </script>
 
 <script type="application/json" id="pro-quotes-data" set:html={JSON.stringify(interludeQuotes).replace(/</g, '\u003c')} />
 
 <style>
-    /* === HERO === */
+   /* === HERO — the desk briefing (centered) === */
     .pro-hero {
-        display: grid;
-        grid-template-columns: 1.1fr 1fr;
-        min-height: 78vh;
-        align-items: center;
-        max-width: 1320px;
+        max-width: 1080px;
         margin: 0 auto;
-        padding: 3rem 1.6rem 2rem;
-        gap: 2rem;
+        padding: 3.5rem 1.6rem 2.5rem;
+        text-align: center;
     }
 
     .pro-hero-kicker {
@@ -831,44 +541,45 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
         letter-spacing: 0.24em;
         text-transform: uppercase;
         color: var(--pro-amber);
-        margin: 0 0 1.2rem;
+        margin: 0 0 1.4rem;
     }
 
     .pro-hero-headline {
         position: relative;
         display: grid;
         font-family: var(--pro-font);
-        font-size: clamp(2.6rem, 5.6vw, 4.6rem);
+        font-size: clamp(2.4rem, 5.4vw, 4.4rem);
         font-weight: 700;
-        line-height: 1.06;
+        line-height: 1.08;
         letter-spacing: -0.03em;
         color: var(--pro-text);
         margin: 0 0 1.4rem;
+        min-height: 1.2em;
     }
 
-    .pro-hero-line {
+    .pro-hero-word {
         grid-area: 1 / 1;
         display: flex;
-        flex-direction: column;
+        align-items: center;
         justify-content: center;
         opacity: 0;
-        transform: translateY(14px);
+        transform: translateY(12px);
         pointer-events: none;
-        transition: opacity 0.8s ease, transform 0.8s ease;
+        transition: opacity 0.7s ease, transform 0.7s ease;
     }
 
-    .pro-hero-line.active { opacity: 1; transform: none; pointer-events: auto; }
+    .pro-hero-word.active { opacity: 1; transform: none; pointer-events: auto; }
 
     .pro-hero-lede {
         font-family: var(--pro-font-read);
-        font-size: 1.12rem;
+        font-size: 1.1rem;
         line-height: 1.7;
         color: var(--pro-text-2);
-        max-width: 46ch;
-        margin: 0 0 2rem;
+        max-width: 52ch;
+        margin: 0 auto 2rem;
     }
 
-    .pro-hero-actions { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .pro-hero-actions { display: flex; gap: 0.7rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1.5rem; }
 
     .pro-hero-meta {
         font-size: 0.7rem;
@@ -879,52 +590,70 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
         margin: 0;
     }
 
-    /* the plate — dark frame */
-    .pro-hero-plate-side { display: flex; justify-content: center; }
+    /* filmstrip: stage + thumbnail row */
+    .pro-filmstrip { margin-top: 1rem; }
 
-    .pro-plate {
-        position: relative;
-        width: min(80%, 440px);
-        border: 1px solid var(--pro-line-hi, var(--pro-line));
-        padding: 0.8rem;
-        background: #0a0d10;
-        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 60px rgba(255, 106, 0, 0.06);
-    }
-
-    .pro-plate-stack { position: relative; width: 100%; aspect-ratio: 4 / 5; overflow: hidden; }
-
-    .pro-plate-img {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        filter: saturate(0.92) contrast(1.03);
-        opacity: 0;
-        transform: scale(1.03);
-        transition: opacity 1.2s ease, transform 8s linear;
-    }
-
-    .pro-plate-img.active { opacity: 1; transform: none; }
-
-    .pro-plate-caption {
-        display: block;
-        margin-top: 0.7rem;
+    .pro-strip-caption {
         font-size: 0.64rem;
         font-weight: 600;
         letter-spacing: 0.2em;
         text-transform: uppercase;
         color: var(--pro-amber);
+        margin: 0 0 0.9rem;
+    }
+
+    .pro-strip-stage {
+        max-width: 760px;
+        margin: 0 auto 1rem;
+        border: 1px solid var(--pro-line-hi, var(--pro-line));
+        background: #0a0d10;
+        padding: 0.6rem;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 60px rgba(255, 106, 0, 0.05);
+    }
+
+    .pro-strip-stage img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 21 / 9;
+        object-fit: cover;
+        filter: saturate(0.92) contrast(1.03);
+    }
+
+    .pro-strip-row {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        overflow-x: auto;
+        padding-bottom: 0.4rem;
+    }
+
+    .pro-strip-thumb {
+        flex: 0 0 auto;
+        width: 74px;
+        aspect-ratio: 4 / 5;
+        padding: 0;
+        border: 1px solid var(--pro-line);
+        background: #101418;
+        cursor: pointer;
+        opacity: 0.45;
+        transition: opacity 0.25s, border-color 0.25s, transform 0.25s;
+    }
+
+    .pro-strip-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .pro-strip-thumb:hover { opacity: 0.8; }
+    .pro-strip-thumb.active {
+        opacity: 1;
+        border-color: var(--pro-amber);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(255, 106, 0, 0.15);
     }
 
     @media (prefers-reduced-motion: reduce) {
-        .pro-hero-line { position: static; opacity: 1; transform: none; transition: none; }
-        .pro-hero-line:not(:first-child) { display: none; }
-        .pro-plate-img { transition: none; }
-        .pro-plate-img:not(:first-child) { display: none; }
+        .pro-hero-word { opacity: 1; transform: none; transition: none; }
+        .pro-hero-word:not(:first-child) { display: none; }
     }
 
-    /* === TICKER === */
+        /* === TICKER === */
     .pro-ticker {
         overflow: hidden;
         border-top: 1px solid var(--pro-line);
@@ -1064,19 +793,6 @@ const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.len
         background: #101418;
     }
 
-    .pro-work-reserved {
-        position: absolute;
-        top: 0.7rem;
-        right: 0.7rem;
-        font-size: 0.58rem;
-        font-weight: 700;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        color: #1a0d00;
-        background: var(--pro-amber);
-        border-radius: 999px;
-        padding: 0.22rem 0.6rem;
-    }
 
     .pro-work-body { padding: 1.15rem 1.25rem 1.2rem; display: flex; flex-direction: column; gap: 0.45rem; flex: 1; }
 
