@@ -39,6 +39,11 @@ body.plus-skin .dv-card{background:rgba(22,22,27,.94);color:#f2eee3;border:1px s
   box-shadow:0 24px 70px rgba(0,0,0,.55);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 body.pro-skin .dv-card{background:rgba(13,16,20,.94);color:#e9eef2;border:1px solid rgba(255,255,255,.14);
   box-shadow:0 24px 70px rgba(0,0,0,.6);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.dv-pick-list{display:flex;flex-direction:column;max-height:50vh;overflow-y:auto}
+.dv-pick-item{padding:.6rem .8rem;border:none;border-bottom:1px solid rgba(128,128,128,.18);background:transparent;
+  text-align:left;font:inherit;font-size:.9rem;cursor:pointer;border-radius:8px}
+.dv-pick-item:hover{background:rgba(128,128,128,.12)}
+
 /* toast */
 .dv-toast{position:fixed;left:50%;bottom:1.6rem;transform:translateX(-50%);z-index:2147483600;
   padding:.7rem 1.3rem;border-radius:999px;font-family:var(--mx-font-body,'Segoe UI',system-ui,sans-serif);
@@ -95,6 +100,35 @@ export function dvConfirm(opts: {
         document.addEventListener('keydown', onKey);
         document.body.appendChild(overlay);
         (overlay.querySelector('[data-dv="ok"]') as HTMLElement)?.focus();
+    });
+}
+
+export function dvPick(question: string, options: string[]): Promise<number | null> {
+    if (typeof document === 'undefined') return Promise.resolve(null);
+    ensureStyles();
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'dv-overlay';
+        overlay.innerHTML = `
+            <div class="dv-card" role="dialog" aria-modal="true" aria-label="${question}">
+                <h3 class="dv-title">${question}</h3>
+                <div class="dv-pick-list">
+                    ${options.map((o, i) => `<button type="button" class="dv-pick-item" data-i="${i}">${o}</button>`).join('')}
+                </div>
+            </div>`;
+        const done = (v: number | null) => {
+            overlay.remove();
+            document.removeEventListener('keydown', onKey);
+            resolve(v);
+        };
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') done(null); };
+        overlay.addEventListener('click', (e) => {
+            const t = (e.target as HTMLElement).closest('[data-i]');
+            if (t) done(Number((t as HTMLElement).dataset.i));
+            else if (e.target === overlay) done(null);
+        });
+        document.addEventListener('keydown', onKey);
+        document.body.appendChild(overlay);
     });
 }
 

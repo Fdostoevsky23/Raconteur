@@ -44,7 +44,7 @@ const navHref = {
     feed: '/max/feed',
     login: '/login',
     signup: '/signup',
-    dashboard: '/dashboard',
+    dashboard: '/max/dashboard',
     digest: '/digest',
 };
 ---
@@ -307,7 +307,7 @@ import { iconSvg } from '../lib/icons';
                 const safeName = esc(name);
                 const profileSlug = esc(name.toLowerCase().replace(/\s+/g, '-'));
                 authArea.innerHTML = `
-                    <a href="/dashboard" class="mx-auth-link">My Shelf</a>
+                    <a href="/max/dashboard" class="mx-auth-link">My Shelf</a>
                     <a href="/max/author/${profileSlug}" class="mx-hello" title="Your public writer page">Hello, ${safeName}</a>
                     <span class="mx-notif-wrap">
                         <button id="notifBell" class="mx-notif-bell" type="button" aria-label="Notifications"><Icon name="bell" size={15} /><span id="notifDot" class="mx-notif-dot" hidden></span></button>
