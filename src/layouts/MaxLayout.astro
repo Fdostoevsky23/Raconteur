@@ -126,34 +126,11 @@ const navHref = {
             </div>
         </header>
     ) : (
-        <header class="mx-glass-nav">
-            <a href="/max" class="mx-brand" aria-label="Raconteur Max home">
+        <header class="mx-inner-bar">
+            <a href="/max" class="mx-brand mx-inner-brand" aria-label="Raconteur Max home">
                 Raconteur <span class="mx-brand-max">Max</span>
             </a>
-            <nav class="mx-nav-links" aria-label="Primary">
-                <a href={navHref.stories}>Library</a>
-                <a href={navHref.feed}>Feed</a>
-                <a href={navHref.about}>About</a>
-            </nav>
-            <div class="mx-topbar-tools">
-                <div class="mx-search" id="mxSearchWrap">
-                    <input
-                        type="text"
-                        id="searchInput"
-                        placeholder="Search…"
-                        autocomplete="off"
-                        aria-label="Search stories and writers"
-                    />
-                    <span class="mx-search-icon" aria-hidden="true"><Icon name="search" size={15} /></span>
-                    <div id="searchDropdown" class="mx-search-dropdown" style="display: none;">
-                        <div id="searchResults" class="mx-search-results"></div>
-                    </div>
-                </div>
-                <div class="mx-auth" id="authArea">
-                    <a href={navHref.login} class="mx-auth-link">Log in</a>
-                    <a href={navHref.signup} class="mx-btn mx-btn-ink mx-auth-cta">Sign up</a>
-                </div>
-            </div>
+            <p class="mx-inner-tagline">Literature you want to read</p>
         </header>
     )}
 
@@ -169,7 +146,7 @@ const navHref = {
     </main>
 
     <footer class="mx-footer">
-        <p class="mx-footer-brand">Raconteur <em>Max</em> · The Editorial Split</p>
+        <p class="mx-footer-brand">Raconteur <em>Max</em></p>
         <nav class="mx-footer-links" aria-label="Footer">
             <a href="/max">Home</a>
             <a href="/max/stories">Library</a>
@@ -307,16 +284,16 @@ import { iconSvg } from '../lib/icons';
                 const safeName = esc(name);
                 const profileSlug = esc(name.toLowerCase().replace(/\s+/g, '-'));
                 authArea.innerHTML = `
-                    <a href="/max/dashboard" class="mx-auth-link">My Shelf</a>
-                    <a href="/max/author/${profileSlug}" class="mx-hello" title="Your public writer page">Hello, ${safeName}</a>
+                    <a href="/max/dashboard" class="mx-auth-pill">${iconSvg('book', 14)} My Shelf</a>
+                    <a href="/max/author/${profileSlug}" class="mx-auth-pill ghost" title="Your public writer page">${iconSvg('user', 14)} ${safeName}</a>
                     <span class="mx-notif-wrap">
-                        <button id="notifBell" class="mx-notif-bell" type="button" aria-label="Notifications"><Icon name="bell" size={15} /><span id="notifDot" class="mx-notif-dot" hidden></span></button>
+                        <button id="notifBell" class="mx-notif-bell" type="button" aria-label="Notifications">${iconSvg('bell', 15)}<span id="notifDot" class="mx-notif-dot" hidden></span></button>
                         <div id="notifPanel" class="mx-notif-panel" hidden>
                             <div class="mx-notif-head">Notifications</div>
                             <div id="notifList" class="mx-notif-list"></div>
                         </div>
                     </span>
-                    <a href="#" id="logoutBtn" class="mx-auth-link">Log out</a>`;
+                    <a href="#" id="logoutBtn" class="mx-auth-pill ghost danger">${iconSvg('logout', 14)} Log out</a>`;
                 if (user.id) initNotifications(user.id);
                 document.getElementById('logoutBtn')?.addEventListener('click', async (e) => {
                     e.preventDefault();
@@ -652,6 +629,71 @@ import { iconSvg } from '../lib/icons';
     .mx-notif-icon { color: var(--mx-vermilion); }
     .mx-notif-text { font-size: 0.82rem; flex: 1; }
     .mx-notif-time { font-size: 0.7rem; color: var(--mx-ink-faint); }
+
+    /* === INNER BRAND BAR — inner pages carry only the name + tagline === */
+    .mx-inner-bar {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        padding: 2.2rem 1rem 1.6rem;
+        border-bottom: 1px solid var(--mx-line);
+        background: var(--mx-paper);
+    }
+
+    .mx-inner-brand { font-size: 1.7rem; }
+
+    .mx-inner-tagline {
+        font-family: var(--mx-font-read);
+        font-style: italic;
+        font-size: 0.85rem;
+        color: var(--mx-ink-faint);
+        margin: 0.3rem 0 0;
+    }
+
+    /* === AUTH PILLS — icon buttons in the nav === */
+    .mx-auth-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.5rem 1.05rem;
+        border-radius: 999px;
+        background: var(--mx-ink);
+        color: var(--mx-paper);
+        font-family: var(--mx-font-body);
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: transform 0.2s var(--mx-ease), background 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .mx-auth-pill:hover { background: var(--mx-vermilion); transform: translateY(-1px); }
+
+    .mx-auth-pill.ghost {
+        background: transparent;
+        border: 1px solid var(--mx-line-strong);
+        color: var(--mx-ink);
+    }
+
+    .mx-auth-pill.ghost:hover { background: rgba(28, 25, 23, 0.06); border-color: var(--mx-ink); transform: translateY(-1px); }
+
+    .mx-auth-pill.ghost.danger:hover { background: var(--mx-vermilion); border-color: var(--mx-vermilion); color: var(--mx-paper); }
+
+    .mx-notif-bell {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.2rem;
+        height: 2.2rem;
+        background: transparent;
+        border: 1px solid var(--mx-line-strong);
+        border-radius: 50%;
+        color: var(--mx-ink);
+        cursor: pointer;
+        position: relative;
+        transition: border-color 0.2s, color 0.2s, transform 0.2s;
+    }
+
+    .mx-notif-bell:hover { border-color: var(--mx-vermilion); color: var(--mx-vermilion); transform: translateY(-1px); }
 
     /* === TOGGLE ROW === */
     .mx-toggle-row {
