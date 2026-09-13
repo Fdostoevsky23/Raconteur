@@ -729,38 +729,12 @@ main.mx-main { flex: 1; }
 .mx-notif-text { font-size: 0.82rem; flex: 1; }
 .mx-notif-time { font-size: 0.7rem; color: var(--mx-ink-faint); }
 
-/* Slim utility footer — inner pages */
-.mx-footer-slim { padding: 1.6rem 2rem; margin-top: 3rem; background: transparent; }
-
-.mx-footer-slim-row {
-    max-width: 1240px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.mx-footer-slim-brand {
-    font-family: var(--mx-font-display);
-    font-size: 1rem;
-    font-weight: 900;
-    color: var(--mx-ink);
-    text-decoration: none;
-}
-
-.mx-footer-slim-brand em { font-style: italic; color: var(--mx-vermilion); }
-
-.mx-footer-slim .mx-footer-links { margin: 0; gap: 1.1rem; }
-.mx-footer-slim .mx-fineprint { margin: 0; }
-
 /* === 8. FOOTER — giant masthead + the word rain === */
 .mx-footer {
     position: relative;
     z-index: 1;
     overflow: hidden;
-    margin-top: 7rem;
+    margin-top: 11rem;
     border-top: 1px solid var(--mx-line);
     background: var(--mx-paper-deep);
     padding: 5.5rem 2rem 3.5rem;
@@ -834,6 +808,15 @@ main.mx-main { flex: 1; }
 .mx-footer-legal a { color: var(--mx-ink-faint); text-decoration: none; }
 .mx-footer-legal a:hover { color: var(--mx-vermilion); }
 .mx-fineprint { margin-top: 1.4rem; color: var(--mx-ink-faint); font-size: 0.75rem; }
+
+/* Inner pages: the same footer, scaled down a step */
+.mx-footer-inner { margin-top: 6rem; padding: 3.8rem 2rem 2.8rem; }
+
+.mx-footer-inner .mx-footer-name { font-size: clamp(2.3rem, 5vw, 3.7rem); }
+
+.mx-footer-inner .mx-footer-tagline { font-size: clamp(0.95rem, 1.8vw, 1.15rem); }
+
+.mx-footer-inner .mx-footer-links { margin-top: 1.5rem; }
 
 /* === 9. RESPONSIVE === */
 @media (max-width: 860px) {
