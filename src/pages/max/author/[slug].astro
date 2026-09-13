@@ -89,6 +89,24 @@ if (!author) {
 
 const authorSlug = author.name.toLowerCase().replace(/\s+/g, '-');
 
+// Shelf rank — earned, never given (same tiers as classic ShelfMark)
+const shelfProse = (author as any).proseCount ?? authorProseCountFallback(authorStories);
+function authorProseCountFallback(list: any[]) {
+    return list.filter((x: any) => x.kind !== 'poem').length;
+}
+const shelfPoetry = (author as any).poetryCount ?? authorStories.filter((x: any) => x.kind === 'poem').length;
+const shelfTotal = (author as any).workCount || authorStories.length;
+function getShelfRank(pr: number, po: number, t: number): { glyph: string; label: string } | null {
+    if (t >= 75) return { glyph: '❖❖', label: 'The Archive' };
+    if (t >= 40) return { glyph: '❖', label: 'Omnibus' };
+    const m = Math.max(pr, po);
+    if (m >= 20) return { glyph: '✦', label: 'Collection' };
+    if (m >= 10) return { glyph: '✦', label: 'Volume' };
+    if (m >= 5) return { glyph: '✦', label: 'Pamphlet' };
+    return null;
+}
+const shelfRank = getShelfRank(shelfProse, shelfPoetry, shelfTotal);
+
 // Books (DB authors only)
 let authorBooks: any[] = [];
 if (isDbAuthor && author.userId) {
@@ -143,6 +161,11 @@ if (isDbAuthor && author.userId) {
                 {author.name}
                 {(author as any).verified && <span class="mx-verified" title="Verified writer">✦</span>}
             </h1>
+            {shelfRank && (
+                <p class="mx-shelf-rank" title={`${shelfProse} prose · ${shelfPoetry} poetry`}>
+                    <span class="mx-shelf-rank-glyph">{shelfRank.glyph}</span> {shelfRank.label}
+                </p>
+            )}
             {(author as any).isAdmin && <p class="mx-admin-line">Admin's Account</p>}
 
             {(author.xUrl || author.instagramUrl || author.facebookUrl || author.publicEmail) && (
@@ -581,6 +604,20 @@ if (isDbAuthor && author.userId) {
         margin-left: 0.35rem;
         text-shadow: 0 0 14px rgba(216, 52, 28, 0.45);
     }
+
+    .mx-shelf-rank {
+        margin: 0.5rem 0 0;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--mx-brass);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .mx-shelf-rank-glyph { font-size: 0.9rem; color: var(--mx-brass); }
 
     .mx-admin-line {
         margin: 0.4rem 0 0;

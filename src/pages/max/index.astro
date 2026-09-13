@@ -60,6 +60,130 @@ const moods = [
     { icon: 'home', name: 'Homeward', query: 'home' },
     { icon: 'sparkle', name: 'Wonder', query: 'light' },
 ];
+
+// ===== Featured author of the day (admin spotlight + two rotating writers) =====
+import giants from '../../data/giants.json';
+
+const adminAuthor = {
+    name: 'Nzan Kikon',
+    avatarInitials: 'NK',
+    bio: 'Nzan Kikon is a writer based in Kohima, Nagaland. He is the author of The Starry Night, The Unlikely Indians, Loving Lauren & Lauren and Raindrops of Dostoevsky. He enjoys reading, gazing at the night sky, spending time alone, and watching sci-fi movies. His personal heroes include Dostoevsky, Camus, Von Neumann, Van Gogh, Carl Jung, and Carl Sagan. A humanist and existentialist at heart, Nzan immerses himself in a variety of fields for pleasure, with his top five being science particularly physics and cosmology, philosophy, psychology, human and artificial intelligence, and mythology.',
+    favoriteLine: 'Remember that I am thy creature; I ought to be thy Adam, but I am rather the fallen angel, whom thou drivest from joy for no misdeed. Everywhere I see bliss, from which I alone am irrevocably excluded. I was benevolent and good, misery made me a fiend. Make me happy, and I shall again be virtuous.',
+    featuredStorySlug: 'poets-from-tomorrow',
+    featuredStoryTitle: 'Poets From Tomorrow',
+    favoriteBook: 'Frankenstein',
+};
+
+const { data: qvProfile } = await supabase.from('profiles').select('bio, book_recs').eq('pen_name', 'Quite Verbose').maybeSingle();
+const { data: mwProfile } = await supabase.from('profiles').select('bio, book_recs').eq('pen_name', 'Mr. Wordy').maybeSingle();
+
+const resolveFeatured = (name: string, slug: string, title: string) => {
+    if (dbStories.some((x) => x.slug === slug) || stories.some((x: any) => x.slug === slug)) {
+        return { featuredStorySlug: slug, featuredStoryTitle: title };
+    }
+    const own = dbStories.find((x) => x.author === name);
+    if (own) return { featuredStorySlug: own.slug, featuredStoryTitle: own.title };
+    return { featuredStorySlug: null as string | null, featuredStoryTitle: title };
+};
+
+const rotatingWriters = [
+    {
+        name: 'Quite Verbose',
+        role: 'Community Writer',
+        bio: qvProfile?.bio || 'I am Qverbose and I love reading and writing.',
+        avatarUrl: '/avatars/quite-verbose.jpg',
+        avatarInitials: 'QV',
+        location: 'The Raconteur Community',
+        joinedDate: 'August 2026',
+        storyCount: 1,
+        totalWords: 500,
+        favoriteLine: 'What if tomorrow makes today?',
+        ...resolveFeatured('Quite Verbose', 'does-he-know', 'Does He Know?'),
+        favoriteBook: qvProfile?.book_recs?.[0] || 'Brave New World',
+    },
+    {
+        name: 'Mr. Wordy',
+        role: 'Community Writer',
+        bio: mwProfile?.bio || 'A writer who believes in the power of words to change the world.',
+        avatarUrl: '/avatars/mr-wordy.jpg',
+        avatarInitials: 'MW',
+        location: 'The Raconteur Community',
+        joinedDate: 'August 2026',
+        storyCount: 3,
+        totalWords: 2500,
+        favoriteLine: 'The city slept, but I did not.',
+        ...resolveFeatured('Mr. Wordy', 'tragedies-in-silence', 'Tragedies in Silence'),
+        favoriteBook: mwProfile?.book_recs?.[0] || 'Crime and Punishment',
+    },
+];
+
+// ===== The bookshelf today: editor's books + a community writer's books, daily rotation =====
+import authorsData from '../../data/authors.json';
+const altarAuthor = (authorsData as any[]).find((a: any) => a.name === 'Nzan Kikon') || (authorsData as any[])[0];
+const dayIndex = Math.floor(Date.now() / 86400000);
+const adminSlug = String(altarAuthor.name).toLowerCase().replace(/[ ]/g, '-');
+const adminBooks = (altarAuthor.books as any[]) || [];
+
+const { data: allBooks } = await supabase.from('books').select('title, cover_url, owner_id');
+const booksByOwner: Record<string, any[]> = {};
+(allBooks || []).forEach((b: any) => {
+    (booksByOwner[b.owner_id] = booksByOwner[b.owner_id] || []).push(b);
+});
+const ownerIds = Object.keys(booksByOwner);
+let communitySlots: any[] = [];
+if (ownerIds.length > 0) {
+    const pickedOwner = ownerIds[dayIndex % ownerIds.length];
+    const { data: prof } = await supabase.from('profiles').select('pen_name').eq('user_id', pickedOwner).maybeSingle();
+    const cName = prof?.pen_name || 'A Raconteur writer';
+    const cSlug = cName.toLowerCase().replace(/[ ]/g, '-');
+    communitySlots = booksByOwner[pickedOwner].slice(0, 3).map((b: any) => ({ ...b, authorName: cName, authorSlug: cSlug }));
+}
+const communityTitles = new Set(communitySlots.map((b: any) => String(b.title || '').toLowerCase().trim()));
+let adminPick: any = null;
+for (let i = 0; i < adminBooks.length; i++) {
+    const candidate = adminBooks[(dayIndex + i) % adminBooks.length];
+    if (!communityTitles.has(String(candidate.title || '').toLowerCase().trim())) {
+        adminPick = candidate;
+        break;
+    }
+}
+if (!adminPick && adminBooks.length) adminPick = adminBooks[dayIndex % adminBooks.length];
+const adminSlot = adminPick ? [{ ...adminPick, authorName: altarAuthor.name, authorSlug: adminSlug }] : [];
+const mergedBooks = communitySlots.length
+    ? [...adminSlot, ...communitySlots]
+    : adminBooks.map((b: any) => ({ ...b, authorName: altarAuthor.name, authorSlug: adminSlug }));
+const seenBooks = new Set<string>();
+const shelfBooks: any[] = mergedBooks.filter((b: any) => {
+    const t = String(b.title || '').toLowerCase().trim();
+    if (seenBooks.has(t)) return false;
+    seenBooks.add(t);
+    return true;
+});
+const shelfKicker = communitySlots.length ? "Today's featured shelf" : "From the editor's bookshelf";
+
+// ===== Literary giants: three featured per day =====
+const giantsFirst = (dayOfYear * 3) % giants.length;
+const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.length], giants[(giantsFirst + 2) % giants.length]];
+
+// ===== Quote interlude =====
+const interludeQuotes = [
+    { text: 'A reader lives a thousand lives before he dies. The man who never reads lives only one.', cite: 'George R.R. Martin' },
+    { text: 'There is no friend as loyal as a book.', cite: 'Ernest Hemingway' },
+    { text: 'A word after a word after a word is power.', cite: 'Margaret Atwood' },
+    { text: 'We read to know we are not alone.', cite: 'William Nicholson' },
+    { text: 'Stories are the creative conversion of life itself into a more powerful, clearer, more meaningful experience.', cite: 'Robert McKee' },
+    { text: 'One must always be careful of books, and what is inside them, for words have the power to change us.', cite: 'Cassandra Clare' },
+    { text: 'I have always imagined that Paradise will be a kind of library.', cite: 'Jorge Luis Borges' },
+    { text: 'The reading of all good books is like a conversation with the finest minds of past centuries.', cite: 'Rene Descartes' },
+    { text: 'Books are a uniquely portable magic.', cite: 'Stephen King' },
+    { text: 'Until I feared I would lose it, I never loved to read. One does not love breathing.', cite: 'Harper Lee' },
+    { text: 'A room without books is like a body without a soul.', cite: 'Marcus Tullius Cicero' },
+    { text: 'So many books, so little time.', cite: 'Frank Zappa' },
+    { text: 'Reading is essential for those who seek to rise above the ordinary.', cite: 'Jim Rohn' },
+    { text: 'The world was hers for the reading.', cite: 'Betty Smith' },
+    { text: 'Literature is the most agreeable way of ignoring life.', cite: 'Fernando Pessoa' },
+];
+const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.length)];
 ---
 
 <MaxLayout title="Raconteur Max · The Editorial Split" description="Literature you want to read. The Raconteur Max edition.">
@@ -76,7 +200,7 @@ const moods = [
             </p>
             <div class="mx-hero-actions">
                 <a href="/max/stories" class="mx-btn mx-btn-ink">Enter the library</a>
-                <a href="/submit" class="mx-btn mx-btn-ghost">Publish a story</a>
+                <a href="/max/submit" class="mx-btn mx-btn-ghost">Publish a story</a>
             </div>
             <p class="mx-hero-meta">
                 {stories.length} works · {totalWords.toLocaleString()} words · EST. 2026
@@ -108,7 +232,7 @@ const moods = [
                 {shelf.map((s: any, i: number) => (
                     <li>
                         <a
-                            href={`/story/${s.slug}`}
+                            href={`/max/story/${s.slug}`}
                             class="mx-shelf-item"
                             data-plate={s.cover || `/hero/${(i % heroImageCount) + 1}.jpg`}
                             data-genre={s.genre}
@@ -152,11 +276,11 @@ const moods = [
                 <blockquote class="mx-verse-quote">
                     “{verse[0].excerpt}”
                 </blockquote>
-                <p class="mx-verse-cite">from <a href={`/story/${verse[0].slug}`} class="mx-ulink">{verse[0].title}</a> by {verse[0].author}</p>
+                <p class="mx-verse-cite">from <a href={`/max/story/${verse[0].slug}`} class="mx-ulink">{verse[0].title}</a> by {verse[0].author}</p>
             </div>
             <div class="mx-split-side mx-verse-list">
                 {verse.slice(0, 3).map((v: any) => (
-                    <a href={`/story/${v.slug}`} class="mx-verse-item">
+                    <a href={`/max/story/${v.slug}`} class="mx-verse-item">
                         <span class="mx-verse-mark">✦</span>
                         <span>
                             <strong>{v.title}</strong>
@@ -187,11 +311,11 @@ const moods = [
     {/* ===== STATS BAND — the colophon ===== */}
     <section class="mx-stats-band">
         <div class="mx-stat" data-mx-reveal>
-            <span class="mx-stat-num">{stories.length}</span>
+            <span class="mx-stat-num" data-target={stories.length}>{stories.length}</span>
             <span class="mx-stat-label">works published</span>
         </div>
         <div class="mx-stat" data-mx-reveal style="--mx-reveal-delay: 0.08s">
-            <span class="mx-stat-num">{totalWords.toLocaleString()}</span>
+            <span class="mx-stat-num" data-target={totalWords}>{totalWords.toLocaleString()}</span>
             <span class="mx-stat-label">words written</span>
         </div>
         <div class="mx-stat" data-mx-reveal style="--mx-reveal-delay: 0.16s">
@@ -213,7 +337,434 @@ const moods = [
             ))}
         </div>
     </section>
+
+    {/* ===== FEATURED AUTHORS OF THE DAY — the trio ===== */}
+    <section class="mx-featured" data-mx-reveal>
+        <hr class="mx-rule-strong" data-mx-reveal="rule" />
+        <p class="mx-eyebrow mx-featured-eyebrow">04 · Featured writers of the day</p>
+        <div class="mx-trio">
+            <article class="mx-trio-card mx-trio-admin">
+                <div class="mx-trio-head">
+                    <span class="mx-avatar mx-trio-avatar" style="background: linear-gradient(135deg, #3d5a3c, #a8763e);">{adminAuthor.avatarInitials}</span>
+                    <div>
+                        <h3 class="mx-trio-name">{adminAuthor.name} <span class="mx-trio-admin-tag">Editor</span></h3>
+                        <p class="mx-trio-loc">Kohima, Nagaland</p>
+                    </div>
+                </div>
+                <p class="mx-trio-bio">{adminAuthor.bio}</p>
+                <p class="mx-trio-line">“{adminAuthor.favoriteLine}”</p>
+                <div class="mx-trio-meta">
+                    <span><Icon name="book" size={13} /> Favorite book: {adminAuthor.favoriteBook}</span>
+                    {adminAuthor.featuredStorySlug && <a href={`/max/story/${adminAuthor.featuredStorySlug}`} class="mx-ulink">Read their featured story</a>}
+                </div>
+            </article>
+            {rotatingWriters.map((w: any) => (
+                <article class="mx-trio-card">
+                    <div class="mx-trio-head">
+                        <span class="mx-avatar mx-trio-avatar" style="background: linear-gradient(135deg, #4a6b6b, #6b8a8a);">{w.name === 'Mr. Wordy' ? 'MW' : 'QV'}</span>
+                        <div>
+                            <h3 class="mx-trio-name">{w.name}</h3>
+                            <p class="mx-trio-loc">{w.location} · Joined {w.joinedDate}</p>
+                        </div>
+                    </div>
+                    <p class="mx-trio-bio">{w.bio}</p>
+                    <p class="mx-trio-line">“{w.favoriteLine}”</p>
+                    <div class="mx-trio-meta">
+                        <span><Icon name="book" size={13} /> Favorite book: {w.favoriteBook}</span>
+                        <span><Icon name="edit" size={13} /> {w.totalWords.toLocaleString()} words written</span>
+                        {w.featuredStorySlug && <a href={`/max/story/${w.featuredStorySlug}`} class="mx-ulink">Read their featured story</a>}
+                    </div>
+                </article>
+            ))}
+        </div>
+    </section>
+
+    {/* ===== THE BOOKSHELF + LITERARY GIANTS — the altar ===== */}
+    <section class="mx-altar">
+        <div class="mx-altar-books" data-mx-reveal>
+            <p class="mx-eyebrow">05 · {shelfKicker}</p>
+            <h2 class="mx-display mx-altar-title">On the bookshelf today</h2>
+            <div class="mx-altar-shelf">
+                {shelfBooks.map((b: any) => (
+                    <a href={`/max/author/${b.authorSlug}`} class="mx-altar-book" title={`${b.title} by ${b.authorName} · visit their page`}>
+                        {(b.cover_url || b.cover) ? (
+                            <img src={b.cover_url || b.cover} alt={`Cover of ${b.title}`} loading="lazy" />
+                        ) : (
+                            <div class="mx-altar-book-empty">{b.title}</div>
+                        )}
+                        <span class="mx-altar-book-title">{b.title}</span>
+                        <span class="mx-altar-book-author">{b.authorName}</span>
+                    </a>
+                ))}
+            </div>
+        </div>
+        <div class="mx-altar-giants" data-mx-reveal style="--mx-reveal-delay: 0.1s">
+            <p class="mx-eyebrow">The Eternal Canon</p>
+            <h3 class="mx-giants-title">Know your literary giants</h3>
+            <div class="mx-giants-row">
+                {todaysGiants.map((g: any, i: number) => (
+                    <button class="mx-giant" data-giant={i}>
+                        <span class="mx-giant-portrait"><img src={g.portrait} alt={`Portrait of ${g.name}`} loading="lazy" /></span>
+                        <span class="mx-giant-name">{g.name}</span>
+                        <span class="mx-giant-years">{g.born} – {g.died}</span>
+                    </button>
+                ))}
+            </div>
+        </div>
+    </section>
+
+    {/* Giants details modal */}
+    <div id="mxGiantModal" class="mx-modal" hidden>
+        <div class="mx-modal-backdrop"></div>
+        <div class="mx-modal-card mx-gm-card">
+            <button class="mx-modal-close" aria-label="Close">×</button>
+            <h4 class="mx-gm-name"></h4>
+            <p class="mx-gm-years"></p>
+            <p class="mx-gm-bio"></p>
+            <div class="mx-gm-grid">
+                <div><span class="mx-gm-label">Magnum Opus</span><p class="mx-gm-opus"></p></div>
+                <div><span class="mx-gm-label">Active Years</span><p class="mx-gm-years-inline"></p></div>
+            </div>
+            <span class="mx-gm-label">Books</span>
+            <p class="mx-gm-books"></p>
+            <span class="mx-gm-label">A Fact Few Know</span>
+            <p class="mx-gm-fact"></p>
+            <blockquote class="mx-gm-line"></blockquote>
+        </div>
+    </div>
+
+    {/* ===== QUOTE INTERLUDE ===== */}
+    <section class="mx-interlude" data-mx-reveal>
+        <blockquote>
+            <p id="mxQuote">{firstQuote.text}</p>
+            <cite id="mxCite">— {firstQuote.cite}</cite>
+        </blockquote>
+    </section>
+
+    {/* ===== THE READING ROOM ===== */}
+    <section class="mx-room" data-mx-reveal>
+        <hr class="mx-rule" data-mx-reveal="rule" />
+        <div class="mx-room-head">
+            <p class="mx-eyebrow">06 · From the community</p>
+            <h2 class="mx-display mx-room-title">The Reading Room</h2>
+        </div>
+        <div class="mx-room-split">
+            <div class="mx-room-half">
+                <h3 class="mx-room-half-title">Whispers from the Shelf</h3>
+                <p class="mx-room-half-sub">Short thoughts, passing through. Gone in 7 days.</p>
+                <div id="whispersList" class="mx-notes-list"></div>
+                <form id="whisperForm" class="mx-note-form">
+                    <input type="text" id="whisperName" class="mx-field" placeholder="Your name (optional: leave blank for a random visitor name)" maxlength="40" />
+                    <textarea id="whisperInput" class="mx-field" rows="2" maxlength="140" placeholder="Share a whisper…"></textarea>
+                    <span id="whisperHint" class="mx-note-hint"></span>
+                    <button type="submit" class="mx-btn mx-btn-ghost mx-note-submit">Post Whisper</button>
+                </form>
+            </div>
+            <div class="mx-room-half">
+                <h3 class="mx-room-half-title">Notes Left Behind</h3>
+                <p class="mx-room-half-sub">Longer thoughts, gratitude, questions. Kept for 30 days.</p>
+                <div id="notesList" class="mx-notes-list"></div>
+                <form id="noteForm" class="mx-note-form">
+                    <input type="text" id="noteName" class="mx-field" placeholder="Your name (optional: leave blank for a random visitor name)" maxlength="40" />
+                    <textarea id="noteInput" class="mx-field" rows="3" maxlength="500" placeholder="Leave a note…"></textarea>
+                    <span id="noteHint" class="mx-note-hint"></span>
+                    <button type="submit" class="mx-btn mx-btn-ghost mx-note-submit">Post Note</button>
+                </form>
+            </div>
+        </div>
+    </section>
 </MaxLayout>
+
+<script type="application/json" id="giants-data" set:html={JSON.stringify(todaysGiants).replace(/</g, '\u003c')} />
+<script type="application/json" id="mx-quotes-data" set:html={JSON.stringify(interludeQuotes).replace(/</g, '\u003c')} />
+
+<script>
+    // Giants modal — glass
+    import { supabase } from '../../lib/supabase';
+    import { dvToast } from '../../lib/dialog';
+    import { iconSvg } from '../../lib/icons';
+    import { esc } from '../../lib/escape';
+
+    const giantsData = JSON.parse(document.getElementById('giants-data')?.textContent || '[]');
+    const giantModal = document.getElementById('mxGiantModal');
+    function fillGiant(i) {
+        const g = giantsData[i];
+        if (!g || !giantModal) return;
+        giantModal.querySelector('.mx-gm-name').textContent = g.name;
+        giantModal.querySelector('.mx-gm-years').textContent = `${g.born} – ${g.died} · Active ${g.active}`;
+        giantModal.querySelector('.mx-gm-bio').textContent = g.bio;
+        giantModal.querySelector('.mx-gm-opus').textContent = g.magnumOpus;
+        giantModal.querySelector('.mx-gm-books').textContent = g.books.join(' · ');
+        giantModal.querySelector('.mx-gm-fact').textContent = g.unknownFact;
+        giantModal.querySelector('.mx-gm-line').textContent = '"' + g.greatestLine + '"';
+    }
+    document.querySelectorAll('.mx-giant').forEach((tile, i) => {
+        tile.addEventListener('click', () => {
+            fillGiant(i);
+            giantModal?.removeAttribute('hidden');
+            document.body.style.overflow = 'hidden';
+        });
+    });
+    function closeGiant() {
+        giantModal?.setAttribute('hidden', '');
+        document.body.style.overflow = '';
+    }
+    giantModal?.querySelector('.mx-modal-close')?.addEventListener('click', closeGiant);
+    giantModal?.addEventListener('click', (e) => { if (e.target === giantModal) closeGiant(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGiant(); });
+</script>
+
+<script>
+    // Quote interlude — rotates every 8s
+    const quotes = JSON.parse(document.getElementById('mx-quotes-data')?.textContent || '[]');
+    const quoteEl = document.getElementById('mxQuote');
+    const citeEl = document.getElementById('mxCite');
+    if (quoteEl && citeEl && quotes.length > 1) {
+        let qIndex = Math.floor(Math.random() * quotes.length);
+        setInterval(() => {
+            qIndex = (qIndex + 1) % quotes.length;
+            quoteEl.style.opacity = '0';
+            citeEl.style.opacity = '0';
+            setTimeout(() => {
+                quoteEl.textContent = quotes[qIndex].text;
+                citeEl.textContent = '\u2014 ' + quotes[qIndex].cite;
+                quoteEl.style.opacity = '1';
+                citeEl.style.opacity = '1';
+            }, 600);
+        }, 8000);
+    }
+
+    // Stats count-up when scrolled into view
+    const statNums = document.querySelectorAll('.mx-stats-band .mx-stat-num[data-target]');
+    if ('IntersectionObserver' in window && statNums.length) {
+        const statsIO = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                const el = entry.target;
+                const target = parseInt(el.dataset.target || '0', 10);
+                const start = performance.now();
+                const tick = (now) => {
+                    const progress = Math.min((now - start) / 1400, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    el.textContent = Math.round(target * eased).toLocaleString();
+                    if (progress < 1) requestAnimationFrame(tick);
+                };
+                requestAnimationFrame(tick);
+                statsIO.unobserve(el);
+            });
+        }, { threshold: 0.5 });
+        statNums.forEach((el) => statsIO.observe(el));
+    }
+</script>
+
+<script>
+    // The Reading Room — whispers + notes (faithful clone of classic)
+    import { supabase } from '../../lib/supabase';
+    import { dvToast } from '../../lib/dialog';
+    import { iconSvg } from '../../lib/icons';
+    import { esc } from '../../lib/escape';
+
+    function timeAgo(iso) {
+        const diff = Date.now() - new Date(iso).getTime();
+        const m = Math.floor(diff / 60000);
+        if (m < 1) return 'just now';
+        if (m < 60) return m + 'm ago';
+        const h = Math.floor(m / 60);
+        if (h < 24) return h + 'h ago';
+        return Math.floor(h / 24) + 'd ago';
+    }
+
+    const BLOCKED_WORDS = ['fuck','shit','ass','bitch','cunt','dick','pussy','nigger','faggot','retard'];
+    function isVulgar(text) {
+        const words = (text.toLowerCase().match(/[a-z']+/g) || []);
+        return BLOCKED_WORDS.some(w => words.includes(w));
+    }
+
+    const VISITOR_NAMES = ['Wandering Reader','Quiet Guest','Night Owl','Book Wanderer','Shelf Browser','Page Turner','Ink Dreamer','Story Seeker'];
+
+    async function loadNotes(type, listId) {
+        const { data: notes } = await supabase
+            .from('community_notes')
+            .select('*')
+            .eq('note_type', type)
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: true });
+        const list = document.getElementById(listId);
+        if (!notes || notes.length === 0) {
+            list.innerHTML = `<p class="mx-notes-empty">No ${type === 'whisper' ? 'whispers' : 'notes'} yet. Be the first.</p>`;
+            return;
+        }
+        const byParent = {};
+        notes.forEach(n => {
+            const key = n.parent_id || 'root';
+            (byParent[key] = byParent[key] || []).push(n);
+        });
+        const renderNote = (n, isReply) => {
+            const replies = (byParent[n.id] || []).map(r => renderNote(r, true)).join('');
+            const replyBtn = (!isReply && type === 'note')
+                ? `<button class="mx-note-reply" data-id="${esc(n.id)}" data-name="${esc(n.display_name)}">Reply</button>`
+                : '';
+            const reportBtn = `<button class="mx-note-report" data-id="${esc(n.id)}" data-type="${type}" aria-label="Report">${iconSvg('flag', 12)}</button>`;
+            return `
+                <div class="mx-note-card ${isReply ? 'reply' : ''}" data-id="${esc(n.id)}">
+                    <p class="mx-note-body">${esc(n.body)}</p>
+                    <div class="mx-note-meta">
+                        <span class="mx-note-author">\u2014 ${esc(n.display_name)}</span>
+                        <span class="mx-note-time">${timeAgo(n.created_at)}</span>
+                        ${replyBtn}${reportBtn}
+                    </div>
+                    ${replies ? `<div class="mx-note-replies">${replies}</div>` : ''}
+                </div>`;
+        };
+        const topLevel = (byParent['root'] || []).reverse();
+        list.innerHTML = topLevel.map(n => renderNote(n, false)).join('');
+        list.querySelectorAll('.mx-note-report').forEach(btn => {
+            btn.addEventListener('click', () => openReportModal(btn.dataset.id, btn.dataset.type));
+        });
+        if (type === 'note') {
+            list.querySelectorAll('.mx-note-reply').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const noteId = btn.dataset.id;
+                    const name = btn.dataset.name;
+                    const input = document.getElementById('noteInput');
+                    input.value = `@${name} `;
+                    input.focus();
+                    input.dataset.replyTo = noteId;
+                    const hint = document.getElementById('noteHint');
+                    if (hint) hint.textContent = 'Replying. Post to send.';
+                });
+            });
+        }
+    }
+
+    async function postNote(type, inputId, listId) {
+        const input = document.getElementById(inputId);
+        const body = input.value.trim();
+        if (!body) return false;
+        if (isVulgar(body)) {
+            dvToast('Please keep it kind. Raconteur is a quiet place.');
+            return false;
+        }
+        const nameEl = document.getElementById(type === 'whisper' ? 'whisperName' : 'noteName');
+        const displayName = (nameEl && nameEl.value.trim()) ? nameEl.value.trim()
+            : (type === 'whisper' ? 'Anonymous' : VISITOR_NAMES[Math.floor(Math.random() * VISITOR_NAMES.length)]);
+        const days = type === 'whisper' ? 7 : 30;
+        const payload = {
+            note_type: type,
+            body,
+            display_name: displayName,
+            expires_at: new Date(Date.now() + days * 86400000).toISOString(),
+        };
+        const parentId = input.dataset.replyTo || null;
+        if (parentId) payload.parent_id = parentId;
+        const { error } = await supabase.from('community_notes').insert(payload);
+        if (error) { console.error('postNote error:', error); dvToast('Something went wrong. Please try again.'); return false; }
+        delete input.dataset.replyTo;
+        const hint = document.getElementById(type === 'whisper' ? 'whisperHint' : 'noteHint');
+        if (hint) hint.textContent = '';
+        input.value = '';
+        if (nameEl) nameEl.value = '';
+        loadNotes(type, listId);
+        return true;
+    }
+
+    loadNotes('whisper', 'whispersList');
+    loadNotes('note', 'notesList');
+
+    let lastWhisper = 0;
+    const WHISPER_COOLDOWN = 15000;
+    document.getElementById('whisperForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const now = Date.now();
+        const btn = document.querySelector('#whisperForm button[type="submit"]');
+        const hint = document.getElementById('whisperHint');
+        if (now - lastWhisper < WHISPER_COOLDOWN) {
+            const wait = Math.ceil((WHISPER_COOLDOWN - (now - lastWhisper)) / 1000);
+            if (hint) hint.textContent = `Wait ${wait}s before another whisper.`;
+            return;
+        }
+        if (btn) { btn.disabled = true; btn.textContent = 'Wait a moment\u2026'; }
+        const ok = await postNote('whisper', 'whisperInput', 'whispersList');
+        if (ok) {
+            lastWhisper = now;
+            setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = 'Post Whisper'; } if (hint) hint.textContent = ''; }, WHISPER_COOLDOWN);
+        } else {
+            if (btn) { btn.disabled = false; btn.textContent = 'Post Whisper'; }
+        }
+    });
+
+    let lastNote = 0;
+    const NOTE_COOLDOWN = 15000;
+    document.getElementById('noteForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const now = Date.now();
+        const btn = document.querySelector('#noteForm button[type="submit"]');
+        const hint = document.getElementById('noteHint');
+        if (now - lastNote < NOTE_COOLDOWN) {
+            const wait = Math.ceil((NOTE_COOLDOWN - (now - lastNote)) / 1000);
+            if (hint) hint.textContent = `Wait ${wait}s before another note.`;
+            return;
+        }
+        if (btn) { btn.disabled = true; btn.textContent = 'Wait a moment\u2026'; }
+        const ok = await postNote('note', 'noteInput', 'notesList');
+        if (ok) {
+            lastNote = now;
+            setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = 'Post Note'; } if (hint) hint.textContent = ''; }, NOTE_COOLDOWN);
+        } else {
+            if (btn) { btn.disabled = false; btn.textContent = 'Post Note'; }
+        }
+    });
+
+    // Report modal — glass
+    function openReportModal(targetId, targetType) {
+        let modal = document.getElementById('mxRoomReportModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'mxRoomReportModal';
+            modal.className = 'mx-modal';
+            modal.innerHTML = `
+                <div class="mx-modal-backdrop"></div>
+                <div class="mx-modal-card">
+                    <button class="mx-modal-close" aria-label="Close">×</button>
+                    <h3 class="mx-modal-title">Report this ${targetType}</h3>
+                    <p class="mx-report-sub">Help keep Raconteur quiet and kind.</p>
+                    <select id="mxReportReason" class="mx-field">
+                        <option value="spam">Spam or advertising</option>
+                        <option value="harassment">Harassment or abuse</option>
+                        <option value="other">Something else</option>
+                    </select>
+                    <div class="mx-report-actions">
+                        <button id="mxReportCancel" class="mx-btn mx-btn-ghost">Cancel</button>
+                        <button id="mxReportSubmit" class="mx-btn mx-btn-ink">Submit report</button>
+                    </div>
+                    <p id="mxReportMsg" class="mx-report-msg"></p>
+                </div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('.mx-modal-close').addEventListener('click', () => modal.setAttribute('hidden', ''));
+            modal.querySelector('.mx-modal-backdrop').addEventListener('click', () => modal.setAttribute('hidden', ''));
+        }
+        const reasonSel = document.getElementById('mxReportReason');
+        const msg = document.getElementById('mxReportMsg');
+        const submitBtn = document.getElementById('mxReportSubmit');
+        reasonSel.value = 'spam';
+        msg.textContent = '';
+        modal.removeAttribute('hidden');
+        submitBtn.onclick = async () => {
+            submitBtn.textContent = 'Sending...';
+            const { data: { session } } = await supabase.auth.getSession();
+            const { error } = await supabase.from('reports').insert({
+                reporter_id: session?.user.id || null,
+                target_type: targetType,
+                target_id: targetId,
+                reason: reasonSel.value,
+            });
+            if (error) { msg.textContent = 'Something went wrong.'; msg.style.color = '#b3261e'; }
+            else { msg.textContent = 'Thank you. We will look into it.'; msg.style.color = '#2e7d32'; }
+            submitBtn.textContent = 'Submit report';
+            setTimeout(() => modal.setAttribute('hidden', ''), 1400);
+        };
+    }
+</script>
 
 <script>
     // Split shelf — hover/focus a title and its plate crossfades into the frame.
@@ -531,5 +1082,156 @@ const moods = [
         .mx-verse-list { padding: 0 1.4rem 2.6rem; }
         .mx-letter { padding: 3rem 1.4rem 2.4rem; }
     }
-</style>
+
+    /* === FEATURED WRITERS TRIO === */
+    .mx-featured { padding: 4rem clamp(1.4rem, 5vw, 5rem) 1rem; }
+    .mx-featured-eyebrow { margin: 2rem 0 1.6rem; }
+    .mx-trio { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.4rem; }
+    .mx-trio-card {
+        border: 1px solid var(--mx-line);
+        background: #fffdf9;
+        padding: 1.8rem 1.6rem;
+        display: flex; flex-direction: column; gap: 1rem;
+        transition: transform 0.35s var(--mx-ease), box-shadow 0.35s var(--mx-ease);
+    }
+    .mx-trio-card:hover { transform: translateY(-6px); box-shadow: 0 22px 60px rgba(28, 25, 23, 0.12); }
+    .mx-trio-admin { border-top: 3px solid var(--mx-vermilion); }
+    .mx-trio-head { display: flex; align-items: center; gap: 0.9rem; }
+    .mx-trio-avatar { width: 56px; height: 56px; font-size: 1.2rem; background: linear-gradient(135deg, var(--mx-vermilion), var(--mx-vermilion-deep)); }
+    .mx-trio-name { font-family: var(--mx-font-display); font-weight: 900; font-size: 1.15rem; color: var(--mx-ink); margin: 0; }
+    .mx-trio-admin-tag {
+        font-family: var(--mx-font-body); font-size: 0.6rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+        background: var(--mx-vermilion); color: var(--mx-paper); border-radius: 999px; padding: 0.14rem 0.55rem; vertical-align: middle;
+    }
+    .mx-trio-loc { font-size: 0.74rem; color: var(--mx-ink-faint); margin: 0.2rem 0 0; }
+    .mx-trio-bio {
+        font-family: var(--mx-font-read); font-size: 0.92rem; line-height: 1.65; color: var(--mx-ink-soft);
+        margin: 0; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .mx-trio-line {
+        font-family: var(--mx-font-read); font-style: italic; font-size: 0.9rem; line-height: 1.6; color: var(--mx-ink);
+        border-left: 2px solid var(--mx-vermilion); padding-left: 0.9rem; margin: 0;
+        display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .mx-trio-meta { display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem; color: var(--mx-ink-faint); border-top: 1px solid var(--mx-line); padding-top: 0.9rem; margin-top: auto; }
+    .mx-trio-meta span { display: inline-flex; align-items: center; gap: 0.45rem; }
+    .mx-trio-meta a { font-weight: 600; font-size: 0.84rem; }
+
+    /* === ALTAR: BOOKSHELF + GIANTS === */
+    .mx-altar {
+        display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem;
+        padding: 4rem clamp(1.4rem, 5vw, 5rem);
+        border-top: 1px solid var(--mx-line);
+        background: var(--mx-paper-deep);
+    }
+    .mx-altar-title { font-size: clamp(1.8rem, 3.4vw, 2.6rem); margin: 0.9rem 0 1.8rem; }
+    .mx-altar-shelf { display: flex; gap: 1.4rem; flex-wrap: wrap; }
+    .mx-altar-book {
+        display: flex; flex-direction: column; gap: 0.45rem; width: 132px;
+        text-decoration: none; color: var(--mx-ink);
+        transition: transform 0.35s var(--mx-ease);
+    }
+    .mx-altar-book:hover { transform: translateY(-6px); }
+    .mx-altar-book img {
+        width: 132px; height: 190px; object-fit: cover; display: block;
+        border: 1px solid var(--mx-line-strong); box-shadow: 0 14px 34px rgba(28, 25, 23, 0.16);
+    }
+    .mx-altar-book-empty {
+        width: 132px; height: 190px; display: flex; align-items: center; justify-content: center;
+        background: #fffdf9; border: 1px solid var(--mx-line-strong);
+        font-family: var(--mx-font-display); font-size: 0.8rem; text-align: center; padding: 0.8rem; color: var(--mx-ink-soft);
+    }
+    .mx-altar-book-title { font-family: var(--mx-font-display); font-size: 0.82rem; font-weight: 600; line-height: 1.25; }
+    .mx-altar-book-author { font-size: 0.7rem; color: var(--mx-ink-faint); }
+
+    .mx-altar-giants { border-left: 1px solid var(--mx-line); padding-left: 2rem; }
+    .mx-giants-title { font-family: var(--mx-font-display); font-weight: 900; font-size: 1.5rem; color: var(--mx-ink); margin: 0.8rem 0 1.6rem; }
+    .mx-giants-row { display: flex; gap: 1.6rem; flex-wrap: wrap; }
+    .mx-giant {
+        display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+        background: none; border: none; cursor: pointer; font-family: inherit;
+        transition: transform 0.35s var(--mx-ease);
+    }
+    .mx-giant:hover { transform: translateY(-6px); }
+    .mx-giant-portrait {
+        width: 128px; height: 172px; overflow: hidden; border-radius: 4px;
+        border: 1px solid var(--mx-line-strong); box-shadow: 0 16px 40px rgba(28, 25, 23, 0.2);
+        display: block;
+    }
+    .mx-giant-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(0.85); }
+    .mx-giant-name { font-family: var(--mx-font-display); font-size: 0.82rem; font-weight: 700; color: var(--mx-ink); max-width: 120px; text-align: center; line-height: 1.2; }
+    .mx-giant-years { font-size: 0.66rem; color: var(--mx-ink-faint); letter-spacing: 0.08em; }
+
+    /* Giants modal content */
+    .mx-gm-card { max-width: 620px; }
+    .mx-gm-name { font-family: var(--mx-font-display); font-size: 1.7rem; font-weight: 900; color: var(--mx-ink); margin: 0 0 0.3rem; }
+    .mx-gm-years { font-size: 0.8rem; color: var(--mx-ink-faint); letter-spacing: 0.08em; margin: 0 0 1rem; }
+    .mx-gm-bio { font-size: 0.95rem; line-height: 1.7; font-style: italic; color: var(--mx-ink-soft); margin: 0 0 1rem; }
+    .mx-gm-grid { display: flex; gap: 2.2rem; flex-wrap: wrap; }
+    .mx-gm-label { display: block; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mx-vermilion); margin: 1rem 0 0.3rem; }
+    .mx-gm-opus { font-family: var(--mx-font-display); font-size: 1.05rem; font-weight: 700; color: var(--mx-ink); margin: 0; }
+    .mx-gm-books, .mx-gm-fact { font-size: 0.9rem; line-height: 1.6; color: var(--mx-ink-soft); margin: 0; }
+    .mx-gm-line {
+        margin: 1.4rem 0 0; padding: 1.1rem 1.3rem;
+        border-left: 3px solid var(--mx-vermilion); background: rgba(216, 52, 28, 0.05);
+        font-family: var(--mx-font-display); font-style: italic; font-size: 1.05rem; line-height: 1.55; color: var(--mx-ink);
+    }
+
+    /* === QUOTE INTERLUDE === */
+    .mx-interlude {
+        padding: 4.5rem clamp(1.4rem, 6vw, 7rem);
+        text-align: center;
+        border-top: 1px solid var(--mx-line);
+    }
+    .mx-interlude p {
+        font-family: var(--mx-font-display); font-weight: 600; font-style: italic;
+        font-size: clamp(1.3rem, 2.6vw, 1.9rem); line-height: 1.5;
+        color: var(--mx-ink); max-width: 26ch; margin: 0 auto 1.2rem;
+        transition: opacity 0.6s ease;
+    }
+    .mx-interlude cite {
+        font-family: var(--mx-font-read); font-style: italic;
+        font-size: 0.9rem; color: var(--mx-vermilion);
+        transition: opacity 0.6s ease;
+    }
+
+    /* === READING ROOM === */
+    .mx-room { padding: 4rem clamp(1.4rem, 5vw, 5rem) 5rem; }
+    .mx-room-head { text-align: center; margin-bottom: 2.6rem; }
+    .mx-room-title { font-size: clamp(2rem, 4vw, 3rem); margin: 0.9rem 0 0; }
+    .mx-room-split { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 1100px; margin: 0 auto; }
+    .mx-room-half {
+        border: 1px solid var(--mx-line); background: #fffdf9;
+        padding: 1.8rem 1.6rem; display: flex; flex-direction: column;
+    }
+    .mx-room-half-title { font-family: var(--mx-font-display); font-weight: 900; font-size: 1.2rem; color: var(--mx-ink); margin: 0 0 0.3rem; }
+    .mx-room-half-sub { font-family: var(--mx-font-read); font-style: italic; font-size: 0.84rem; color: var(--mx-ink-faint); margin: 0 0 1.4rem; }
+    .mx-notes-list { flex: 1; display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.4rem; max-height: 420px; overflow-y: auto; }
+    :global(.mx-notes-empty) { font-family: var(--mx-font-read); font-style: italic; color: var(--mx-ink-faint); font-size: 0.88rem; }
+    :global(.mx-note-card) { border: 1px solid var(--mx-line); background: var(--mx-paper); padding: 0.9rem 1rem; border-radius: 12px; }
+    :global(.mx-note-card.reply) { margin: 0.7rem 0 0 1.2rem; background: var(--mx-paper-deep); }
+    :global(.mx-note-body) { font-size: 0.9rem; line-height: 1.6; color: var(--mx-ink); margin: 0 0 0.5rem; overflow-wrap: anywhere; }
+    :global(.mx-note-meta) { display: flex; align-items: center; gap: 0.6rem; font-size: 0.72rem; color: var(--mx-ink-faint); flex-wrap: wrap; }
+    :global(.mx-note-author) { font-family: var(--mx-font-display); font-weight: 600; color: var(--mx-vermilion); }
+    :global(.mx-note-reply), :global(.mx-note-report) {
+        background: transparent; border: none; color: var(--mx-ink-faint);
+        font-family: var(--mx-font-body); font-size: 0.72rem; cursor: pointer;
+        display: inline-flex; align-items: center; padding: 0.1rem;
+        transition: color 0.2s;
+    }
+    :global(.mx-note-reply:hover), :global(.mx-note-report:hover) { color: var(--mx-vermilion); }
+    :global(.mx-note-replies) { margin-top: 0.6rem; }
+    .mx-note-form { display: flex; flex-direction: column; gap: 0.6rem; }
+    .mx-note-hint { font-size: 0.74rem; color: var(--mx-ink-faint); min-height: 1rem; }
+    .mx-note-submit { align-self: flex-start; }
+
+    .mx-report-sub { font-size: 0.88rem; color: var(--mx-ink-soft); margin: 0 0 1rem; }
+    .mx-report-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1.2rem; }
+    .mx-report-msg { font-size: 0.85rem; margin: 0.8rem 0 0; min-height: 1.1rem; }
+
+    @media (max-width: 860px) {
+        .mx-altar { grid-template-columns: 1fr; }
+        .mx-altar-giants { border-left: none; padding-left: 0; }
+        .mx-room-split { grid-template-columns: 1fr; }
+    }
 </style>
