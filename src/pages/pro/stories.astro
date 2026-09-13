@@ -1,0 +1,441 @@
+---
+// src/pages/pro/stories.astro · Raconteur Pro library ("The Reader's Desk" inner page).
+// Dark desk language: dark work cards with amber/mint pills over the ledger night,
+// scroll reveals throughout. Server logic is a faithful copy of classic /stories
+// (feature parity) via the max/stories pattern.
+import ProLayout from '../../layouts/ProLayout.astro';
+import Icon from '../../components/Icon.astro';
+import { getVisibleStories } from '../../data/stories';
+import { supabase } from '../../lib/supabase';
+import { buildStoryFromDB, bandFromWords } from '../../lib/storyLoader';
+
+const staticStories = getVisibleStories();
+
+const { data: dbRows } = await supabase
+    .from('stories')
+    .select('*')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false });
+
+const dbStories = (dbRows || []).map(buildStoryFromDB);
+
+// Force every story (static + DB) to use the computed length band — poems keep 'Poetry'
+const stories = [...dbStories, ...staticStories].map(s => ({
+    ...s,
+    genre: ((s as any).kind === 'poem' || s.genreTag === 'Poetry') ? 'Poetry' : bandFromWords(s.wordCount)
+}));
+const baseBands = ['Flash Fiction', 'Short Story', 'Novelette', 'Novella'];
+const extra = Array.from(new Set(stories.map((s) => s.genre))).filter((g) => !baseBands.includes(g) && g !== 'Poetry');
+const proseStories = stories.filter((s) => s.genre !== 'Poetry');
+const poemStories = stories.filter((s) => s.genre === 'Poetry');
+const genres = ['All', ...baseBands, ...extra];
+const genreTags = ['All', ...Array.from(new Set(stories.map((s) => s.genreTag).filter(Boolean) as string[]))];
+
+// Trending — most-read in the last 7 days (reads_weekly aggregate view)
+const { data: weekReads } = await supabase
+    .from('reads_weekly')
+    .select('story_id, read_count');
+const weekCounts: Record<string, number> = {};
+(weekReads || []).forEach((r: any) => { weekCounts[r.story_id] = r.read_count || 0; });
+const trending = (Object.entries(weekCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id, n]) => {
+        const s = stories.find((st) => st.slug === id);
+        return s ? { title: s.title, slug: s.slug, n } : null;
+    })
+    .filter(Boolean) as { title: string; slug: string; n: number }[]).slice(0, 3);
+---
+
+<ProLayout title="The Library · Raconteur Pro" description="Browse the full Raconteur shelf: flash fiction, novellas, poetry, and everything between.">
+    <div class="pro-archive">
+        {/* ===== Header ===== */}
+        <header class="pro-archive-head" data-pro-reveal>
+            <p class="pro-browser-kicker">The full shelf</p>
+            <h1 class="pro-archive-title">The Library</h1>
+            <p class="pro-archive-sub">
+                {stories.length} {stories.length === 1 ? 'work' : 'works'} on the shelf
+            </p>
+        </header>
+
+        {/* ===== Trending — dark pill strip, amber label ===== */}
+        {trending.length > 0 && (
+            <div class="pro-trending" data-pro-reveal style="--pro-reveal-delay: 0.06s">
+                <span class="pro-trending-label">Trending this week</span>
+                {trending.map((t) => (
+                    <a href={`/story/${t.slug}`} class="pro-trending-item">
+                        <span class="pro-trending-title">{t.title}</span>
+                        <span class="pro-trending-count">{t.n} {t.n === 1 ? 'reader' : 'readers'}</span>
+                    </a>
+                ))}
+            </div>
+        )}
+
+        {/* ===== Controls: search + band chips + tag chips + sort ===== */}
+        <div class="pro-controls" data-pro-reveal style="--pro-reveal-delay: 0.12s">
+            <div class="pro-searchbar">
+                <input
+                    type="search"
+                    id="storySearch"
+                    class="pro-searchbar-input"
+                    placeholder="Search by title, author, or feeling…"
+                    aria-label="Search stories"
+                />
+                <span class="pro-searchbar-icon" aria-hidden="true"><Icon name="search" size={16} /></span>
+            </div>
+
+            <div class="pro-chiprow" id="genreChips">
+                {genres.map((g, i) => (
+                    <button type="button" class={`pro-chip ${i === 0 ? 'active' : ''}`} data-genre={g}>{g}</button>
+                ))}
+            </div>
+
+            <div class="pro-chiprow" id="genreTagChips">
+                {genreTags.map((g, i) => (
+                    <button type="button" class={`pro-chip pro-chip-tag ${i === 0 ? 'active' : ''}`} data-genretag={g}>{g}</button>
+                ))}
+            </div>
+
+            <div class="pro-sortrow">
+                <label for="storySort" class="pro-sort-label">Sort</label>
+                <select id="storySort" class="pro-sort-select">
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="shortest">Shortest first</option>
+                    <option value="longest">Longest first</option>
+                </select>
+            </div>
+        </div>
+
+        {/* ===== Prose grid ===== */}
+        <div class="pro-work-grid" id="storyGrid">
+            {proseStories.map((story: any, i: number) => (
+                <a
+                    href={`/story/${story.slug}`}
+                    class="pro-work-card"
+                    data-genre={story.genre}
+                    data-genretag={story.genreTag || ''}
+                    data-title={story.title.toLowerCase()}
+                    data-author={story.author.toLowerCase()}
+                    data-excerpt={(story.excerpt || '').toLowerCase()}
+                    data-words={story.wordCount}
+                    data-date={story.publishedDate}
+                    data-pro-reveal
+                    style={`--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}
+                >
+                    <div class="pro-work-cover">
+                        {story.cover ? (
+                            <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />
+                        ) : (
+                            <span class="pro-work-star" aria-hidden="true"><Icon name="sparkle" size={30} /></span>
+                        )}
+                    </div>
+                    <div class="pro-work-body">
+                        <span class="pro-work-genre">{story.genre}</span>
+                        <h3 class="pro-work-title">{story.title}</h3>
+                        <p class="pro-work-excerpt">{story.excerpt}</p>
+                        <div class="pro-work-meta">
+                            <span>{story.author}</span>
+                            <span>{story.wordCount.toLocaleString()} words · {story.readTime}</span>
+                        </div>
+                    </div>
+                </a>
+            ))}
+        </div>
+
+        {/* ===== Poetry divider ===== */}
+        {poemStories.length > 0 && (
+            <div class="pro-poetry-divider" id="poetryDivider">
+                <h2 class="pro-poetry-heading">Verse <span class="pro-poetry-star" aria-hidden="true">✦</span></h2>
+            </div>
+        )}
+
+        {/* ===== Poetry grid ===== */}
+        <div class="pro-work-grid" id="poemGrid">
+            {poemStories.map((story: any, i: number) => (
+                <a
+                    href={`/story/${story.slug}`}
+                    class="pro-work-card is-poem"
+                    data-genre={story.genre}
+                    data-genretag={story.genreTag || ''}
+                    data-title={story.title.toLowerCase()}
+                    data-author={story.author.toLowerCase()}
+                    data-excerpt={(story.excerpt || '').toLowerCase()}
+                    data-words={story.wordCount}
+                    data-date={story.publishedDate}
+                    data-pro-reveal
+                    style={`--pro-reveal-delay: ${Math.min(i * 0.05, 0.4)}s`}
+                >
+                    <div class="pro-work-cover">
+                        {story.cover ? (
+                            <img src={story.cover} alt={`Cover of ${story.title}`} loading="lazy" />
+                        ) : (
+                            <span class="pro-work-quote">“{(story.content[0]?.text || '').replace(/<[^>]+>/g, ' ').substring(0, 90)}…”</span>
+                        )}
+                    </div>
+                    <div class="pro-work-body">
+                        <span class="pro-work-genre poem">{story.genre}</span>
+                        <h3 class="pro-work-title">{story.title}</h3>
+                        <p class="pro-work-excerpt">{story.excerpt}</p>
+                        <div class="pro-work-meta">
+                            <span>{story.author}</span>
+                            <span>{story.wordCount.toLocaleString()} words · Poem</span>
+                        </div>
+                    </div>
+                </a>
+            ))}
+        </div>
+
+        {/* ===== Empty state ===== */}
+        <p class="pro-empty" id="emptyState" hidden>
+            No stories match that search. Try another word or feeling.
+        </p>
+    </div>
+</ProLayout>
+
+<script>
+    // === Live search + genre filter + sort — faithful clone of classic /stories ===
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.pro-work-card'));
+    const searchInput = document.getElementById('storySearch') as HTMLInputElement;
+    const bandChips = Array.from(document.querySelectorAll<HTMLElement>('#genreChips .pro-chip'));
+    const tagChips = Array.from(document.querySelectorAll<HTMLElement>('#genreTagChips .pro-chip'));
+    const sortSelect = document.getElementById('storySort') as HTMLSelectElement;
+    const emptyState = document.getElementById('emptyState')!;
+
+    let activeBand = 'All';
+    let activeTag = 'All';
+
+    function applyFilters() {
+        const query = searchInput.value.trim().toLowerCase();
+        let visibleCount = 0;
+
+        cards.forEach((card) => {
+            const matchesBand = activeBand === 'All' || card.dataset.genre === activeBand;
+            const matchesTag = activeTag === 'All' || card.dataset.genretag === activeTag;
+            const matchesSearch =
+                !query ||
+                card.dataset.title!.includes(query) ||
+                card.dataset.author!.includes(query) ||
+                card.dataset.excerpt!.includes(query);
+
+            const show = matchesBand && matchesTag && matchesSearch;
+            card.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        emptyState.hidden = visibleCount !== 0;
+        const anyPoemVisible = cards.some((c) => c.closest('#poemGrid') !== null && c.style.display !== 'none');
+        const divider = document.getElementById('poetryDivider');
+        if (divider) divider.style.display = anyPoemVisible ? 'block' : 'none';
+    }
+
+    function applySort() {
+        const mode = sortSelect.value;
+        ['storyGrid', 'poemGrid'].forEach((gid) => {
+            const g = document.getElementById(gid);
+            if (!g) return;
+            const gCards = Array.from(g.querySelectorAll<HTMLElement>('.pro-work-card'));
+            const sorted = [...gCards].sort((a, b) => {
+                if (mode === 'shortest') return Number(a.dataset.words) - Number(b.dataset.words);
+                if (mode === 'longest') return Number(b.dataset.words) - Number(a.dataset.words);
+                if (mode === 'oldest') return (a.dataset.date ?? '').localeCompare(b.dataset.date ?? '');
+                return (b.dataset.date ?? '').localeCompare(a.dataset.date ?? '');
+            });
+            sorted.forEach((card) => g.appendChild(card));
+        });
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+
+    // Deep-link support: /pro/stories?q=rain pre-fills the search (moods feature)
+    const initialQuery = new URLSearchParams(window.location.search).get('q');
+    if (initialQuery) {
+        searchInput.value = initialQuery;
+        applyFilters();
+    }
+
+    bandChips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+            bandChips.forEach((c) => c.classList.remove('active'));
+            chip.classList.add('active');
+            activeBand = chip.dataset.genre!;
+            applyFilters();
+        });
+    });
+
+    tagChips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+            tagChips.forEach((c) => c.classList.remove('active'));
+            chip.classList.add('active');
+            activeTag = chip.dataset.genretag!;
+            applyFilters();
+        });
+    });
+
+    sortSelect.addEventListener('change', applySort);
+</script>
+
+<style>
+    /* === SHELL === */
+    .pro-archive {
+        position: relative;
+        z-index: 1;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 3.4rem 1.6rem 3rem;
+    }
+
+    /* === HEADER === */
+    .pro-archive-head { text-align: center; margin-bottom: 2.6rem; }
+
+    .pro-archive-title {
+        font-family: var(--pro-font);
+        font-size: clamp(2.4rem, 5.4vw, 3.8rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--pro-text);
+        margin: 0.7rem 0 0.6rem;
+    }
+
+    .pro-archive-sub {
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        font-size: 1rem;
+        color: var(--pro-text-2);
+    }
+
+    .pro-archive-head .pro-browser-kicker { margin: 0; }
+
+    /* === TRENDING — dark pill strip === */
+    .pro-trending {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1.1rem;
+        padding: 0.85rem 1.4rem;
+        background: var(--pro-card);
+        border: 1px solid var(--pro-line);
+        border-radius: 999px;
+        margin: 0 auto 2.2rem;
+        max-width: 900px;
+    }
+
+    .pro-trending-label {
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--pro-amber);
+    }
+
+    .pro-trending-item { display: inline-flex; align-items: baseline; gap: 0.45rem; text-decoration: none; }
+
+    .pro-trending-title {
+        font-family: var(--pro-font);
+        font-weight: 500;
+        font-size: 0.92rem;
+        color: var(--pro-text);
+        border-bottom: 1px dotted rgba(255, 106, 0, 0.55);
+        transition: color 0.2s;
+    }
+
+    .pro-trending-item:hover .pro-trending-title { color: var(--pro-amber); }
+    .pro-trending-count { font-size: 0.72rem; font-style: italic; color: var(--pro-text-3); }
+
+    /* === CONTROLS === */
+    .pro-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        margin-bottom: 2.8rem;
+    }
+
+    .pro-searchbar { position: relative; max-width: 560px; width: 100%; margin: 0 auto; }
+
+    .pro-searchbar-input {
+        width: 100%;
+        padding: 0.95rem 1.3rem 0.95rem 2.7rem;
+        font-size: 0.95rem;
+        font-family: var(--pro-font);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: 999px;
+        color: var(--pro-text);
+        outline: none;
+        transition: border-color 0.25s, background 0.25s;
+    }
+
+    .pro-searchbar-input:focus {
+        border-color: var(--pro-amber);
+        background: rgba(6, 8, 10, 0.9);
+    }
+
+    .pro-searchbar-input::placeholder { color: var(--pro-text-3); }
+
+    .pro-searchbar-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--pro-text-3);
+        pointer-events: none;
+    }
+
+    /* === CHIPS === */
+    .pro-chiprow { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+
+    .pro-chip-tag { font-family: var(--pro-font-read); font-style: italic; }
+
+    .pro-sortrow { display: flex; align-items: center; justify-content: center; gap: 0.6rem; }
+
+    .pro-sort-label {
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--pro-text-3);
+    }
+
+    .pro-sort-select {
+        padding: 0.5rem 1rem;
+        font-family: var(--pro-font);
+        font-size: 0.85rem;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--pro-line);
+        border-radius: 999px;
+        color: var(--pro-text);
+        cursor: pointer;
+    }
+
+    .pro-sort-select option { background: #0b0e11; color: var(--pro-text); }
+
+    /* === POETRY DIVIDER === */
+    .pro-poetry-divider { margin: 3.2rem 0 2.2rem; text-align: center; }
+    .pro-poetry-heading {
+        font-family: var(--pro-font);
+        font-size: 1.7rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--pro-text);
+    }
+    .pro-poetry-star { color: var(--pro-mint); }
+
+    /* === EMPTY === */
+    .pro-empty {
+        text-align: center;
+        font-family: var(--pro-font-read);
+        font-style: italic;
+        color: var(--pro-text-3);
+        padding: 3rem 0;
+    }
+
+    /* === RESPONSIVE + MANNERS (shared card rules live in pro.css §10) === */
+    @media (max-width: 640px) {
+        .pro-archive { padding: 2.2rem 1rem 2.4rem; }
+        .pro-trending { border-radius: var(--pro-r-lg); flex-direction: column; gap: 0.7rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .pro-chip:hover { transform: none; }
+    }
+</style>

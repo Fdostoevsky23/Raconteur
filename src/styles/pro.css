@@ -414,3 +414,157 @@ main.pro-main { flex: 1; position: relative; z-index: 1; }
 .pro-row { display: flex; align-items: center; gap: 0.6rem; }
 .pro-grow { flex: 1; }
 .pro-mono-num { font-variant-numeric: tabular-nums; }
+
+/* === 10. SHARED INNER PAGE KIT — every Pro inner page builds from these ===
+   (mirrors max.css §7b; the homepage carries its own scoped copies) */
+.pro-browser-kicker {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--pro-amber);
+    margin: 0 0 0.5rem;
+}
+
+.pro-browser-title {
+    font-family: var(--pro-font);
+    font-size: clamp(1.7rem, 3.2vw, 2.5rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--pro-text);
+    margin: 0;
+}
+
+.pro-card-link { font-size: 0.85rem; font-weight: 500; color: var(--pro-text-2); text-decoration: none; transition: color 0.2s; }
+.pro-card-link:hover { color: var(--pro-amber); }
+
+.pro-browser-empty { grid-column: 1 / -1; text-align: center; font-style: italic; color: var(--pro-text-3); padding: 3rem 0; }
+
+.pro-work-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.pro-work-card {
+    display: flex;
+    flex-direction: column;
+    background: #0b0e11;
+    border: 1px solid var(--pro-line);
+    border-radius: 16px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.4s var(--pro-ease, ease), border-color 0.3s, box-shadow 0.4s;
+}
+
+.pro-work-card:hover {
+    transform: translateY(-7px);
+    border-color: rgba(255, 106, 0, 0.45);
+    box-shadow: 0 26px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(255, 106, 0, 0.05);
+}
+
+.pro-work-card.is-poem { border-color: rgba(46, 230, 168, 0.14); }
+.pro-work-card.is-poem:hover { border-color: rgba(46, 230, 168, 0.4); box-shadow: 0 26px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(46, 230, 168, 0.05); }
+
+.pro-work-cover { position: relative; height: 200px; overflow: hidden; background: #101418; }
+
+.pro-work-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+    display: block;
+    transition: transform 0.6s var(--pro-ease, ease);
+}
+
+.pro-work-card:hover .pro-work-cover img { transform: scale(1.05); }
+
+.pro-work-star {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pro-amber);
+    background: radial-gradient(80% 100% at 50% 0%, rgba(255, 106, 0, 0.12), transparent 70%), #101418;
+}
+
+.pro-work-quote {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.4rem;
+    font-family: var(--pro-font-read);
+    font-style: italic;
+    font-size: 0.92rem;
+    line-height: 1.7;
+    text-align: center;
+    color: var(--pro-text-2);
+    background: #101418;
+}
+
+.pro-work-body { padding: 1.15rem 1.25rem 1.2rem; display: flex; flex-direction: column; gap: 0.45rem; flex: 1; }
+
+.pro-work-genre {
+    align-self: flex-start;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--pro-amber);
+    border: 1px solid rgba(255, 106, 0, 0.35);
+    border-radius: 999px;
+    padding: 0.18rem 0.6rem;
+}
+
+.pro-work-genre.poem { color: var(--pro-mint); border-color: rgba(46, 230, 168, 0.35); }
+
+.pro-work-title {
+    font-family: var(--pro-font);
+    font-size: 1.08rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--pro-text);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.pro-work-excerpt {
+    font-family: var(--pro-font-read);
+    font-size: 0.86rem;
+    line-height: 1.6;
+    color: var(--pro-text-2);
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.pro-work-meta {
+    font-size: 0.74rem;
+    color: var(--pro-text-3);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    border-top: 1px solid var(--pro-line);
+    padding-top: 0.7rem;
+    margin-top: auto;
+}
+
+@media (max-width: 640px) {
+    .pro-work-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pro-work-card:hover { transform: none; }
+    .pro-work-card:hover .pro-work-cover img { transform: none; }
+}
