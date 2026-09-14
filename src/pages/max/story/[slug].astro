@@ -1,5 +1,5 @@
 ---
-// src/pages/max/story/[slug].astro — Raconteur Max story reader ("bright glass" edition).
+// src/pages/max/story/[slug].astro — Raconteur Pro story reader ("bright glass" edition).
 // Every feature of the classic reader, faithfully cloned; presented in
 // bright glassmorphism: a luminous glass reading sheet floating over the
 // drifting colour fields, glass controls, vermilion dropcap, movements.
@@ -98,7 +98,7 @@ const coverUrl = safeCover(story.cover);
 const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
 ---
 
-<MaxLayout title={`${story.title} · ${story.author} · Raconteur Max`} description={firstLine} ogImage={ogImage}>
+<MaxLayout title={`${story.title} · ${story.author} · Raconteur Pro`} description={firstLine} ogImage={ogImage}>
     <div class="mx-progress" id="progressBar"></div>
 
     <article class={`mx-story ${isPoem ? 'poem-mode' : ''}`} id="storyContent">

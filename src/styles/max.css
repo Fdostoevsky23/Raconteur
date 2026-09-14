@@ -1,5 +1,5 @@
 /* ============================================================
-   max.css — Raconteur MAX design system
+   max.css — Raconteur PRO design system
    "The Editorial Split" — a dual-mode system:
    · HOME (/max): pure editorial — warm paper, ink, vermilion,
      split-screen compositions, print-style motion.
@@ -24,7 +24,7 @@
     /* Accents */
     --mx-vermilion: #d8341c;      /* the editor's red pen */
     --mx-vermilion-deep: #b02410;
-    --mx-brass: #c9a24b;          /* lineage with the plus skin */
+    --mx-brass: #c9a24b;          /* the brass accent of the house */
     --mx-brass-soft: rgba(201, 162, 75, 0.22);
 
     /* Bright-glass mode (inner pages) */

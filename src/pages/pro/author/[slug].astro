@@ -1,5 +1,5 @@
 ---
-// src/pages/pro/author/[slug].astro — Raconteur Pro writer page (the dark desk).
+// src/pages/pro/author/[slug].astro — Raconteur+ writer page (the dark desk).
 // Server logic is a faithful copy of classic /author/[slug] (feature parity):
 // static JSON authors + live DB writers, books, collections, poetry, follow graph.
 import ProLayout from '../../../layouts/ProLayout.astro';
@@ -149,7 +149,7 @@ if (isDbAuthor && author.userId) {
 }
 ---
 
-<ProLayout title={`${author.name} · Raconteur Pro`} description={author.bio}>
+<ProLayout title={`${author.name} · Raconteur+`} description={author.bio}>
     <div class="pro-page pro-author">
         {/* ===== Hero — one dark plate, centred ===== */}
         <header class="pro-card pro-author-hero" data-pro-reveal>

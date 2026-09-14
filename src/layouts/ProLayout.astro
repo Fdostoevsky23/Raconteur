@@ -1,13 +1,13 @@
 ---
-// ProLayout.astro — the Raconteur Pro shell ("The Reader's Desk").
+// ProLayout.astro — the Raconteur+ shell ("The Reader's Desk").
 // Dark bento-grid glassmorphism skin. Feature parity with BaseLayout's
 // shell (search island, auth widget, notifications) in Pro's language.
 // Layout grammar inspired by the dark-fintech-dashboard genre; all
 // content and expression are original Raconteur work.
 import { getVisibleStories } from '../data/stories';
 import { supabase } from '../lib/supabase';
-import SkinToggle from '../components/plus/SkinToggle.astro';
-import SkinSplash from '../components/plus/SkinSplash.astro';
+import SkinToggle from '../components/skin/SkinToggle.astro';
+import SkinSplash from '../components/skin/SkinSplash.astro';
 import '../styles/pro.css';
 
 interface Props {
@@ -59,7 +59,7 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
 
     <title>{title}</title>
 
-    <meta property="og:site_name" content="Raconteur Pro" />
+    <meta property="og:site_name" content="Raconteur+" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="article" />
@@ -119,9 +119,9 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
     {isHome ? (
         <header class="pro-topbar">
             <div class="pro-masthead">
-                <a href="/pro" class="pro-logo pro-logo-masthead" aria-label="Raconteur Pro home">
+                <a href="/pro" class="pro-logo pro-logo-masthead" aria-label="Raconteur+ home">
                     <span class="pro-logo-word">Raconteur</span>
-                    <span class="pro-logo-tag">PRO</span>
+                    <span class="pro-logo-tag">+</span>
                 </a>
                 <p class="pro-masthead-tagline">Literature you want to read</p>
             </div>
@@ -158,9 +158,9 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
     ) : (
         <header class="pro-inner-bar">
             <a href="/pro" class="pro-inner-back">← Back to the Desk</a>
-            <a href="/pro" class="pro-logo pro-inner-brand" aria-label="Raconteur Pro home">
+            <a href="/pro" class="pro-logo pro-inner-brand" aria-label="Raconteur+ home">
                 <span class="pro-logo-word">Raconteur</span>
-                <span class="pro-logo-tag">PRO</span>
+                <span class="pro-logo-tag">+</span>
             </a>
             <p class="pro-inner-tagline">Literature you want to read</p>
         </header>
@@ -174,7 +174,7 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
     <footer class={`pro-footer ${isHome ? '' : 'pro-footer-inner'}`}>
         <div class="pro-rain" aria-hidden="true" id="proRain"></div>
         <div class="pro-footer-core">
-            <p class="pro-footer-name">Raconteur <em>Pro</em></p>
+            <p class="pro-footer-name">Raconteur <em>+</em></p>
             <p class="pro-footer-tagline">Literature you want to read</p>
             <nav class="pro-footer-links" aria-label="Footer">
                 <a href="/pro">Desk</a>
@@ -581,11 +581,11 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
     .pro-logo-tag {
         font-size: 0.64rem;
         font-weight: 700;
-        letter-spacing: 0.22em;
+        letter-spacing: 0;
         color: var(--pro-amber);
         border: 1px solid rgba(255, 106, 0, 0.4);
         border-radius: 6px;
-        padding: 0.14rem 0.4rem;
+        padding: 0.14rem 0.45rem;
         transform: translateY(-2px);
     }
 

@@ -1,5 +1,5 @@
 ---
-// src/pages/pro/story/[slug].astro — Raconteur Pro story reader ("the dark desk" edition).
+// src/pages/pro/story/[slug].astro — Raconteur+ story reader ("the dark desk" edition).
 // Every feature of the classic reader, faithfully cloned; presented in Pro's
 // language: a dark reading sheet on the ledger night — the skin's one focal
 // surface — with amber applause, quiet chapter pager, three sheet themes.
@@ -97,7 +97,7 @@ const coverUrl = safeCover(story.cover);
 const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
 ---
 
-<ProLayout title={`${story.title} · ${story.author} · Raconteur Pro`} description={firstLine} ogImage={ogImage}>
+<ProLayout title={`${story.title} · ${story.author} · Raconteur+`} description={firstLine} ogImage={ogImage}>
     <div class="pro-progress" id="progressBar"></div>
 
     <article class={`pro-story ${isPoem ? 'poem-mode' : ''}`} id="storyContent">

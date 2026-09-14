@@ -1,5 +1,5 @@
 ---
-// src/pages/pro/index.astro · Raconteur Pro homepage ("The Reader's Desk").
+// src/pages/pro/index.astro · Raconteur+ homepage ("The Reader's Desk").
 // Feature parity with the classic homepage — hero with rotating words and
 // plates, ticker, curated browsers (reserved editor slot + three random
 // writers), quote interlude, stats — expressed in Pro's dark desk language.
@@ -182,7 +182,7 @@ const giantsFirst = (dayOfYearNow() * 3) % giants.length;
 const todaysGiants = [giants[giantsFirst], giants[(giantsFirst + 1) % giants.length], giants[(giantsFirst + 2) % giants.length]];
 ---
 
-<ProLayout title="Raconteur Pro · The Reader's Desk" description="Literature you want to read. The Raconteur Pro desk.">
+<ProLayout title="Raconteur+ · The Reader's Desk" description="Literature you want to read. The Raconteur+ desk.">
     {/* ===== HERO — the desk briefing: centered words, plate filmstrip beneath ===== */}
     <section class="pro-hero">
         <div class="pro-hero-core" data-pro-reveal>

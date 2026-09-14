@@ -3,8 +3,9 @@
 // Centered logo + tagline, nav row with divider, shared footer.
 import { getVisibleStories } from '../data/stories';
 import { supabase } from '../lib/supabase';
-import SkinToggle from '../components/plus/SkinToggle.astro';
-import Icon from '../components/Icon.astro'; // Raconteur+ dual-skin switcher
+import SkinToggle from '../components/skin/SkinToggle.astro';
+import SkinSplash from '../components/skin/SkinSplash.astro';
+import Icon from '../components/Icon.astro';
 interface Props {
     title: string;
     description?: string;
@@ -39,7 +40,7 @@ const _staticSearchData = getVisibleStories().map(s => ({ slug: s.slug, title: s
 
     <title>{title}</title>
 
-        <meta property="og:site_name" content="Raconteur" />
+        <meta property="og:site_name" content="Raconteur Classic" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="article" />
@@ -60,18 +61,55 @@ const _staticSearchData = getVisibleStories().map(s => ({ slug: s.slug, title: s
 <body>
     {/* Search data island — lives in layout so search works on every page, not just / */}
     <script type="application/json" id="all-stories-data" set:html={JSON.stringify(searchStories).replace(/</g,'\\u003c')} />
+
+    {/* The Classic entrance — the letter-by-letter wordmark ceremony, born
+        covered when arriving from another skin (?welcome=1), same mechanic
+        as the Raconteur+ and Raconteur Pro editions. */}
+    <SkinSplash variant="classic" eager={Astro.url.searchParams.get('welcome') === '1'} />
+
       <header class={`site-header ${isStory ? 'on-story' : ''}`}>
-        {/* Raconteur / Raconteur+ skin switcher — HOME PAGES ONLY (the
-            wrapper is gated too so no empty gap pads inner pages) */}
+        {/* Raconteur Classic / Raconteur+ / Raconteur Pro skin switcher —
+            HOME PAGES ONLY (the wrapper is gated too so no empty gap pads
+            inner pages) */}
         {Astro.url.pathname === '/' && (
             <div class="skin-switch-row">
                 <SkinToggle />
             </div>
         )}
         <a href="/" class="logo-block">
+            <span class="logo-edition">Classic</span>
             <span class="logo">RACONTEUR</span>
             <span class="tagline">Literature you want to read</span>
         </a>
+        <style>
+            /* The Classic edition plate — a quiet print-convention mark that
+               sits above the wordmark, the way a newspaper names its edition. */
+            .logo-edition {
+                display: block;
+                font-family: 'Lora', Georgia, serif;
+                font-style: italic;
+                font-size: 0.72rem;
+                letter-spacing: 0.44em;
+                text-transform: uppercase;
+                color: #8a7f6a;
+                margin-bottom: 0.4rem;
+                animation: edition-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+            }
+            .logo-edition::before,
+            .logo-edition::after {
+                content: '—';
+                font-style: normal;
+                margin: 0 0.65em;
+                color: rgba(138, 127, 106, 0.5);
+            }
+            @keyframes edition-in {
+                from { opacity: 0; transform: translateY(10px); letter-spacing: 0.7em; }
+                to   { opacity: 1; transform: none; letter-spacing: 0.44em; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .logo-edition { animation: none; }
+            }
+        </style>
 
         <div class="header-divider"></div>
         {showAuth && (
@@ -251,7 +289,7 @@ const _staticSearchData = getVisibleStories().map(s => ({ slug: s.slug, title: s
               }
             </script>
 
-            <p class="footer-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur</p>
+            <p class="footer-fineprint">Made for writers, by a writer · © {new Date().getFullYear()} Raconteur Classic</p>
         </div>
     </footer>
     )}

@@ -7,7 +7,7 @@ const { data: collections } = await supabase
   .select('*, collection_stories(count)')
   .order('created_at', { ascending: false });
 ---
-<BaseLayout title="Collections · Raconteur" description="Curated reading bundles, hand-picked by the editor.">
+<BaseLayout title="Collections · Raconteur Classic" description="Curated reading bundles, hand-picked by the editor.">
   <div class="collections-bg">
     <section class="collections-page">
       <header class="collections-header">

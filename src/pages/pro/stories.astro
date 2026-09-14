@@ -1,5 +1,5 @@
 ---
-// src/pages/pro/stories.astro · Raconteur Pro library ("The Reader's Desk" inner page).
+// src/pages/pro/stories.astro · Raconteur+ library ("The Reader's Desk" inner page).
 // Dark desk language: dark work cards with amber/mint pills over the ledger night,
 // scroll reveals throughout. Server logic is a faithful copy of classic /stories
 // (feature parity) via the max/stories pattern.
@@ -46,7 +46,7 @@ const trending = (Object.entries(weekCounts)
     .filter(Boolean) as { title: string; slug: string; n: number }[]).slice(0, 3);
 ---
 
-<ProLayout title="The Library · Raconteur Pro" description="Browse the full Raconteur shelf: flash fiction, novellas, poetry, and everything between.">
+<ProLayout title="The Library · Raconteur+" description="Browse the full Raconteur shelf: flash fiction, novellas, poetry, and everything between.">
     <div class="pro-archive">
         {/* ===== Header ===== */}
         <header class="pro-archive-head" data-pro-reveal>

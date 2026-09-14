@@ -1,5 +1,5 @@
 ---
-// src/pages/max/stories.astro · Raconteur Max library ("The Editorial Split" inner page).
+// src/pages/max/stories.astro · Raconteur Pro library ("The Editorial Split" inner page).
 // Bright glassmorphism: white-glass cards floating over drifting colour fields,
 // with movements and effects throughout (reveal staggers, hover floats, cover zooms).
 // Server logic is a faithful copy of classic /stories (feature parity).
@@ -46,7 +46,7 @@ const trending = (Object.entries(weekCounts)
     .filter(Boolean) as { title: string; slug: string; n: number }[]).slice(0, 3);
 ---
 
-<MaxLayout title="The Library · Raconteur Max" description="Browse the full Raconteur shelf: flash fiction, novellas, poetry, and everything between.">
+<MaxLayout title="The Library · Raconteur Pro" description="Browse the full Raconteur shelf: flash fiction, novellas, poetry, and everything between.">
     <div class="mx-archive">
         {/* ===== Header ===== */}
         <header class="mx-archive-head" data-mx-reveal>
@@ -192,7 +192,7 @@ const trending = (Object.entries(weekCounts)
         </p>
 
         <div class="mx-back">
-            <a href="/max" class="mx-ulink">← Back to the Max edition</a>
+            <a href="/max" class="mx-ulink">← Back to the Pro edition</a>
         </div>
     </div>
 </MaxLayout>

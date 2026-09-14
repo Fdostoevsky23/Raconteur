@@ -1,5 +1,5 @@
 ---
-// src/pages/max/author/[slug].astro — Raconteur Max writer page (bright glassmorphism).
+// src/pages/max/author/[slug].astro — Raconteur Pro writer page (bright glassmorphism).
 // Server logic is a faithful copy of classic /author/[slug] (feature parity):
 // static JSON authors + live DB writers, books, collections, poetry, follow graph.
 import MaxLayout from '../../../layouts/MaxLayout.astro';
@@ -149,7 +149,7 @@ if (isDbAuthor && author.userId) {
 }
 ---
 
-<MaxLayout title={`${author.name} · Raconteur Max`} description={author.bio}>
+<MaxLayout title={`${author.name} · Raconteur Pro`} description={author.bio}>
     <div class="mx-page mx-author">
         {/* ===== Hero — one big glass plate ===== */}
         <header class="mx-glass mx-author-hero" data-mx-reveal>
@@ -394,7 +394,7 @@ if (isDbAuthor && author.userId) {
         )}
 
         <div class="mx-back">
-            <a href="/max" class="mx-ulink">← Back to the Max edition</a>
+            <a href="/max" class="mx-ulink">← Back to the Pro edition</a>
         </div>
 
         <div id="author-meta" data-userid={author.userId || ''} hidden></div>

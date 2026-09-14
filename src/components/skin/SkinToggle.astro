@@ -1,26 +1,24 @@
 ---
-// SkinToggle.astro — the "Raconteur" / "Raconteur+" switcher.
-// Self-contained: works on BOTH skins (classic pages and /plus pages).
+// SkinToggle.astro — the skin switcher: Raconteur Classic / Raconteur+ / Raconteur Pro.
+// Self-contained: works on ALL THREE skins (classic pages, /pro pages, /max pages).
 // Pure server-rendered anchors — no client JS, no state to hydrate.
 // Query strings are preserved so ?edit=, ?next=, etc. survive the switch.
-// variant="regal" — the brass-and-obsidian crown used in the /plus masthead;
+// variant="regal" — the brass-and-obsidian crown used in the Raconteur+ masthead;
+// variant="editorial" — the paper pill used in the Raconteur Pro masthead;
 // default (no prop) keeps the classic cream pill untouched.
-import { isPlusPath, isProPath, isMaxPath, isHomePath, toPlusPath, toProPath, toMaxPath, toClassicPath } from '../../lib/skin';
+import { isProPath, isMaxPath, isHomePath, toProPath, toMaxPath, toClassicPath } from '../../lib/skin';
 
 const here = Astro.url.pathname;
-const onPlus = isPlusPath(here);
 const onPro = isProPath(here);
 const onMax = isMaxPath(here);
-const onNew = onPlus || onPro || onMax; // any of the modern skins
+const onNew = onPro || onMax; // either modern edition
 const onHome = isHomePath(here); // the switch only lives on the home pages
-// Cross-skin arrivals carry a flag so the destination renders born-covered:
-// welcome=1 → the royal entrance splash (plus, pro, or max skin)
-// return=1  → the homecoming veil (classic skin)
-// In-skin buttons stay clean (no flags, no replays).
+// Cross-skin arrivals carry ?welcome=1 so the destination renders
+// born-covered: every skin — Classic included — greets its visitors with
+// the letter-by-letter wordmark ceremony. In-skin buttons stay clean.
 const q = Astro.url.search;
 const suffix = (flag: string) => (q ? '&' : '?') + flag;
-const classicHref = onNew ? toClassicPath(here) + q + suffix('return=1') : toClassicPath(here) + q;
-const plusHref = onPlus ? toPlusPath(here) + q : toPlusPath(here) + q + suffix('welcome=1');
+const classicHref = onNew ? toClassicPath(here) + q + suffix('welcome=1') : toClassicPath(here) + q;
 const proHref = onPro ? toProPath(here) + q : toProPath(here) + q + suffix('welcome=1');
 const maxHref = onMax ? toMaxPath(here) + q : toMaxPath(here) + q + suffix('welcome=1');
 
@@ -29,49 +27,23 @@ interface Props {
 }
 const { variant = 'classic' } = Astro.props as any;
 
-// Boss mandate (Session 16): the Raconteur / Raconteur+ switch appears on
-// the home pages ONLY — inner pages of both skins carry no toggle. The
-// layouts also gate their wrapper divs, but the component self-guards so
-// it can never leak onto an inner page regardless of where it's mounted.
+// Boss mandate (Session 16): the skin switch appears on the home pages
+// ONLY — inner pages of every skin carry no toggle. The layouts also gate
+// their wrapper divs, but the component self-guards so it can never leak
+// onto an inner page regardless of where it's mounted.
 if (!onHome) return;
 ---
 
-{/* === HOMECOMING VEIL (plus → classic) =====================================
-    Rendered server-side ONLY when the visitor arrives home with ?return=1
-    (SkinToggle appends it when leaving the plus skin). The classic page is
-    born covered in its own cream — same gradient as the departure veil,
-    so the navigation handoff is invisible — with the RACONTEUR wordmark
-    rising in; then the curtain lifts to reveal the classic home. The
-    inline script below runs before the rest of the page paints. */}
-{!onNew && Astro.url.searchParams.get('return') === '1' && (
-    <div class="skin-return-veil" id="skinReturnVeil" aria-hidden="true">
-        <div class="skin-return-veil-core">
-            <span class="skin-return-veil-word">RACONTEUR</span>
-            <span class="skin-return-veil-sub">Literature you want to read</span>
-        </div>
-    </div>
-)}
-
-<div class={`skin-toggle ${variant === 'regal' ? 'regal' : variant === 'editorial' ? 'editorial' : ''}`} data-skin={onMax ? 'max' : (onPro ? 'pro' : (onPlus ? 'plus' : 'classic'))} role="group" aria-label="Choose site design">
+<div class={`skin-toggle ${variant === 'regal' ? 'regal' : variant === 'editorial' ? 'editorial' : ''}`} data-skin={onMax ? 'max' : (onPro ? 'pro' : 'classic')} role="group" aria-label="Choose site design">
     <a
         href={classicHref}
         data-dest="classic"
         data-cross={onNew ? '1' : undefined}
-        class={`toggle-btn ${!onNew ? 'active' : ''}`}
+        class={`toggle-btn classic ${!onNew ? 'active' : ''}`}
         aria-current={!onNew ? 'page' : undefined}
-        title="The original Raconteur design"
+        title="The original Raconteur — the Classic edition"
     >
-        Raconteur
-    </a>
-    <a
-        href={plusHref}
-        data-dest="plus"
-        data-cross={onPlus ? undefined : '1'}
-        class={`toggle-btn plus ${onPlus ? 'active' : ''}`}
-        aria-current={onPlus ? 'page' : undefined}
-        title="The Obsidian Editorial design"
-    >
-        Raconteur<span class="plus-sign">+</span>
+        Raconteur <span class="classic-sign">Classic</span>
     </a>
     <a
         href={proHref}
@@ -79,9 +51,9 @@ if (!onHome) return;
         data-cross={onPro ? undefined : '1'}
         class={`toggle-btn pro ${onPro ? 'active' : ''}`}
         aria-current={onPro ? 'page' : undefined}
-        title="The Reader's Desk · Raconteur Pro design"
+        title="The Reader's Desk · the Raconteur+ edition"
     >
-        Raconteur <span class="pro-sign">Pro</span>
+        Raconteur<span class="pro-sign">+</span>
     </a>
     <a
         href={maxHref}
@@ -89,9 +61,9 @@ if (!onHome) return;
         data-cross={onMax ? undefined : '1'}
         class={`toggle-btn max ${onMax ? 'active' : ''}`}
         aria-current={onMax ? 'page' : undefined}
-        title="The Editorial Split · Raconteur Max design"
+        title="The Editorial Split · the Raconteur Pro edition"
     >
-        Raconteur <span class="max-sign">Max</span>
+        Raconteur <span class="max-sign">Pro</span>
     </a>
 </div>
 
@@ -134,34 +106,28 @@ if (!onHome) return;
         box-shadow: 0 2px 10px rgba(244, 237, 224, 0.25);
     }
 
-    /* Plus button carries a brass-gold identity in both skins */
-    .toggle-btn.plus {
-        font-style: normal;
-    }
-
-    .toggle-btn.plus .plus-sign {
-        font-weight: 700;
-        margin-left: 1px;
-        color: #c9a24b;
-        transition: color 0.25s;
-    }
-
-    .toggle-btn.plus.active .plus-sign {
-        color: #7d5f1d; /* dark brass on cream pill */
-    }
-
-    /* The inactive plus button gets a brass glow hint on hover */
-    .toggle-btn.plus:hover:not(.active) {
-        box-shadow: inset 0 0 0 1px rgba(201, 162, 75, 0.5);
-    }
-
-    /* Pro button carries the amber identity in every skin */
-    .toggle-btn.pro .pro-sign {
+    /* The Classic button carries the aged-ink identity in every skin */
+    .toggle-btn.classic .classic-sign {
         font-weight: 700;
         margin-left: 2px;
         font-size: 0.7em;
         letter-spacing: 0.06em;
         text-transform: uppercase;
+        color: #8a7f6a; /* the aged-ink grey of the classic paper */
+        transition: color 0.25s;
+    }
+
+    .toggle-btn.classic.active .classic-sign { color: #57504a; } /* deep ink on cream pill */
+
+    .toggle-btn.classic:hover:not(.active) {
+        box-shadow: inset 0 0 0 1px rgba(138, 127, 106, 0.5);
+    }
+
+    /* The Raconteur+ button carries the amber identity in every skin */
+    .toggle-btn.pro .pro-sign {
+        font-weight: 700;
+        margin-left: 1px;
+        font-size: 0.95em;
         color: #ff6a00;
         transition: color 0.25s;
     }
@@ -172,7 +138,7 @@ if (!onHome) return;
         box-shadow: inset 0 0 0 1px rgba(255, 106, 0, 0.5);
     }
 
-    /* Max button carries the vermilion identity in every skin */
+    /* The Raconteur Pro button carries the vermilion identity in every skin */
     .toggle-btn.max .max-sign {
         font-weight: 700;
         margin-left: 2px;
@@ -224,16 +190,12 @@ if (!onHome) return;
             inset 0 1px 0 rgba(255, 244, 214, 0.55);
     }
 
-    .skin-toggle.regal .toggle-btn.plus .plus-sign {
-        color: #c9a24b;
+    .skin-toggle.regal .toggle-btn.classic .classic-sign {
+        color: rgba(242, 238, 227, 0.75);
     }
 
-    .skin-toggle.regal .toggle-btn.plus.active .plus-sign {
-        color: #5c430f;
-    }
-
-    .skin-toggle.regal .toggle-btn.plus:hover:not(.active) {
-        box-shadow: inset 0 0 0 1px rgba(201, 162, 75, 0.55);
+    .skin-toggle.regal .toggle-btn.classic.active .classic-sign {
+        color: #17110a;
     }
 
     /* === EDITORIAL VARIANT — the Max masthead pill ============================
@@ -267,11 +229,11 @@ if (!onHome) return;
         box-shadow: 0 2px 10px rgba(28, 25, 23, 0.25);
     }
 
-    .skin-toggle.editorial .toggle-btn.plus .plus-sign { color: #a8842f; }
+    .skin-toggle.editorial .toggle-btn.classic .classic-sign { color: #8a7f6a; }
     .skin-toggle.editorial .toggle-btn.pro .pro-sign { color: #c25a12; }
     .skin-toggle.editorial .toggle-btn.max .max-sign { color: #d8341c; }
 
-    .skin-toggle.editorial .toggle-btn.plus.active .plus-sign { color: #e6cc7d; }
+    .skin-toggle.editorial .toggle-btn.classic.active .classic-sign { color: #f4ede0; }
     .skin-toggle.editorial .toggle-btn.pro.active .pro-sign { color: #ffb27a; }
     .skin-toggle.editorial .toggle-btn.max.active .max-sign { color: #ff6a4a; }
 
@@ -287,53 +249,12 @@ if (!onHome) return;
 </style>
 
 <script is:inline>
-    // === HOMECOMING VEIL LIFTER ==============================================
-    // Runs inline at the top of the page (SkinToggle mounts first in the
-    // header), i.e. before the rest of the page paints. If the veil is in
-    // the DOM (?return=1 arrival), scrub the flag, lock scroll, and
-    // schedule the curtain lift. Click anywhere to skip.
-    (function () {
-        var veil = document.getElementById('skinReturnVeil');
-        if (!veil) return;
-        var params = new URLSearchParams(window.location.search);
-        if (params.get('return') !== '1') return;
-        params.delete('return');
-        var rest = params.toString();
-        try {
-            window.history.replaceState({}, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
-        } catch (e) { /* private modes — the veil still lifts, URL keeps the flag */ }
-        document.documentElement.classList.add('ss-lock');
-        var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        var total = reduced ? 1100 : 2700; // wordmark rises → beat → lift
-        var done = false;
-        var finish = function () {
-            if (done) return;
-            done = true;
-            veil.dataset.leaving = 'true';
-            window.setTimeout(function () {
-                veil.remove();
-                document.documentElement.classList.remove('ss-lock');
-            }, reduced ? 300 : 1050);
-        };
-        window.setTimeout(finish, total);
-        veil.addEventListener('click', finish); // the impatient exit
-        // bfcache: never trap a restored page under the curtain.
-        window.addEventListener('pageshow', function (e) {
-            if (e.persisted) {
-                veil.remove();
-                document.documentElement.classList.remove('ss-lock');
-            }
-        });
-    })();
-</script>
-
-<script is:inline>
     // === DEPARTURE VEIL ======================================================
     // A skin switch should never be a hard cut: when a visitor clicks the
     // OTHER skin's button, a full-screen veil fades up over the current
     // page FIRST — wearing the destination's exact cover — and only then
     // do we navigate. Color never leaves the screen between click and
-    // reveal. Runs only on the two home pages, where the toggle lives.
+    // reveal. Runs only on the three home pages, where the toggle lives.
     (function () {
         // Reduced motion → plain navigation; arrivals still self-clean and
         // the no-JS failsafes still fire.
@@ -352,10 +273,9 @@ if (!onHome) return;
 
             // The veil wears the DESTINATION's exact cover so the handoff
             // at navigation time is pixel-identical:
-            // → plus: the Mesher gradient (same stops as .skin-splash-plus .ss-bg)
             // → pro: the Reader's Desk amber-on-void (matches .skin-splash-pro)
             // → max: Editorial paper + vermilion (matches .skin-splash-max)
-            // → classic: the homecoming cream (same as .skin-return-veil)
+            // → classic: the homecoming cream (matches .skin-splash-classic)
             var path = href.replace(/^https?:\/\/[^/]+/, '').split('?')[0];
             var bg;
             if (path === '/max') {
@@ -366,14 +286,6 @@ if (!onHome) return;
                 bg = 'radial-gradient(85% 70% at 78% 6%, rgba(255, 106, 0, 0.34) 0%, rgba(255, 106, 0, 0) 60%),'
                    + 'radial-gradient(70% 60% at 8% 96%, rgba(46, 230, 168, 0.22) 0%, rgba(46, 230, 168, 0) 60%),'
                    + '#06080a';
-            } else if (path === '/plus') {
-                bg = 'radial-gradient(at 10% 15%, hsla(28, 100%, 74%, 1) 0px, transparent 55%),'
-                   + 'radial-gradient(at 38% 28%, hsla(28, 100%, 74%, 1) 0px, transparent 45%),'
-                   + 'radial-gradient(at 2%  55%, hsla(28, 100%, 70%, 1) 0px, transparent 40%),'
-                   + 'radial-gradient(at 78% 8%,  hsla(189, 100%, 56%, 1) 0px, transparent 50%),'
-                   + 'radial-gradient(at 100% 38%, hsla(189, 100%, 56%, 1) 0px, transparent 45%),'
-                   + 'radial-gradient(at 65% 100%, hsla(263, 100%, 45%, 1) 0px, transparent 50%),'
-                   + 'hsla(263, 100%, 50%, 1)';
             } else {
                 bg = 'radial-gradient(120% 100% at 50% 30%, #fffdf5 0%, #f7f0dd 61%, #efe5cc 100%)';
             }
@@ -400,7 +312,8 @@ if (!onHome) return;
         }
 
         // Capture-phase listener — one handler covers every toggle instance
-        // (cream pill on classic home, regal crown on plus home). Modifier
+        // (cream pill on the Classic home, regal crown on the Raconteur+ home,
+        // paper pill on the Raconteur Pro home). Modifier
         // clicks (new tab etc.) are left to the browser.
         document.addEventListener('click', function (ev) {
             if (sealed) return;
@@ -427,8 +340,7 @@ if (!onHome) return;
 
 <style is:global>
     /* Scroll lock while any curtain is up (shared rule — ships with the
-       toggle, so it exists on classic pages too, where SkinSplash styles
-       never load). */
+       toggle, so it exists on every skin's pages). */
     html.ss-lock { overflow: hidden; }
 
     /* === DEPARTURE VEIL — full-screen cover, above the page, one step
@@ -438,72 +350,5 @@ if (!onHome) return;
         inset: 0;
         z-index: 2147483646; /* one below the splash (…647) — arrival wins */
         opacity: 0;
-    }
-
-    /* === HOMECOMING VEIL — the classic side's born-covered curtain =====
-       Same cream gradient as the departure veil toward classic: the swap
-       is invisible. The wordmark rises in (classic's own Playfair + Lora),
-       then the curtain itself lifts upward to reveal the home. */
-    .skin-return-veil {
-        position: fixed;
-        inset: 0;
-        z-index: 2147483645;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: radial-gradient(120% 100% at 50% 30%, #fffdf5 0%, #f7f0dd 62%, #efe5cc 100%);
-        cursor: pointer; /* click anywhere to skip the homecoming */
-        animation: skin-return-autohide 0.8s ease 5s forwards; /* no-JS failsafe */
-    }
-
-    .skin-return-veil[data-leaving='true'] {
-        transform: translateY(-102%);
-        transition: transform 0.95s cubic-bezier(0.65, 0, 0.2, 1);
-    }
-
-    .skin-return-veil-core {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.9rem;
-        padding: 0 1.5rem;
-        text-align: center;
-    }
-
-    .skin-return-veil-word {
-        font-family: 'Playfair Display', Georgia, serif;
-        font-weight: 900;
-        font-size: clamp(2.6rem, 10vw, 6rem);
-        letter-spacing: 0.18em;
-        line-height: 1;
-        color: #2e2a22; /* classic ink */
-        opacity: 0;
-        animation: skin-return-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
-    }
-
-    .skin-return-veil-sub {
-        font-family: 'Lora', Georgia, serif;
-        font-style: italic;
-        font-size: 0.95rem;
-        letter-spacing: 0.04em;
-        color: #8a7f6a;
-        opacity: 0;
-        animation: skin-return-in 0.9s ease 0.55s forwards;
-    }
-
-    @keyframes skin-return-in {
-        from { opacity: 0; transform: translateY(18px); filter: blur(8px); }
-        to   { opacity: 1; transform: none; filter: blur(0); }
-    }
-
-    @keyframes skin-return-autohide {
-        to { opacity: 0; visibility: hidden; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .skin-return-veil { animation-duration: 0.01s; animation-delay: 1.4s; }
-        .skin-return-veil[data-leaving='true'] { transition-duration: 0.3s; }
-        .skin-return-veil-word { animation-duration: 0.01s; animation-delay: 0.05s; }
-        .skin-return-veil-sub { animation-duration: 0.01s; animation-delay: 0.1s; }
     }
 </style>

@@ -1,13 +1,13 @@
 ---
-// MaxLayout.astro — the Raconteur Max shell ("The Editorial Split").
+// MaxLayout.astro — the Raconteur Pro shell ("The Editorial Split").
 // DUAL-MODE skin per boss brief (Session 20):
 //   · HOME (/max): editorial design — paper, ink, split compositions.
 //   · INNER (/max/**): bright glassmorphism with movement.
 // The body carries data-max-mode so max.css can switch systems.
 import { getVisibleStories } from '../data/stories';
 import { supabase } from '../lib/supabase';
-import SkinToggle from '../components/plus/SkinToggle.astro';
-import SkinSplash from '../components/plus/SkinSplash.astro';
+import SkinToggle from '../components/skin/SkinToggle.astro';
+import SkinSplash from '../components/skin/SkinSplash.astro';
 import Icon from '../components/Icon.astro';
 import '../styles/max.css';
 
@@ -62,7 +62,7 @@ const navHref = {
 
     <title>{title}</title>
 
-    <meta property="og:site_name" content="Raconteur Max" />
+    <meta property="og:site_name" content="Raconteur Pro" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="article" />
@@ -108,8 +108,8 @@ const navHref = {
     {isHome ? (
         <header class="mx-topbar">
             <div class="mx-masthead">
-                <a href="/max" class="mx-brand mx-brand-masthead" aria-label="Raconteur Max home">
-                    Raconteur <span class="mx-brand-max">Max</span>
+                <a href="/max" class="mx-brand mx-brand-masthead" aria-label="Raconteur Pro home">
+                    Raconteur <span class="mx-brand-max">Pro</span>
                 </a>
                 <p class="mx-masthead-tagline">Literature you want to read</p>
             </div>
@@ -144,9 +144,9 @@ const navHref = {
         </header>
     ) : (
         <header class="mx-inner-bar">
-            <a href="/max" class="mx-inner-back">← Back to the Max edition</a>
-            <a href="/max" class="mx-brand mx-inner-brand" aria-label="Raconteur Max home">
-                Raconteur <span class="mx-brand-max">Max</span>
+            <a href="/max" class="mx-inner-back">← Back to the Pro edition</a>
+            <a href="/max" class="mx-brand mx-inner-brand" aria-label="Raconteur Pro home">
+                Raconteur <span class="mx-brand-max">Pro</span>
             </a>
             <p class="mx-inner-tagline">Literature you want to read</p>
         </header>
@@ -160,7 +160,7 @@ const navHref = {
     <footer class={`mx-footer ${isHome ? '' : 'mx-footer-inner'}`}>
         <div class="mx-rain" aria-hidden="true" id="mxRain"></div>
         <div class="mx-footer-core">
-            <p class="mx-footer-name">Raconteur <em>Max</em></p>
+            <p class="mx-footer-name">Raconteur <em>Pro</em></p>
             <p class="mx-footer-tagline">Literature you want to read</p>
             <nav class="mx-footer-links" aria-label="Footer">
                 <a href="/max">Home</a>

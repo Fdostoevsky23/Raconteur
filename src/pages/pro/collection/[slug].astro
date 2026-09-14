@@ -30,7 +30,7 @@ const storiesMap = new Map((storyRows || []).map((r: any) => [r.id, buildStoryFr
 const stories = storyIds.map((id: string) => storiesMap.get(id)).filter(Boolean);
 ---
 
-<ProLayout title={`${collection.title} · Raconteur Pro`} description={collection.curator_note || 'A curated collection on Raconteur.'}>
+<ProLayout title={`${collection.title} · Raconteur+`} description={collection.curator_note || 'A curated collection on Raconteur.'}>
     <div class="pro-page">
         <header class="pro-page-head" data-pro-reveal>
             <p class="pro-browser-kicker">Curated shelf</p>

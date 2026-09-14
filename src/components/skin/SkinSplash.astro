@@ -1,28 +1,31 @@
 ---
-// SkinSplash.astro — the royal entrance interstitial.
-// When a visitor switches skins (Raconteur → Raconteur+), the SkinToggle
-// appends ?welcome=1 to the destination link. This component detects that
-// param, covers the screen, spells the brand letter-by-letter, holds for
-// a beat when the "+" lands, then lifts to reveal the page beneath.
+// SkinSplash.astro — the entrance ceremony, shared by ALL THREE skins.
+// When a visitor switches skins, the SkinToggle appends ?welcome=1 to the
+// destination link. This component detects that param, covers the screen,
+// spells the brand letter-by-letter, holds for a beat when the accent
+// lands, then lifts to reveal the page beneath.
 //
 // The MECHANIC (letter-by-letter reveal → hold → lift) is shared by every
-// skin; the LOOK is per-variant. variant="plus" uses the boss's Mesher
-// settings (csshero.org/mesher): bg hsla(263,100%,50%,1) with palette
-// blobs hsla(28,100%,74%,1) + hsla(189,100%,56%,1), grain 0.
-// variant="pro" / "max" are reserved — they will get their own landing
-// looks (NOT this gradient) when those skins are built.
+// skin; the LOOK is per-variant:
+//   variant="classic" — Raconteur Classic: the warm cream paper of the
+//     original home, Playfair ink letters, the "Classic" tail in vermilion.
+//   variant="pro" — Raconteur+: the Reader's Desk, near-black void with a
+//     desk-lamp amber bloom; the "+" lands in amber.
+//   variant="max" — Raconteur Pro: the Editorial Split, warm paper with a
+//     vermilion wash; the "Pro" tail lands in vermilion.
 //
 // No splash without the param (direct visits, refreshes, in-skin nav) and
 // the param is scrubbed from the URL the instant it's read. Click skips.
 interface Props {
-    variant?: 'plus' | 'pro' | 'max';
+    variant?: 'classic' | 'pro' | 'max';
     /** Server-side activation (?welcome=1): the page is BORN covered — no
      *  flash of content before the curtain and no dependence on JS timing.
      *  The departure veil on the old page hands off to this seamlessly
-     *  because both wear the identical Mesher background. */
+     *  because both wear the identical cover. */
     eager?: boolean;
 }
-const { variant = 'plus', eager = false } = Astro.props as any;
+const { variant = 'classic', eager = false } = Astro.props as any;
+const isClassic = variant === 'classic';
 const isPro = variant === 'pro';
 const isMax = variant === 'max';
 
@@ -30,13 +33,14 @@ const isMax = variant === 'max';
 // a professional, unhurried reveal. First letter at 0.50s, +0.25s per
 // glyph, each entrance takes 1.05s (expo-out) → the accent fully landed
 // shortly after; hold 1.5s; lift takes 1.1s.
-const glyphs = (isPro ? 'Raconteur Pro' : isMax ? 'Raconteur Max' : 'Raconteur+').split('');
+const glyphs = (isPro ? 'Raconteur+' : isMax ? 'Raconteur Pro' : 'Raconteur Classic').split('');
 const stagger = 0.25;
 const first = 0.50;
 const letterDur = 1.05;
 const hold = 1.5;
-// The accent tail: "+" for plus (index 9), "Pro" for pro / "Max" for max (indices 10-12)
-const accentFrom = (isPro || isMax) ? 10 : 9;
+// The accent tail: the "+" is attached to the word (index 9) for
+// Raconteur+; the "Classic" / "Pro" tails begin at index 10.
+const accentFrom = isPro ? 9 : 10;
 const lastArrives = first + (glyphs.length - 1) * stagger + letterDur;
 const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begins
 ---
@@ -51,10 +55,10 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
 >
     <div class="ss-bg" aria-hidden="true"></div>
     <div class="ss-core">
-        <div class="ss-word" aria-label={isPro ? 'Raconteur Pro' : isMax ? 'Raconteur Max' : 'Raconteur+'}>
+        <div class="ss-word" aria-label={isPro ? 'Raconteur+' : isMax ? 'Raconteur Pro' : 'Raconteur Classic'}>
             {glyphs.map((ch: string, i: number) => (
                 <span
-                    class:list={['ss-letter', { 'ss-plus': !isPro && !isMax && ch === '+', 'ss-accent-pro': isPro && i >= accentFrom, 'ss-accent-max': isMax && i >= accentFrom }]}
+                    class:list={['ss-letter', { 'ss-accent-classic': isClassic && i >= accentFrom, 'ss-accent-pro': isPro && i >= accentFrom, 'ss-accent-max': isMax && i >= accentFrom }]}
                     style={`animation-delay:${(first + i * stagger).toFixed(2)}s`}
                     aria-hidden="true"
                 >
@@ -98,19 +102,13 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1), transform 1.1s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* === VARIANT: plus — the Mesher gradient, exactly as exported ===
-       bg hsla(263,100%,50%,1) · palette hsla(28,100%,74%,1) + hsla(189,100%,56%,1) · grain 0 */
-    .skin-splash-plus .ss-bg {
+    /* === VARIANT: classic — Raconteur Classic: the warm cream paper of
+       the original home. Identical to the departure veil's classic cover,
+       so the click-to-arrival handoff is one continuous sheet of cream. */
+    .skin-splash-classic .ss-bg {
         position: absolute;
         inset: 0;
-        background-color: hsla(263, 100%, 50%, 1);
-        background-image:
-            radial-gradient(at 10% 15%, hsla(28, 100%, 74%, 1) 0px, transparent 55%),
-            radial-gradient(at 38% 28%, hsla(28, 100%, 74%, 1) 0px, transparent 45%),
-            radial-gradient(at 2% 55%, hsla(28, 100%, 70%, 1) 0px, transparent 40%),
-            radial-gradient(at 78% 8%, hsla(189, 100%, 56%, 1) 0px, transparent 50%),
-            radial-gradient(at 100% 38%, hsla(189, 100%, 56%, 1) 0px, transparent 45%),
-            radial-gradient(at 65% 100%, hsla(263, 100%, 45%, 1) 0px, transparent 50%);
+        background: radial-gradient(120% 100% at 50% 30%, #fffdf5 0%, #f7f0dd 61%, #efe5cc 100%);
         animation: ss-bg-swell 9s ease-in-out infinite alternate;
     }
 
@@ -163,6 +161,15 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         color: #fdfbf6;
     }
 
+    /* Classic wordmark — Playfair Display 900 in ink: the original masthead face */
+    .skin-splash-classic .ss-word {
+        font-family: 'Playfair Display', Georgia, serif;
+        font-weight: 900;
+        font-size: clamp(2.6rem, 11vw, 7.4rem);
+        letter-spacing: 0.02em;
+        color: #2e2a22;
+    }
+
     /* Pro wordmark — Outfit (the Pro system font), a touch tighter */
     .skin-splash-pro .ss-word {
         font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif;
@@ -188,19 +195,30 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         text-shadow: 0 6px 44px rgba(20, 0, 50, 0.45);
     }
 
-    /* The "+" lands in Mesher peach — the payoff moment */
-    .ss-letter.ss-plus {
-        color: hsla(28, 100%, 74%, 1);
-        text-shadow: 0 0 70px rgba(255, 255, 255, 0.4);
+    /* Classic: the "Classic" tail lands in vermilion — the editor's seal */
+    .skin-splash-classic .ss-letter.ss-accent-classic {
+        color: #b3543e;
+        text-shadow: 0 6px 40px rgba(179, 84, 62, 0.30);
     }
 
-    /* Pro: the "Pro" tail lands in amber, mint glow beneath */
+    .skin-splash-classic .ss-letter { text-shadow: 0 6px 40px rgba(46, 42, 34, 0.18); }
+
+    .skin-splash-classic .ss-tagline {
+        font-family: 'Lora', Georgia, serif;
+        font-style: italic;
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: none;
+        color: rgba(46, 42, 34, 0.62);
+    }
+
+    /* Pro: the "+" tail lands in amber — the payoff moment */
     .skin-splash-pro .ss-letter.ss-accent-pro {
         color: #ff6a00;
         text-shadow: 0 0 60px rgba(255, 106, 0, 0.55);
     }
 
-    /* Max: the "Max" tail lands in vermilion — the editor's red pen */
+    /* Max: the "Pro" tail lands in vermilion — the editor's red pen */
     .skin-splash-max .ss-letter.ss-accent-max {
         color: #d8341c;
         text-shadow: 0 6px 40px rgba(216, 52, 28, 0.35);
@@ -237,7 +255,7 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
     /* === Manners === */
     @media (prefers-reduced-motion: reduce) {
         .ss-letter, .ss-tagline { animation-duration: 0.01s; }
-        .skin-splash-plus .ss-bg, .skin-splash-pro .ss-bg, .skin-splash-max .ss-bg { animation: none; }
+        .skin-splash-classic .ss-bg, .skin-splash-pro .ss-bg, .skin-splash-max .ss-bg { animation: none; }
         .skin-splash[data-leaving='true'] { transition-duration: 0.3s; }
     }
 
