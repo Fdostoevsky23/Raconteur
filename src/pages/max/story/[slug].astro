@@ -336,7 +336,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     const isDbStory = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
 
     async function initLikes() {
-        if (!isDbStory) { likeBtn.closest('.mx-like-row')?.remove(); return; }
+        // story_id is text now — static-slug stories take likes too.
 
         const { count } = await supabase
             .from('likes')
@@ -424,7 +424,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     const likeHint2 = document.getElementById('likeHint')!;
 
     async function initBookmarks() {
-        if (!isDbStory2) { bookmarkBtn.remove(); return; }
+        // story_id is text now — static-slug stories can be saved too.
         const { data: { session: bSession } } = await supabase.auth.getSession();
         if (!bSession) {
             bookmarkBtn.addEventListener('click', () => { likeHint2.textContent = 'Log in to save stories for later.'; });
@@ -715,7 +715,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     }
 
     async function initComments() {
-        if (!isDbStory) return;
+        // story_id is text now — static-slug stories take comments too.
         section.style.display = 'block';
         const { data: { session } } = await supabase.auth.getSession();
         me = session?.user || null;

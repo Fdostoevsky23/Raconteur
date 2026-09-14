@@ -45,12 +45,23 @@ import MaxLayout from '../../layouts/MaxLayout.astro';
             .select('story_id, stories(id, title, cover_url, author_name)')
             .eq('user_id', session.user.id);
 
-        const saved = (savedRows || []).filter((r: any) => r.stories);
+        // Static-slug stories are not rows in `stories`, so their FK join
+        // comes back null — resolve those from the shared search-data island
+        // (slug → title/author) so saved static stories render too.
+        let savedIsland: any[] = [];
+        try { savedIsland = JSON.parse(document.getElementById('all-stories-data')?.textContent || '[]'); } catch { savedIsland = []; }
+        const savedBySlug: Record<string, any> = {};
+        (savedIsland || []).forEach((s: any) => { if (s?.slug) savedBySlug[s.slug] = s; });
+        const saved = (savedRows || []).map((r: any) => {
+            if (r.stories) return { id: r.story_id, title: r.stories.title, author_name: r.stories.author_name, cover_url: r.stories.cover_url };
+            const st = savedBySlug[r.story_id];
+            return st ? { id: r.story_id, title: st.title, author_name: st.author, cover_url: '' } : null;
+        }).filter(Boolean);
         if (saved.length === 0) { emptyState.hidden = false; return; }
 
         savedGrid.hidden = false;
         savedGrid.innerHTML = saved.map((r: any, i: number) => {
-            const s = r.stories;
+            const s = r;
             const cover = s.cover_url
                 ? `<div class="mx-card-cover"><img src="${esc(s.cover_url)}" alt="Cover of ${esc(s.title)}" loading="lazy" /></div>`
                 : `<div class="mx-card-cover"><span class="mx-card-star" aria-hidden="true">${iconSvg('bookmark', 26)}</span></div>`;

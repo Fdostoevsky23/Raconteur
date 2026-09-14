@@ -109,8 +109,30 @@ alter table public.bookmarks alter column story_id type text using story_id::tex
 create index if not exists bookmarks_story_id_idx on public.bookmarks (story_id);
 
 -- ============================================================================
+-- PART D — OPTIONAL: notifications.story_id uuid -> text
+-- (Only affects reply/comment notifications on STATIC-slug stories. Without
+-- it, comments on static stories work fine — only the "someone replied to
+-- you" notification skips for those stories. Safe to run anytime.)
+-- ============================================================================
+do $$
+declare r record;
+begin
+  for r in
+    select conname from pg_constraint
+    where conrelid = 'public.notifications'::regclass
+      and contype = 'f'
+      and pg_get_constraintdef(oid) like '%story_id%'
+  loop
+    execute format('alter table public.notifications drop constraint %I', r.conname);
+  end loop;
+end $$;
+
+alter table public.notifications alter column story_id type text using story_id::text;
+
+-- ============================================================================
 -- AFTER RUNNING:
 -- Tell the agent ("SQL done") — the readers' isDbStory gates on static-slug
--- stories get opened, and the admin Story Comments list gets a slug->title
--- fallback so static-story comments render with the right title/link.
--- ============================================================================
+-- stories have ALREADY been opened (2026-09-14), the Saved shelves resolve
+-- slug bookmarks, and the admin Story Comments lists show titles via the
+-- slug fallback. PART D completes reply-notifications for static stories.
+-- =============================================================================

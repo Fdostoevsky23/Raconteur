@@ -231,11 +231,33 @@ import { supabase } from '../lib/supabase';
 
       // ===== Comments =====
       const { data: comments } = await supabase.from('comments').select('*').order('created_at', { ascending: false }).limit(50);
-      document.getElementById('commentsList')!.innerHTML = (comments || []).map((c: any) => `
+      // Resolve story titles so every comment shows WHICH story it is on, with a link
+      const commentStoryIds = Array.from(new Set((comments || []).map((c: any) => c.story_id).filter(Boolean)));
+      const commentStoryTitles: Record<string, string> = {};
+      if (commentStoryIds.length > 0) {
+        const { data: cStories } = await supabase.from('stories').select('id, title').in('id', commentStoryIds);
+        (cStories || []).forEach((s: any) => { commentStoryTitles[s.id] = s.title; });
+        // Static-slug stories live in the shared search-data island, not `stories`.
+        try {
+          const island = JSON.parse(document.getElementById('all-stories-data')?.textContent || '[]');
+          const islandBySlug: Record<string, string> = {};
+          (island || []).forEach((s: any) => { if (s?.slug && s?.title) islandBySlug[s.slug] = s.title; });
+          commentStoryIds.forEach((id: any) => { if (!commentStoryTitles[id] && islandBySlug[id]) commentStoryTitles[id] = islandBySlug[id]; });
+        } catch { /* island missing — those rows keep the id fragment */ }
+      }
+      document.getElementById('commentsList')!.innerHTML = (comments || []).length === 0
+        ? '<p class="admin-hint">No comments yet.</p>'
+        : (comments || []).map((c: any) => {
+            const title = commentStoryTitles[c.story_id];
+            const where = title
+              ? `on <a href="/story/${esc(c.story_id)}" style="color:inherit; text-decoration:underline;">${esc(title)}</a> · ${new Date(c.created_at).toLocaleDateString()}`
+              : `on story ${esc((c.story_id || '').slice(0, 8))} · ${new Date(c.created_at).toLocaleDateString()}`;
+            return `
         <div class="admin-row">
-          <div class="admin-row-info"><span class="admin-row-meta">${esc(c.author_name || c.display_name || c.pen_name || 'Reader')} · on story ${esc((c.story_id || '').slice(0, 8))}</span><br><span class="admin-row-title" style="font-size:0.85rem;">${esc((c.body || c.text || '').slice(0, 100))}</span></div>
+          <div class="admin-row-info"><span class="admin-row-meta">${esc(c.author_name || c.display_name || c.pen_name || 'Reader')} · ${where}</span><br><span class="admin-row-title" style="font-size:0.85rem;">${esc((c.body || c.text || '').slice(0, 100))}</span></div>
           <button class="admin-btn btn-delete" data-id="${c.id}" data-type="comment">Delete</button>
-        </div>`).join('') || '<p class="admin-hint">No comments yet.</p>';
+        </div>`;
+          }).join('');
       document.querySelectorAll('.btn-delete[data-type="comment"]').forEach(b => b.addEventListener('click', async () => {
         if (!(await dvConfirm({ title: 'Are you sure?', body: 'Delete this comment?', danger: true }))) return;
         const { error } = await supabase.from('comments').delete().eq('id', (b as HTMLElement).dataset.id!);

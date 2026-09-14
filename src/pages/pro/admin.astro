@@ -194,6 +194,17 @@ import Icon from '../../components/Icon.astro';
             const { data: cStories } = await supabase.from('stories').select('id, title').in('id', commentStoryIds);
             (cStories || []).forEach((s: any) => { commentStoryTitles[s.id] = s.title; });
         }
+        // Static-slug stories are not rows in `stories` — resolve their titles
+        // from the shared search-data island (slug → title) so comments on
+        // the classic-file stories render with a real title + link too.
+        if (commentStoryIds.length > 0) {
+            try {
+                const island = JSON.parse(document.getElementById('all-stories-data')?.textContent || '[]');
+                const islandBySlug: Record<string, string> = {};
+                (island || []).forEach((s: any) => { if (s?.slug && s?.title) islandBySlug[s.slug] = s.title; });
+                commentStoryIds.forEach((id: any) => { if (!commentStoryTitles[id] && islandBySlug[id]) commentStoryTitles[id] = islandBySlug[id]; });
+            } catch { /* island missing — those rows keep the id fragment */ }
+        }
         document.getElementById('commentsList')!.innerHTML = (comments || []).length === 0
             ? '<p class="pro-admin-hint">No comments yet. When readers comment on stories, they appear here for review.</p>'
             : (comments || []).map((c: any) => {
