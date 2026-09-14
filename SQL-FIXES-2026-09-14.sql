@@ -18,18 +18,24 @@
 -- ============================================================================
 
 -- ============================================================================
--- PART A — Comments DELETE policy: owner or admin only (idempotent)
+-- PART A — Comments policies: public read/insert, delete = owner or admin only.
+-- Drops EVERY existing policy on comments first (dynamic, name-agnostic), so
+-- the end state is guaranteed no matter what names the live DB currently uses.
+-- (Live probe 2026-09-14: anon deletes are ALREADY blocked — this part makes
+-- the intent explicit and idempotent.)
 -- ============================================================================
 alter table public.comments enable row level security;
 
-drop policy if exists "comments_public_read"          on public.comments;
-drop policy if exists "comments_anyone_insert"        on public.comments;
-drop policy if exists "comments_own_delete"           on public.comments;
-drop policy if exists "comments_story_author_delete"  on public.comments;
-drop policy if exists "comments_admin_delete"         on public.comments;
-drop policy if exists "comments_delete_owner"         on public.comments;
-drop policy if exists "comments_anyone_delete"        on public.comments;
-drop policy if exists "comments_guest_delete"         on public.comments;
+do $$
+declare r record;
+begin
+  for r in
+    select policyname from pg_policies
+    where schemaname = 'public' and tablename = 'comments'
+  loop
+    execute format('drop policy if exists %I on public.comments', r.policyname);
+  end loop;
+end $$;
 
 create policy "comments_public_read"    on public.comments for select using (true);
 create policy "comments_anyone_insert"  on public.comments for insert with check (true);
@@ -60,6 +66,10 @@ end $$;
 
 alter table public.comments alter column story_id type text using story_id::text;
 
+-- story lookups are the hottest comments query — keep an index on each path.
+create index if not exists comments_story_id_idx  on public.comments (story_id);
+create index if not exists comments_parent_id_idx on public.comments (parent_id);
+
 -- ============================================================================
 -- PART C — OPTIONAL: likes.story_id + bookmarks.story_id uuid -> text
 -- (only run if you want likes/bookmarks on static-slug stories as well)
@@ -79,6 +89,8 @@ end $$;
 
 alter table public.likes alter column story_id type text using story_id::text;
 
+create index if not exists likes_story_id_idx on public.likes (story_id);
+
 do $$
 declare r record;
 begin
@@ -93,6 +105,8 @@ begin
 end $$;
 
 alter table public.bookmarks alter column story_id type text using story_id::text;
+
+create index if not exists bookmarks_story_id_idx on public.bookmarks (story_id);
 
 -- ============================================================================
 -- AFTER RUNNING:
