@@ -237,3 +237,83 @@ export function playDeparture(dest: string | null | undefined): void {
     tone(A, keys[0], t0 + 0.02, 0.45, 0.048, 'sine', 0.008, 0);
     tone(A, keys[1], t0 + 0.13, 0.55, 0.04, 'sine', 0.008, 0);
 }
+
+/* === The pass-unlock motif (Chunk 1, build-log row 74) ================== */
+
+export interface PassCeremonyTiming {
+    /** s — when the first letter of the wordmark lands */
+    first: number;
+    /** s — between letters */
+    stagger: number;
+    /** s — when the brass seal finishes drawing (the bell moment) */
+    sealAt: number;
+    /** ms from the ceremony origin until the curtain lifts */
+    liftMs: number;
+    /** ms from the same origin until now (0 on a fresh ceremony) */
+    elapsedMs: number;
+}
+
+/**
+ * The pass-unlock theme: a page flick, one cognac pluck per letter of the
+ * wordmark, the house brass bell the moment the seal completes, and a warm
+ * D-major resolve at the lift. (The desk speaks D minor; a pass is a reward,
+ * so its resolve is major — the same root, the brighter third.) Shares the
+ * synth and the guard chain with the skin ceremonies.
+ */
+export function buildPassSchedule(spec: PassCeremonyTiming & { word: string }): CeremonyEvent[] {
+    const elapsed = spec.elapsedMs / 1000;
+    const rel = (absS: number) => absS - elapsed;
+    const keep = (absS: number) => absS - elapsed >= 0.02;
+    const liftAt = spec.liftMs / 1000;
+    const events: CeremonyEvent[] = [];
+    if (!keep(liftAt)) return events;
+
+    // The key turning: a soft flick just before the first letter.
+    const flickAt = Math.max(0.03, spec.first - 0.3);
+    if (keep(flickAt)) {
+        events.push({ t: rel(flickAt), kind: 'sweep', noise: { freq: 900, dur: 0.22, peak: 0.03, type: 'lowpass' } });
+    }
+
+    // One cognac pluck per letter — the desk's own pentatonic voice.
+    let voice = 0;
+    for (let i = 0; i < spec.word.length; i++) {
+        if (spec.word[i] === ' ') continue;
+        const letterAt = spec.first + i * spec.stagger;
+        if (!keep(letterAt)) continue;
+        events.push({
+            t: rel(letterAt), kind: 'note',
+            freqs: [PRO_PLUCKS[voice % PRO_PLUCKS.length]],
+            dur: 0.9, peak: voice % 2 ? 0.045 : 0.06, type: 'triangle', detune: 4,
+        });
+        voice++;
+    }
+
+    // The seal completes — the house brass bell (the same voice as Classic's desk bell).
+    if (keep(spec.sealAt)) {
+        events.push({ t: rel(spec.sealAt), kind: 'accent', freqs: [1046.5, 2093.01], dur: 2.6, peak: 0.06, type: 'sine', detune: 3 });
+    }
+
+    // The curtain lifts on a D-major resolve.
+    events.push({ t: rel(liftAt), kind: 'chord', stagger: 0.08, dur: 2.2, peak: 0.05, type: 'sine', freqs: [293.66, 369.99, 440, 587.33] });
+
+    return events.sort((a, b) => a.t - b.t);
+}
+
+/** The pass-unlock theme — schedule + play, all guards inside. */
+export function playPassUnlock(spec: PassCeremonyTiming & { word: string }): void {
+    if (!readAudioEnabled() || motionQuiet()) return;
+    const A = rig();
+    if (!A) return;
+    const t0 = A.ac.currentTime + 0.02;
+    for (const ev of buildPassSchedule(spec)) {
+        if (ev.noise) {
+            noiseBurst(A, t0 + ev.t, ev.noise.dur, ev.noise.peak, ev.noise.freq, ev.noise.q ?? 1, (ev.noise.type as BiquadFilterType) ?? 'bandpass');
+        } else if (ev.freqs) {
+            const stag = ev.stagger ?? 0;
+            for (let j = 0; j < ev.freqs.length; j++) {
+                const peak = (ev.peak ?? 0.05) * (j === 0 ? 1 : ev.freqs.length > 2 ? 0.8 : 0.4);
+                tone(A, ev.freqs[j], t0 + ev.t + j * stag, ev.dur ?? 0.8, peak, (ev.type as OscillatorType) ?? 'sine', ev.attack ?? 0.012, ev.detune ?? 0);
+            }
+        }
+    }
+}

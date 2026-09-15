@@ -1,0 +1,242 @@
+---
+// PassCeremony.astro — the Pro Pass unlock ceremony (Chunk 1, build-log row 74).
+// A dedicated curtain in the Reader's Desk language: the cognac ledger cover
+// (identical to the pro splash, so the desk never changes colour mid-scene),
+// the brass seal drawing itself shut, the wordmark spelling itself letter by
+// letter, a hold, then the lift. Summoned when a writer is FIRST seen holding
+// the pass (once per writer, per browser) or server-side on ?unlocked=1.
+//
+// Same manners as the skin ceremonies: click skips, reduced motion settles
+// near-instantly, a muted or blocked AudioContext stays silent, no-JS pages
+// never trap a visitor (noscript hides the curtain). The per-skin "pass
+// unlocked" chord lives in src/lib/ceremony-audio.ts (buildPassSchedule).
+interface Props {
+    /** Server-side activation (?unlocked=1): the page is born covered. */
+    eager?: boolean;
+}
+const { eager = false } = Astro.props;
+
+// The ceremony clock (shared with the audio schedule — one source of truth):
+// first letter at 0.6s, +0.16s per glyph, the seal completes at 2.1s, hold,
+// lift at 3.7s over 0.9s.
+const first = 0.6;
+const stagger = 0.16;
+const sealAt = 2.1;
+const liftMs = 3700;
+const word = 'Pro Pass';
+const glyphs = word.split('');
+const accentFrom = 4; // the "Pass" tail lands in brass
+---
+
+<div
+    class="pass-ceremony"
+    id="passCeremony"
+    data-active={eager ? 'true' : 'false'}
+    data-pc-born={eager ? 'true' : 'false'}
+    data-pc-first={String(first)}
+    data-pc-stagger={String(stagger)}
+    data-pc-seal={String(sealAt)}
+    data-pc-lift={String(liftMs)}
+    data-pc-word={word}
+    role="dialog"
+    aria-label="Pro Pass unlocked"
+>
+    <div class="pc-bg" aria-hidden="true"></div>
+    <div class="pc-core">
+        <div class="pc-seal" aria-hidden="true"><span class="pc-seal-r">R</span></div>
+        <div class="pc-word" aria-label={word}>
+            {glyphs.map((ch: string, i: number) => (
+                <span
+                    class:list={['pc-letter', { 'pc-accent': i >= accentFrom }]}
+                    style={`animation-delay:${(first + i * stagger).toFixed(2)}s`}
+                    aria-hidden="true"
+                >
+                    {ch === ' ' ? '\u00A0' : ch}
+                </span>
+            ))}
+        </div>
+        <p class="pc-tagline">The pass is yours.</p>
+    </div>
+</div>
+
+<noscript>
+    <style>.pass-ceremony { display: none !important; }</style>
+</noscript>
+
+<style>
+    .pass-ceremony {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        cursor: pointer;
+    }
+    .pass-ceremony[data-active='true'] { display: flex; }
+    .pass-ceremony[data-leaving='true'] {
+        opacity: 0;
+        transform: scale(1.04);
+        pointer-events: none;
+        transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1), transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* The cover — identical to the pro splash (one continuous desk) */
+    .pc-bg {
+        position: absolute;
+        inset: 0;
+        background-color: #241a12;
+        background-image:
+            radial-gradient(85% 70% at 78% 6%, rgba(255, 106, 0, 0.34) 0%, rgba(255, 106, 0, 0) 60%),
+            radial-gradient(70% 60% at 8% 96%, rgba(46, 230, 168, 0.22) 0%, rgba(46, 230, 168, 0) 60%);
+        animation: pc-bg-swell 9s ease-in-out infinite alternate;
+    }
+    @keyframes pc-bg-swell {
+        from { transform: scale(1); }
+        to   { transform: scale(1.06); }
+    }
+
+    .pc-core { position: relative; text-align: center; padding: 0 1.5rem; }
+
+    /* The brass seal — draws itself shut while the word spells */
+    .pc-seal {
+        width: clamp(6.4rem, 14vw, 8.4rem);
+        height: clamp(6.4rem, 14vw, 8.4rem);
+        margin: 0 auto 2.2rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid rgba(255, 198, 72, 0.55);
+        box-shadow:
+            0 0 0 7px rgba(255, 198, 72, 0.10),
+            0 0 60px rgba(255, 106, 0, 0.22),
+            inset 0 0 34px rgba(255, 198, 72, 0.10);
+        color: #ffc648;
+        opacity: 0;
+        transform: scale(0.86);
+        animation: pc-seal-in 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+    }
+    @keyframes pc-seal-in {
+        from { opacity: 0; transform: scale(0.86) rotate(-6deg); }
+        to   { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+    .pc-seal-r {
+        font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+        font-weight: 700;
+        font-size: clamp(2.6rem, 6vw, 3.4rem);
+        line-height: 1;
+        letter-spacing: -0.02em;
+    }
+
+    /* The word — the Pro voice, letters materialise one by one */
+    .pc-word {
+        display: flex;
+        justify-content: center;
+        font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+        font-weight: 700;
+        font-size: clamp(2.9rem, 11vw, 7.2rem);
+        line-height: 1;
+        letter-spacing: -0.015em;
+        color: #f7f0e4;
+    }
+    .pc-letter {
+        display: inline-block;
+        opacity: 0;
+        animation: pc-letter-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+        text-shadow: 0 6px 44px rgba(46, 24, 4, 0.4);
+    }
+    .pc-letter.pc-accent { color: #ffc648; }
+    @keyframes pc-letter-in {
+        from { opacity: 0; transform: translateY(0.35em) scale(0.94); filter: blur(10px); }
+        to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    }
+
+    .pc-tagline {
+        margin: 1.9rem 0 0;
+        font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+        font-size: clamp(0.95rem, 2.6vw, 1.3rem);
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #ffc648;
+        text-shadow: 0 0 26px rgba(255, 106, 0, 0.45);
+        opacity: 0;
+        animation: pc-tagline-in 1s cubic-bezier(0.16, 1, 0.3, 1) 2.3s both;
+    }
+    @keyframes pc-tagline-in {
+        from { opacity: 0; transform: translateY(0.4em); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 560px) {
+        .pc-seal { margin-bottom: 1.6rem; }
+        .pc-tagline { letter-spacing: 0.14em; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .pc-bg { animation: none; }
+        .pc-letter, .pc-seal, .pc-tagline {
+            animation-duration: 0.01ms !important;
+            animation-delay: 0ms !important;
+        }
+        .pass-ceremony[data-leaving='true'] { transition-duration: 0.2s; }
+    }
+</style>
+
+<script>
+    // The pass ceremony runner. The PAGE decides when a writer earns the
+    // ceremony (first unlock seen) and activates the curtain; this script
+    // plays it: lock the scroll, sing the motif in the same clock as the
+    // letters, lift at the hold, scrub ?unlocked=1 from the address bar.
+    import { playPassUnlock } from '../../lib/ceremony-audio';
+
+    const root = document.getElementById('passCeremony');
+    if (root) {
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const first = reduced ? 0.12 : Number(root.dataset.pcFirst) || 0.6;
+        const stagger = reduced ? 0.05 : Number(root.dataset.pcStagger) || 0.16;
+        const sealAt = reduced ? 0.5 : Number(root.dataset.pcSeal) || 2.1;
+        const liftMs = reduced ? 1200 : Number(root.dataset.pcLift) || 3700;
+        const word = root.dataset.pcWord || 'Pro Pass';
+        let played = false;
+
+        const lift = () => {
+            if (root.dataset.leaving === 'true') return;
+            root.dataset.leaving = 'true';
+            window.setTimeout(() => {
+                document.documentElement.classList.remove('ss-lock');
+                if (window.location.search.includes('unlocked=1')) {
+                    window.history.replaceState({}, '', window.location.pathname);
+                }
+                root.dataset.active = 'false';
+                root.remove();
+            }, reduced ? 200 : 950);
+        };
+
+        const run = () => {
+            if (played) return;
+            played = true;
+            document.documentElement.classList.add('ss-lock');
+            const born = root.dataset.pcBorn === 'true';
+            // Ceremony clock: a born-covered page starts at first paint, a
+            // summoned one starts now.
+            playPassUnlock({ first, stagger, sealAt, liftMs, word, elapsedMs: born ? performance.now() : 0 });
+            window.setTimeout(lift, liftMs);
+            root.addEventListener('click', lift, { once: true });
+        };
+
+        if (root.dataset.active === 'true') {
+            run();
+        } else {
+            const mo = new MutationObserver(() => {
+                if (root.dataset.active === 'true') {
+                    mo.disconnect();
+                    run();
+                }
+            });
+            mo.observe(root, { attributes: true, attributeFilter: ['data-active'] });
+        }
+    }
+</script>

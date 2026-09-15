@@ -12,7 +12,7 @@ const REQUIRED = [
     'trash', 'search', 'close', 'check', 'bookmark', 'share', 'link', 'book',
     'collection', 'feather', 'sparkle', 'settings', 'logout', 'type', 'sun',
     'moon', 'sent', 'plus', 'eye', 'clock', 'message', 'flag', 'camera',
-    'refresh', 'home', 'volume-2', 'volume-x',
+    'refresh', 'home', 'volume-2', 'volume-x', 'key',
 ] as const;
 
 describe('iconPaths — the icon contract', () => {

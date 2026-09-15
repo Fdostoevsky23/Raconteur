@@ -4,9 +4,11 @@
 // profile editor + identity preview, stories/poetry/collections managers,
 // books manager, recommendations, saved link, email change, account deletion.
 import ProLayout from '../../layouts/ProLayout.astro';
+import PassCeremony from '../../components/skin/PassCeremony.astro';
 ---
 
 <ProLayout title="Your Stories · Raconteur+" description="Your writing desk: stories, poems, collections, and books.">
+    <PassCeremony />
     <div class="pro-page pro-dash">
         <header class="pro-page-head pro-dash-head" data-pro-reveal>
             <p class="pro-browser-kicker">Your writing desk</p>
@@ -15,6 +17,18 @@ import ProLayout from '../../layouts/ProLayout.astro';
         </header>
 
         <p class="pro-badges-note">✦ Writer badges mark stories published, words written, and milestones reached. They'll appear on every writer's public page.</p>
+
+        <div id="passCard" class="pro-card pro-pass-dash-card" hidden>
+            <div class="pro-pass-hero">
+                <div class="pro-pass-seal" id="dashPassSeal" hidden><span>R</span></div>
+                <div class="pro-pass-hero-info">
+                    <p class="pro-pass-state">Pro Pass</p>
+                    <p class="pro-pass-title" id="dashPassTitle">One time. Every tool.</p>
+                    <p class="pro-pass-meta" id="dashPassMeta">Reading stays free forever. The pass opens creation tools only.</p>
+                </div>
+                <a href="/pro/pass" class="pro-card-link pro-pass-dash-link">About the pass</a>
+            </div>
+        </div>
 
         <div id="recsWidget" class="pro-card pro-panel" hidden>
             <h3 class="pro-panel-title">✦ Recommended for you</h3>
@@ -130,6 +144,7 @@ import ProLayout from '../../layouts/ProLayout.astro';
     import { dvConfirm, dvToast, dvPick } from '../../lib/dialog';
     import { iconSvg } from '../../lib/icons';
     import { esc } from '../../lib/escape';
+    import { passFromProfile, readCeremonyShown, markCeremonyShown, PASS_LOCKED_LINE } from '../../lib/pro-pass';
 
     window.addEventListener('pageshow', (e) => {
         if ((e as any).persisted) window.location.reload();
@@ -160,6 +175,29 @@ import ProLayout from '../../layouts/ProLayout.astro';
             .select('*')
             .eq('user_id', session.user.id)
             .maybeSingle();
+
+        // --- Pro Pass (Chunk 1): the brass seal card + the once-per-writer ceremony ---
+        const passCard = document.getElementById('passCard')!;
+        const dashSeal = document.getElementById('dashPassSeal')!;
+        const dashTitle = document.getElementById('dashPassTitle')!;
+        const dashMeta = document.getElementById('dashPassMeta')!;
+        passCard.hidden = false;
+        const passState = passFromProfile(profile);
+        if (passState.pass) {
+            dashSeal.hidden = false;
+            dashTitle.textContent = 'You hold the Pro Pass.';
+            dashMeta.textContent = passState.since
+                ? `Holder since ${new Date(passState.since).toLocaleDateString()}. One price, one time, forever.`
+                : 'One price, one time, forever.';
+            // Earned once, remembered. The page that sees it first plays it.
+            if (!readCeremonyShown(session.user.id)) {
+                markCeremonyShown(session.user.id);
+                document.getElementById('passCeremony')?.setAttribute('data-active', 'true');
+            }
+        } else {
+            dashTitle.textContent = 'Not yet a holder.';
+            dashMeta.textContent = `${PASS_LOCKED_LINE} Passes are granted from the editor's desk.`;
+        }
 
         const penNameInput = document.getElementById('penNameInput') as HTMLInputElement;
         const bioInput = document.getElementById('bioInput') as HTMLTextAreaElement;

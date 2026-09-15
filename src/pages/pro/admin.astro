@@ -68,6 +68,16 @@ import Icon from '../../components/Icon.astro';
                 <h2 class="pro-admin-h2">All Writers</h2>
                 <div id="writersList" class="pro-admin-list"></div>
             </section>
+
+            <section class="pro-card pro-admin-section" id="proPasses">
+                <h2 class="pro-admin-h2">Pro Passes</h2>
+                <p class="pro-admin-hint">Grant or revoke the one-time writer's pass. Every grant lands in the pass ledger. The pass opens creation tools only; reading stays free forever.</p>
+                <input type="text" id="passFilter" class="pro-field pro-pass-filter" placeholder="Filter writers by name..." autocomplete="off" />
+                <p id="passProvision" class="pro-admin-hint pro-pass-provision" hidden>The pass ledger is not provisioned yet. Run SQL-PRO-PASS-2026-09-15.sql in the Supabase SQL editor, then reopen this desk.</p>
+                <div id="passList" class="pro-admin-list"></div>
+                <h3 class="pro-pass-ledger-head">The ledger, most recent first</h3>
+                <div id="passLedger" class="pro-pass-ledger-lines"></div>
+            </section>
         </div>
     </div>
 </ProLayout>
@@ -88,6 +98,112 @@ import Icon from '../../components/Icon.astro';
         if (!prof?.is_admin) { authCheck.textContent = 'Access denied. This page is for the editor only.'; return; }
         authCheck.hidden = true;
         adminPanel.hidden = false;
+
+        // ===== Pro Passes (Chunk 1) — grant/revoke through the service-role door =====
+        const passList = document.getElementById('passList')!;
+        const passFilter = document.getElementById('passFilter') as HTMLInputElement;
+        const passProvision = document.getElementById('passProvision')!;
+        const passLedger = document.getElementById('passLedger')!;
+        let passRows: any[] = [];
+
+        async function loadPassRoster() {
+            const { data: writers, error } = await supabase
+                .from('profiles')
+                .select('user_id, pen_name, is_admin, pro_pass, pro_pass_since')
+                .order('created_at', { ascending: false })
+                .limit(200);
+            if (error) {
+                // The pass columns are not there yet (SQL-PRO-PASS not run) — say so, quietly.
+                passProvision.hidden = false;
+                passList.innerHTML = '';
+                passLedger.innerHTML = '';
+                return;
+            }
+            passRows = writers || [];
+            renderPassRoster();
+            loadPassLedger();
+        }
+
+        function renderPassRoster() {
+            const q = passFilter.value.trim().toLowerCase();
+            const rows = q ? passRows.filter((p: any) => (p.pen_name || '').toLowerCase().includes(q)) : passRows;
+            passList.innerHTML = rows.length === 0
+                ? '<p class="pro-admin-hint">No writers match.</p>'
+                : rows.map((p: any) => `
+                    <div class="pro-admin-row">
+                        <div class="pro-admin-row-info">
+                            <span class="pro-admin-row-title">${esc(p.pen_name || 'Unnamed writer')}${p.is_admin ? ' <span class="pro-admin-tag">Admin</span>' : ''}</span>
+                            <span class="pro-admin-row-meta">${p.pro_pass
+                                ? 'Holder since ' + (p.pro_pass_since ? new Date(p.pro_pass_since).toLocaleDateString() : 'an unknown date')
+                                : 'Not a holder'}</span>
+                        </div>
+                        <div class="pro-admin-row-actions">
+                            ${p.pro_pass
+                                ? `<button class="pro-admin-btn delete" data-pass-user="${p.user_id}" data-pass-act="revoke">Revoke pass</button>`
+                                : `<button class="pro-admin-btn feature" data-pass-user="${p.user_id}" data-pass-act="grant">Grant pass</button>`}
+                        </div>
+                    </div>`).join('');
+        }
+
+        passFilter.addEventListener('input', renderPassRoster);
+
+        passList.addEventListener('click', async (ev) => {
+            const btn = (ev.target as HTMLElement).closest<HTMLButtonElement>('[data-pass-user]');
+            if (!btn) return;
+            const userId = btn.dataset.passUser || '';
+            const act = btn.dataset.passAct || '';
+            const who = passRows.find((p: any) => p.user_id === userId);
+            const name = who?.pen_name || 'this writer';
+            const confirmed = await dvConfirm({
+                title: act === 'grant' ? 'Grant the Pro Pass?' : 'Revoke the Pro Pass?',
+                body: act === 'grant'
+                    ? `${name} gains the creation toolkit. The grant lands in the ledger.`
+                    : `${name} returns to the free toolkit. The ledger row is closed, not erased.`,
+                confirmLabel: act === 'grant' ? 'Grant' : 'Revoke',
+                danger: act !== 'grant',
+            });
+            if (!confirmed) return;
+            btn.disabled = true;
+            const { data: { session } } = await supabase.auth.getSession();
+            try {
+                const res = await fetch('/api/pro-pass', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+                    body: JSON.stringify({ action: act, userId }),
+                });
+                const out = await res.json().catch(() => ({} as any));
+                if (!res.ok || !out.ok) {
+                    dvToast(out.error || 'The desk could not reach the pass door.', 'err');
+                    btn.disabled = false;
+                    return;
+                }
+                dvToast(act === 'grant' ? 'Pass granted.' : 'Pass revoked.');
+                await loadPassRoster();
+            } catch {
+                dvToast('The desk could not reach the pass door.', 'err');
+                btn.disabled = false;
+            }
+        });
+
+        async function loadPassLedger() {
+            const { data: rows, error } = await supabase
+                .from('passes')
+                .select('user_id, source, granted_at, revoked_at')
+                .order('granted_at', { ascending: false })
+                .limit(8);
+            if (error || !rows || rows.length === 0) {
+                passLedger.innerHTML = '<p class="pro-admin-hint">No grants yet.</p>';
+                return;
+            }
+            const nameOf = (id: string) => passRows.find((p: any) => p.user_id === id)?.pen_name || 'A writer';
+            passLedger.innerHTML = rows.map((r: any) => `
+                <p class="pro-pass-ledger-line">
+                    <span class="pro-pass-ledger-name">${esc(nameOf(r.user_id))}</span>
+                    · ${esc(r.source || 'desk')} · ${new Date(r.granted_at).toLocaleDateString()}${r.revoked_at ? ' · revoked' : ''}
+                </p>`).join('');
+        }
+
+        loadPassRoster();
 
         // ===== Stories =====
         const { data: stories } = await supabase.from('stories')
@@ -457,6 +573,20 @@ import Icon from '../../components/Icon.astro';
     }
     :global(.pro-recs-name) { min-width: 140px; color: var(--pro-text); font-family: var(--pro-font); font-weight: 600; }
     :global(.pro-recs-row .pro-field) { flex: 1; min-width: 200px; width: auto; }
+
+    /* Pro Passes console (client-rendered → global, the notifications-panel lesson) */
+    :global(.pro-pass-filter) { max-width: 320px; margin-bottom: 0.9rem; }
+    :global(.pro-pass-provision) { color: #e05a3a; }
+    :global(.pro-pass-ledger-head) {
+        font-size: 0.74rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--pro-text-2);
+        margin: 1.3rem 0 0.5rem;
+    }
+    :global(.pro-pass-ledger-line) { font-size: 0.8rem; color: var(--pro-text-3); margin: 0.25rem 0; }
+    :global(.pro-pass-ledger-name) { color: var(--pro-text-2); }
 
     @media (max-width: 640px) {
         .pro-page { padding: 2.2rem 1rem 2.4rem; }

@@ -25,12 +25,14 @@ function walk(dir: string, exts: string[]): string[] {
 
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
 
-// New-skin chrome (the seal scope): the two modern layouts + their stylesheets.
+// New-skin chrome (the seal scope): the two modern layouts + their stylesheets
+// + the pass curtain (Chunk 1). The skin components' shared chrome lives here too.
 const CHROME = [
     'src/layouts/MaxLayout.astro',
     'src/layouts/ProLayout.astro',
     'src/styles/max.css',
     'src/styles/pro.css',
+    'src/components/skin/PassCeremony.astro',
 ];
 
 // Strip // line comments (but keep https:// and protocol-relative //) so that

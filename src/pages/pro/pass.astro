@@ -1,0 +1,214 @@
+---
+// src/pages/pro/pass.astro — the Pro Pass pitch page (Chunk 1, build-log row 74).
+// The one-time unlock for writers, in the Reader's Desk language. The model:
+// gate CREATION, never reading; sell the toolkit, never the words (the
+// Bandcamp principle); the money door itself is parked by boss ruling, so
+// this page sells nothing yet — it states the standing, the catalogue, and
+// the ground rules, every row honestly marked from Pro Paid features.md.
+import ProLayout from '../../layouts/ProLayout.astro';
+import Icon from '../../components/Icon.astro';
+import PassCeremony from '../../components/skin/PassCeremony.astro';
+
+const unlocked = Astro.url.searchParams.get('unlocked') === '1';
+
+// The toolkit ledger — honest states, straight from the boss's catalog:
+//   live  = ships with Chunk 1 · next = the confirmed build order · later = catalogued
+const pillars = [
+    { name: 'The Pass itself', note: 'The brass seal, your standing, the unlock ceremony', chip: 'live' },
+    { name: 'Articles', note: 'A third kind beside Story and Poem, and the Essayist shelf', chip: 'next' },
+    { name: 'Unlimited words', note: 'Write past forty thousand. The Novel band joins the shelf', chip: 'next' },
+    { name: 'Quotes', note: 'Pull a line, keep a commonplace book, share the card', chip: 'next' },
+] as const;
+
+const beyond = [
+    { name: 'Volumes', note: 'Bind stories into one book' },
+    { name: 'The Serial', note: 'Publish chapter by chapter, followers get the alert' },
+    { name: 'Drafts and revisions', note: 'Save, version, schedule' },
+    { name: 'Writer analytics', note: 'Reads, likes, where readers stop' },
+    { name: 'EPUB and PDF export', note: 'Take the novel offline' },
+    { name: 'Portfolio builder', note: 'Art-direct your public page' },
+    { name: 'Reading themes', note: 'Choose the light your readers land in' },
+    { name: 'Audio and illustrations', note: 'Read your own words, picture the pages' },
+    { name: 'The founders wall', note: 'The first holders, printed forever' },
+] as const;
+
+const rules = [
+    'Reading is never paywalled. What a pass-holder publishes stays free for every reader, on every skin.',
+    'Community is never paywalled. Likes, comments, follows, bookmarks, messages. Free forever.',
+    'Never a subscription. One price, one time, forever.',
+    'Never loud. The seal lives on the writer\u2019s page and their desk. Prestige is quiet.',
+] as const;
+---
+
+<ProLayout title="The Pro Pass · Raconteur+" description="A one-time pass for writers. It opens creation tools; reading stays free forever.">
+    <PassCeremony eager={unlocked} />
+
+    <div class="pro-page pro-page-narrow">
+        <header class="pro-page-head" data-pro-reveal>
+            <p class="pro-browser-kicker">One pass · Every tool · Reading stays free</p>
+            <h1 class="pro-page-title">The Pro Pass</h1>
+            <p class="pro-page-sub">
+                A one-time unlock for the writer's toolkit. Whatever a pass-holder publishes
+                stays readable by everyone, on every skin. That is the whole model.
+            </p>
+        </header>
+
+        <section class="pro-card pro-pass-sheet" data-pro-reveal>
+            <div class="pro-pass-hero">
+                <div class="pro-pass-seal" id="passSeal" hidden><span>R</span></div>
+                <div class="pro-pass-hero-info">
+                    <p class="pro-pass-state">Your standing</p>
+                    <h2 class="pro-pass-title" id="passStateTitle">Checking your desk<span class="pro-pass-ellipsis">...</span></h2>
+                    <p class="pro-pass-meta" id="passStateMeta">One moment.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="pro-card pro-pass-sheet" data-pro-reveal>
+            <p class="pro-browser-kicker">What the pass opens</p>
+            <div class="pro-pass-ledger">
+                {pillars.map((p) => (
+                    <div class="pro-pass-row">
+                        <span class="pro-pass-row-name">{p.name}</span>
+                        <span class="pro-pass-chip" class:list={[p.chip]}>{p.chip === 'live' ? 'Live' : p.chip === 'next' ? 'Next' : 'Later'}</span>
+                        <span class="pro-pass-row-note">{p.note}</span>
+                    </div>
+                ))}
+                {beyond.map((p) => (
+                    <div class="pro-pass-row">
+                        <span class="pro-pass-row-name">{p.name}</span>
+                        <span class="pro-pass-chip later">Later</span>
+                        <span class="pro-pass-row-note">{p.note}</span>
+                    </div>
+                ))}
+            </div>
+            <p class="pro-pass-footline">The order above is the build order. The money door itself is parked on purpose; the tools come first.</p>
+        </section>
+
+        <section class="pro-card pro-pass-sheet" data-pro-reveal>
+            <p class="pro-browser-kicker">The ground rules</p>
+            <ul class="pro-pass-rules">
+                {rules.map((r) => (
+                    <li><Icon name="check" size={14} /><span>{r}</span></li>
+                ))}
+            </ul>
+            <p class="pro-pass-footline">
+                Passes are granted from the editor's desk while the build is young.
+                Ask in the Reading Room on the <a class="pro-card-link" href="/pro">Desk</a>.
+                The grant console lives in <a class="pro-card-link" href="/pro/admin#proPasses">Pro Passes</a>.
+            </p>
+        </section>
+    </div>
+</ProLayout>
+
+<script>
+    // The standing block: one read, honest states, and the ceremony on the
+    // first unlock. A non-live ledger (SQL not yet run) reads exactly like
+    // "not yet a holder" — nobody can hold a pass before the ledger exists.
+    import { supabase } from '../../lib/supabase';
+    import { fetchProPass, readCeremonyShown, markCeremonyShown, PASS_LOCKED_LINE } from '../../lib/pro-pass';
+
+    const titleEl = document.getElementById('passStateTitle')!;
+    const metaEl = document.getElementById('passStateMeta')!;
+    const sealEl = document.getElementById('passSeal')!;
+    const ceremony = document.getElementById('passCeremony');
+
+    function summon() {
+        ceremony?.setAttribute('data-active', 'true');
+    }
+
+    async function initStanding() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            titleEl.textContent = 'A writer\u2019s pass.';
+            metaEl.innerHTML = 'Sign in and your standing appears here. <a class="pro-card-link" href="/pro/login">Log in</a>';
+            return;
+        }
+        const state = await fetchProPass(session.user.id);
+        if (state.pass) {
+            sealEl.hidden = false;
+            titleEl.textContent = 'You hold the Pro Pass.';
+            metaEl.textContent = state.since
+                ? `Holder since ${new Date(state.since).toLocaleDateString()}. One price, one time, forever.`
+                : 'One price, one time, forever.';
+            // Earned once, remembered: the ceremony plays on the first visit
+            // where the holder is seen carrying the pass.
+            if (!readCeremonyShown(session.user.id)) {
+                markCeremonyShown(session.user.id);
+                summon();
+            }
+            return;
+        }
+        titleEl.textContent = 'Not yet a holder.';
+        metaEl.textContent = `${PASS_LOCKED_LINE} Passes are granted from the editor's desk.`;
+    }
+
+    initStanding();
+</script>
+
+<style>
+    .pro-page {
+        position: relative;
+        z-index: 1;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 3.4rem 1.6rem 3rem;
+    }
+
+    .pro-page-narrow { max-width: 880px; }
+
+    .pro-page-head { text-align: center; margin-bottom: 2.4rem; }
+
+    .pro-page-title {
+        font-family: var(--pro-font);
+        font-size: clamp(2rem, 4.4vw, 3rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--pro-text);
+        margin: 0.6rem 0 0;
+    }
+
+    .pro-page-sub {
+        font-size: 1.05rem;
+        color: var(--pro-text-2);
+        max-width: 44rem;
+        margin: 0.9rem auto 0;
+        line-height: 1.7;
+    }
+
+    .pro-pass-sheet {
+        padding: 2.2rem clamp(1.4rem, 3.4vw, 2.6rem);
+        margin-bottom: 1.4rem;
+    }
+
+    .pro-pass-footline {
+        font-size: 0.82rem;
+        color: var(--pro-text-3);
+        margin: 1.4rem 0 0;
+        line-height: 1.7;
+    }
+
+    .pro-pass-rules {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+    }
+
+    .pro-pass-rules li {
+        display: flex;
+        gap: 0.6rem;
+        align-items: baseline;
+        font-size: 0.9rem;
+        color: var(--pro-text-2);
+        line-height: 1.65;
+    }
+
+    .pro-pass-rules li :global(svg) { color: var(--pro-mint); flex: none; transform: translateY(0.12em); }
+
+    @media (max-width: 640px) {
+        .pro-page { padding: 2.2rem 1rem 2.4rem; }
+    }
+</style>

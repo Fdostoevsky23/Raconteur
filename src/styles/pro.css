@@ -620,3 +620,146 @@ main.pro-main { flex: 1; position: relative; z-index: 1; }
 .pro-notif-icon { color: var(--pro-mint); }
 .pro-notif-text { font-size: 0.82rem; flex: 1; }
 .pro-notif-time { font-size: 0.7rem; color: var(--pro-text-3); }
+
+/* === 11. THE PRO PASS — the brass seal, the standing card, the ledger ===
+   Chunk 1 (build-log row 74). A one-time unlock for writers: it gates
+   CREATION tools, never reading. Brass + honey on the cognac ledger —
+   quiet prestige, never loud (the C2 brief). These pieces render on more
+   than one page and are client-rendered in the desks, so they live here,
+   global (same lesson as the notifications panel). */
+
+/* The brass seal medallion (dashboard card + pitch page) */
+.pro-pass-seal {
+    width: 4.6rem;
+    height: 4.6rem;
+    flex: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(255, 198, 72, 0.5);
+    box-shadow:
+        0 0 0 5px rgba(255, 198, 72, 0.08),
+        0 0 34px rgba(255, 106, 0, 0.16),
+        inset 0 0 18px rgba(255, 198, 72, 0.08);
+    color: var(--pro-honey);
+}
+
+.pro-pass-seal span {
+    font-family: var(--pro-font);
+    font-weight: 700;
+    font-size: 1.9rem;
+    line-height: 1;
+}
+
+/* The standing block (holder since / not yet a holder) */
+.pro-pass-hero {
+    display: flex;
+    gap: 1.6rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.pro-pass-hero-info { flex: 1; min-width: 15rem; }
+
+.pro-pass-state {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--pro-honey);
+    margin: 0 0 0.5rem;
+}
+
+.pro-pass-title {
+    font-family: var(--pro-font);
+    font-size: 1.7rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--pro-text);
+    margin: 0;
+}
+
+.pro-pass-meta {
+    font-size: 0.86rem;
+    color: var(--pro-text-2);
+    margin: 0.4rem 0 0;
+    line-height: 1.6;
+}
+
+/* The toolkit ledger — a print index, not a card zoo */
+.pro-pass-ledger {
+    display: flex;
+    flex-direction: column;
+}
+
+.pro-pass-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+    padding: 0.95rem 0.2rem;
+    border-bottom: 1px solid var(--pro-line);
+}
+
+.pro-pass-row:last-child { border-bottom: none; }
+
+.pro-pass-row-name {
+    font-size: 0.96rem;
+    font-weight: 500;
+    color: var(--pro-text);
+    white-space: nowrap;
+}
+
+.pro-pass-row-note {
+    font-size: 0.8rem;
+    color: var(--pro-text-2);
+    text-align: right;
+}
+
+/* The honest status chips (live / next / later) — no fake features */
+.pro-pass-chip {
+    flex: none;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--pro-line-hi);
+    color: var(--pro-text-2);
+}
+
+.pro-pass-chip.live {
+    color: #1a0d00;
+    background: var(--pro-honey);
+    border-color: var(--pro-honey);
+}
+
+.pro-pass-chip.next {
+    color: var(--pro-honey);
+    border-color: rgba(255, 198, 72, 0.4);
+}
+
+.pro-pass-chip.later { color: var(--pro-text-3); }
+
+/* The locked line — a door with light behind it, never a wall */
+.pro-pass-locked {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.85rem;
+    color: var(--pro-honey);
+}
+
+@media (max-width: 640px) {
+    .pro-pass-row { flex-wrap: wrap; row-gap: 0.35rem; }
+    .pro-pass-row-note { text-align: left; }
+}
+
+/* The dashboard's compact seal card */
+.pro-pass-dash-card {
+    padding: 1.6rem clamp(1.2rem, 3vw, 2rem);
+    margin-bottom: 1.4rem;
+}
+
+.pro-pass-dash-link { flex: none; align-self: center; }

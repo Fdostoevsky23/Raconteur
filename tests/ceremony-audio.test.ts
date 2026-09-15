@@ -6,7 +6,7 @@
 // schedule math (what plays, when, in which key — and what stays silent).
 import { describe, it, expect } from 'vitest';
 import {
-    AUDIO_KEY, parseAudioEnabled, buildArrivalSchedule,
+    AUDIO_KEY, parseAudioEnabled, buildArrivalSchedule, buildPassSchedule,
     type ArrivalSpec,
 } from '../src/lib/ceremony-audio';
 
@@ -127,5 +127,54 @@ describe('buildArrivalSchedule — time manners', () => {
             for (let i = 1; i < ev.length; i++) expect(ev[i].t).toBeGreaterThanOrEqual(ev[i - 1].t);
             for (const e of ev) expect(e.t).toBeGreaterThanOrEqual(0.02);
         }
+    });
+});
+
+/* === The pass-unlock motif (Chunk 1) ==================================== */
+
+const passBase = { first: 0.6, stagger: 0.16, sealAt: 2.1, liftMs: 3700, elapsedMs: 0 } as const;
+const passSpec = { ...passBase, word: 'Pro Pass' };
+
+describe('buildPassSchedule — the pass-unlock theme', () => {
+    const ev = buildPassSchedule(passSpec);
+
+    it('a flick + one pluck per non-space letter + the bell + the resolve', () => {
+        expect(ev.filter(e => e.kind === 'sweep').length).toBe(1);
+        expect(ev.filter(e => e.kind === 'note').length).toBe(7);   // 8 glyphs, the space breathes
+        expect(ev.filter(e => e.kind === 'accent').length).toBe(1);  // the brass bell on the seal
+        expect(ev.filter(e => e.kind === 'chord').length).toBe(1);
+        expect(ev.length).toBe(10);
+    });
+
+    it('the flick leads, the bell lands on the seal, the chord lands at lift', () => {
+        expect(ev.find(e => e.kind === 'sweep')!.t).toBeCloseTo(0.3, 5);
+        expect(ev.find(e => e.kind === 'note')!.t).toBeCloseTo(0.6, 5);
+        expect(ev.find(e => e.kind === 'accent')!.t).toBeCloseTo(2.1, 5);
+        expect(ev.find(e => e.kind === 'chord')!.t).toBeCloseTo(3.7, 5);
+    });
+
+    it('the plucks walk the desk pentatonic; the bell is the house brass; the resolve is D MAJOR', () => {
+        const notes = ev.filter(e => e.kind === 'note');
+        expect(notes[0].freqs).toEqual([293.66]);                    // D — the desk's root
+        expect(notes[5].freqs).toEqual([587.33]);                    // the top of the pentatonic
+        expect(notes[6].freqs).toEqual([293.66]);                    // voice 6 wraps to the root
+        expect(ev.find(e => e.kind === 'accent')!.freqs).toEqual([1046.5, 2093.01]);
+        expect(ev.find(e => e.kind === 'chord')!.freqs).toEqual([293.66, 369.99, 440, 587.33]);
+    });
+
+    it('an empty word still sings the seal and the resolve', () => {
+        const bare = buildPassSchedule({ ...passBase, word: '' });
+        expect(bare.filter(e => e.kind === 'note').length).toBe(0);
+        expect(bare.filter(e => e.kind === 'accent').length).toBe(1);
+        expect(bare.filter(e => e.kind === 'chord').length).toBe(1);
+    });
+
+    it('a late unlock (the lift already passed) schedules nothing', () => {
+        expect(buildPassSchedule({ ...passSpec, elapsedMs: 5000 })).toEqual([]);
+    });
+
+    it('every event is sorted and never scheduled in the past', () => {
+        for (let i = 1; i < ev.length; i++) expect(ev[i].t).toBeGreaterThanOrEqual(ev[i - 1].t);
+        for (const e of ev) expect(e.t).toBeGreaterThanOrEqual(0.02);
     });
 });
