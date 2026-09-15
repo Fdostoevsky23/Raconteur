@@ -9,13 +9,17 @@
 // skin; the LOOK is per-variant:
 //   variant="classic" — Raconteur Classic: the warm cream paper of the
 //     original home, Playfair ink letters, the "Classic" tail in vermilion.
-//   variant="pro" — Raconteur+: the Reader's Desk, near-black void with a
+//   variant="pro" — Raconteur+: the Reader's Desk, cognac-espresso void with a
 //     desk-lamp amber bloom; the "+" lands in amber.
 //   variant="max" — Raconteur Pro: the Editorial Split, warm paper with a
 //     vermilion wash; the "Pro" tail lands in vermilion.
 //
 // No splash without the param (direct visits, refreshes, in-skin nav) and
 // the param is scrubbed from the URL the instant it's read. Click skips.
+// The ARRIVAL THEME: a bundled script at the foot of this file plays a
+// per-skin sound track (src/lib/ceremony-audio.ts — pure Web Audio, no
+// files) synced to this same letter schedule; mute + reduced-motion + a
+// blocked AudioContext all silence it gracefully.
 interface Props {
     variant?: 'classic' | 'pro' | 'max';
     /** Server-side activation (?welcome=1): the page is BORN covered — no
@@ -51,6 +55,11 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
     data-variant={variant}
     data-duration={String(duration)}
     data-active={eager ? 'true' : 'false'}
+    data-audio-first={String(first)}
+    data-audio-stagger={String(stagger)}
+    data-audio-word={glyphs.join('')}
+    data-audio-accent={String(accentFrom)}
+    data-audio-lift={String(duration)}
     aria-hidden="true"
 >
     <div class="ss-bg" aria-hidden="true"></div>
@@ -66,7 +75,7 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
                 </span>
             ))}
         </div>
-        <p class="ss-tagline" style={`animation-delay:${(lastArrives - 0.6).toFixed(2)}s`}>
+        <p class="ss-tagline" style={`--ss-t:${(lastArrives - 0.6).toFixed(2)}s`}>
             Literature you want to read
         </p>
     </div>
@@ -112,13 +121,14 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         animation: ss-bg-swell 9s ease-in-out infinite alternate;
     }
 
-    /* === VARIANT: pro — The Reader's Desk: near-black void, desk-lamp
-       amber bloom + reading-nook mint at the floor. Original expression
-       (boss mandate: Pro does NOT reuse the plus gradient). === */
+    /* === VARIANT: pro — The Reader's Desk: cognac-espresso void (the
+       Cognac Ledger, boss pick 2026-09-14), desk-lamp amber bloom +
+       reading-nook mint at the floor. Original expression (boss mandate:
+       Pro does NOT reuse the plus gradient). === */
     .skin-splash-pro .ss-bg {
         position: absolute;
         inset: 0;
-        background-color: #06080a;
+        background-color: #241a12;
         background-image:
             radial-gradient(85% 70% at 78% 6%, rgba(255, 106, 0, 0.34) 0%, rgba(255, 106, 0, 0) 60%),
             radial-gradient(70% 60% at 8% 96%, rgba(46, 230, 168, 0.22) 0%, rgba(46, 230, 168, 0) 60%);
@@ -176,7 +186,7 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         font-weight: 700;
         font-size: clamp(2.9rem, 11vw, 7.2rem);
         letter-spacing: -0.015em;
-        color: #f4f6f7;
+        color: #f7f0e4; /* candlelight white, matches --pro-text */
     }
 
     /* Max wordmark — Fraunces 900 in ink on paper, editorial italic flavour */
@@ -192,7 +202,7 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         display: inline-block;
         opacity: 0;
         animation: ss-letter-in 1.05s cubic-bezier(0.16, 1, 0.3, 1) both;
-        text-shadow: 0 6px 44px rgba(20, 0, 50, 0.45);
+        text-shadow: 0 6px 44px rgba(46, 24, 4, 0.4);
     }
 
     /* Classic: the "Classic" tail lands in vermilion — the editor's seal */
@@ -206,10 +216,21 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
     .skin-splash-classic .ss-tagline {
         font-family: 'Lora', Georgia, serif;
         font-style: italic;
-        font-size: 0.95rem;
-        letter-spacing: 0.08em;
+        font-weight: 500;
+        font-size: clamp(1.15rem, 3vw, 1.55rem);
+        letter-spacing: 0.09em;
         text-transform: none;
-        color: rgba(46, 42, 34, 0.62);
+        color: rgba(46, 42, 34, 0.8);
+        text-shadow: none;
+    }
+
+    /* Classic rules — the vermilion of the "Classic" seal above */
+    .skin-splash-classic .ss-tagline::before {
+        background: linear-gradient(to left, rgba(179, 84, 62, 0.7), rgba(179, 84, 62, 0));
+    }
+
+    .skin-splash-classic .ss-tagline::after {
+        background: linear-gradient(to right, rgba(179, 84, 62, 0.7), rgba(179, 84, 62, 0));
     }
 
     /* Pro: the "+" tail lands in amber — the payoff moment */
@@ -224,7 +245,26 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         text-shadow: 0 6px 40px rgba(216, 52, 28, 0.35);
     }
 
-    .skin-splash-max .ss-tagline { color: rgba(28, 25, 23, 0.65); }
+    /* Max (Raconteur Pro) tagline — Fraunces italic on paper, vermilion
+       rules matching the editor's red pen. */
+    .skin-splash-max .ss-tagline {
+        font-family: 'Fraunces', Georgia, serif;
+        font-style: italic;
+        font-weight: 500;
+        font-size: clamp(1.15rem, 3vw, 1.55rem);
+        letter-spacing: 0.08em;
+        text-transform: none;
+        color: rgba(28, 25, 23, 0.8);
+        text-shadow: none;
+    }
+
+    .skin-splash-max .ss-tagline::before {
+        background: linear-gradient(to left, rgba(216, 52, 28, 0.72), rgba(216, 52, 28, 0));
+    }
+
+    .skin-splash-max .ss-tagline::after {
+        background: linear-gradient(to right, rgba(216, 52, 28, 0.72), rgba(216, 52, 28, 0));
+    }
 
     .skin-splash-max .ss-letter { text-shadow: 0 6px 40px rgba(28, 25, 23, 0.18); }
 
@@ -241,20 +281,75 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
         }
     }
 
+    /* === The tagline — boss polish (2026-09-14): bigger, ruled, alive.
+       Base = the Raconteur+ voice (mono caps on the void, amber glow);
+       each variant restyles it in its own type above. Hairline rules
+       grow outward from the words; --ss-t (set inline) times it. */
     .ss-tagline {
-        margin: 1.6rem 0 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.15rem;
+        margin: 2rem auto 0;
+        max-width: min(92vw, 720px);
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.72rem;
-        letter-spacing: 0.38em;
+        font-size: clamp(0.95rem, 2.6vw, 1.3rem);
+        font-weight: 500;
+        letter-spacing: 0.3em;
         text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.88);
+        text-align: center;
+        color: rgba(255, 236, 214, 0.96);
+        text-shadow: 0 0 36px rgba(255, 106, 0, 0.38);
         opacity: 0;
-        animation: ss-letter-in 1s ease both;
+        animation: ss-tagline-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation-delay: var(--ss-t, 2.4s);
+    }
+
+    .ss-tagline::before,
+    .ss-tagline::after {
+        content: '';
+        flex: none;
+        width: clamp(24px, 6vw, 80px);
+        height: 1px;
+        transform: scaleX(0);
+        opacity: 0;
+        animation: ss-rule-in 1.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation-delay: var(--ss-t, 2.4s);
+    }
+
+    /* ::before grows leftward from the words, ::after rightward;
+       both fade to nothing at their far ends. */
+    .ss-tagline::before {
+        background: linear-gradient(to left, rgba(255, 106, 0, 0.75), rgba(255, 106, 0, 0));
+        transform-origin: right center;
+    }
+
+    .ss-tagline::after {
+        background: linear-gradient(to right, rgba(255, 106, 0, 0.75), rgba(255, 106, 0, 0));
+        transform-origin: left center;
+    }
+
+    @keyframes ss-tagline-in {
+        from { opacity: 0; transform: translateY(0.5em); filter: blur(10px); }
+        to   { opacity: 1; transform: none; filter: blur(0); }
+    }
+
+    @keyframes ss-rule-in {
+        from { transform: scaleX(0); opacity: 0; }
+        to   { transform: scaleX(1); opacity: 1; }
+    }
+
+    @media (max-width: 560px) {
+        .ss-tagline { gap: 0.7rem; font-size: 0.74rem; letter-spacing: 0.22em; }
+        .ss-tagline::before, .ss-tagline::after { width: 16px; }
+        .skin-splash-classic .ss-tagline, .skin-splash-max .ss-tagline { font-size: 1rem; letter-spacing: 0.05em; }
     }
 
     /* === Manners === */
     @media (prefers-reduced-motion: reduce) {
         .ss-letter, .ss-tagline { animation-duration: 0.01s; }
+        .ss-tagline { animation-delay: 0.01s; }
+        .ss-tagline::before, .ss-tagline::after { animation-duration: 0.01s; animation-delay: 0.01s; }
         .skin-splash-classic .ss-bg, .skin-splash-pro .ss-bg, .skin-splash-max .ss-bg { animation: none; }
         .skin-splash[data-leaving='true'] { transition-duration: 0.3s; }
     }
@@ -316,5 +411,29 @@ const duration = Math.round((lastArrives + hold) * 1000); // ms until lift begin
             if (e.persisted) finish();
         });
     })();
+</script>
+
+<script>
+    // The ARRIVAL THEME (bundled — Vite processes this one, so the static
+    // import resolves in dev AND prod; the is:inline block above stays
+    // dependency-free by design). The page was BORN covered (eager splash),
+    // so the ceremony clock is this document's timeOrigin: the first letter
+    // fires at CSS-delay first+stagger·i, and elapsedMs is how far into the
+    // ceremony this script runs (a beat after parse). The lib's own guards
+    // (mute, reduced-motion, blocked AudioContext, late arrival) make this
+    // a silent no-op everywhere else.
+    import { playArrival } from '../../lib/ceremony-audio';
+    const splash = document.getElementById('skinSplash');
+    if (splash && splash.dataset.audioFirst) {
+        playArrival({
+            variant: splash.dataset.variant as 'classic' | 'pro' | 'max',
+            first: Number(splash.dataset.audioFirst),
+            stagger: Number(splash.dataset.audioStagger),
+            word: splash.dataset.audioWord || '',
+            accent: Number(splash.dataset.audioAccent),
+            liftMs: Number(splash.dataset.audioLift),
+            elapsedMs: (window.performance && performance.now) ? performance.now() : 0,
+        });
+    }
 </script>
 

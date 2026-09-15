@@ -2,24 +2,28 @@
    pro.css — Raconteur PRO design system
    "The Reader's Desk" — dark bento-grid glassmorphism.
    Layout grammar inspired by the dark-fintech-dashboard genre
-   (bento cards, glass surfaces, ambient glows on near-black);
+   (bento cards, glass surfaces, ambient glows on the warm cognac-
+   espresso canvas — the Cognac Ledger, boss pick 2026-09-14);
    ALL content, compositions, and color values are original
    Raconteur work. No financial marks or imagery, ever.
    ============================================================ */
 
 /* === 1. TOKENS === */
 :root {
-    /* Canvas & surfaces */
-    --pro-void: #06080a;        /* near-black canvas */
-    --pro-card: rgba(24, 30, 34, 0.55);   /* dark translucent card */
-    --pro-card-hi: rgba(32, 40, 45, 0.62); /* hover card */
-    --pro-line: rgba(255, 255, 255, 0.08); /* hairline */
-    --pro-line-hi: rgba(255, 255, 255, 0.14);
+    /* Canvas & surfaces — the Cognac Ledger (boss pick 2026-09-14):
+       the old near-black #241a12 read "funeral"; this is lamplight
+       on aged walnut — espresso-cognac canvas, warm glass cards,
+       candlelight text. Amber + mint accents unchanged. */
+    --pro-void: #241a12;        /* espresso-cognac canvas */
+    --pro-card: rgba(56, 41, 29, 0.55);   /* warm translucent card */
+    --pro-card-hi: rgba(64, 47, 33, 0.62); /* hover card */
+    --pro-line: rgba(255, 231, 199, 0.09); /* warm hairline */
+    --pro-line-hi: rgba(255, 231, 199, 0.16);
 
     /* Text */
-    --pro-text: #f4f6f7;
-    --pro-text-2: #a8b4bc;
-    --pro-text-3: #7d8a94; /* >=4.5:1 (de-vibe DR5) */
+    --pro-text: #f7f0e4;        /* candlelight white */
+    --pro-text-2: #b5a795;
+    --pro-text-3: #9a8a76; /* >=4.5:1 (de-vibe DR5) */
 
     /* Accents — original values, warm caramel + cool mint + honey */
     --pro-amber: #ff6a00;       /* primary CTA */
@@ -39,8 +43,8 @@
     --pro-r-sm: 10px;
     --pro-glow-orange: 0 0 42px rgba(255, 106, 0, 0.20);
     --pro-glow-mint: 0 0 42px rgba(27, 222, 162, 0.16);
-    --pro-shadow-card: 0 18px 50px rgba(0, 0, 0, 0.42);
-    --pro-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    --pro-shadow-card: 0 18px 50px rgba(16, 9, 3, 0.5);
+    --pro-inner-glow: inset 0 1px 0 rgba(255, 236, 210, 0.07);
 }
 
 /* === 2. BASE === */
@@ -69,7 +73,7 @@ main.pro-main { flex: 1; position: relative; z-index: 1; }
     background-image: repeating-linear-gradient(
         to right,
         transparent 0 calc(100% / 6 - 1px),
-        rgba(255, 255, 255, 0.028) calc(100% / 6 - 1px) calc(100% / 6)
+        rgba(255, 231, 199, 0.03) calc(100% / 6 - 1px) calc(100% / 6)
     );
 }
 
@@ -465,7 +469,7 @@ main.pro-main { flex: 1; position: relative; z-index: 1; }
 .pro-work-card {
     display: flex;
     flex-direction: column;
-    background: #0b0e11;
+    background: #2e2119;
     border: 1px solid var(--pro-line);
     border-radius: 16px;
     overflow: hidden;
@@ -483,7 +487,7 @@ main.pro-main { flex: 1; position: relative; z-index: 1; }
 .pro-work-card.is-poem { border-color: rgba(46, 230, 168, 0.14); }
 .pro-work-card.is-poem:hover { border-color: rgba(46, 230, 168, 0.4); box-shadow: 0 26px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(46, 230, 168, 0.05); }
 
-.pro-work-cover { position: relative; height: 200px; overflow: hidden; background: #101418; }
+.pro-work-cover { position: relative; height: 200px; overflow: hidden; background: #2e2119; }
 
 .pro-work-cover img {
     width: 100%;
@@ -503,7 +507,7 @@ main.pro-main { flex: 1; position: relative; z-index: 1; }
     align-items: center;
     justify-content: center;
     color: var(--pro-amber);
-    background: radial-gradient(80% 100% at 50% 0%, rgba(255, 106, 0, 0.12), transparent 70%), #101418;
+    background: radial-gradient(80% 100% at 50% 0%, rgba(255, 106, 0, 0.12), transparent 70%), #2e2119;
 }
 
 .pro-work-quote {
@@ -519,7 +523,7 @@ main.pro-main { flex: 1; position: relative; z-index: 1; }
     line-height: 1.7;
     text-align: center;
     color: var(--pro-text-2);
-    background: #101418;
+    background: #2e2119;
 }
 
 .pro-work-body { padding: 1.15rem 1.25rem 1.2rem; display: flex; flex-direction: column; gap: 0.45rem; flex: 1; }
@@ -547,6 +551,7 @@ main.pro-main { flex: 1; position: relative; z-index: 1; }
     margin: 0;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: anywhere;
@@ -560,6 +565,7 @@ main.pro-main { flex: 1; position: relative; z-index: 1; }
     margin: 0;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: anywhere;
@@ -591,7 +597,7 @@ main.pro-main { flex: 1; position: relative; z-index: 1; }
     top: calc(100% + 10px);
     right: 0;
     width: 320px;
-    background: rgba(10, 13, 16, 0.97);
+    background: rgba(30, 21, 14, 0.97);
     border: 1px solid var(--pro-line-hi);
     border-radius: var(--pro-r-md);
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);

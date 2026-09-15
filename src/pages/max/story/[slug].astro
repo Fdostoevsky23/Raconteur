@@ -327,13 +327,12 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
 <script>
     // === Likes + bookmarks (classic clone) ===
     import { supabase } from '../../../lib/supabase';
+    import { iconSvg } from '../../../lib/icons';
 
     const likeBtn = document.getElementById('likeBtn')!;
     const likeHeart = document.getElementById('likeHeart')!;
     const likeCount = document.getElementById('likeCount')!;
-    const likeHint = document.getElementById('likeHint')!;
     const slug = JSON.parse(document.getElementById('current-slug')?.textContent || '""');
-    const isDbStory = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
 
     async function initLikes() {
         // story_id is text now — static-slug stories take likes too.
@@ -499,7 +498,6 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     import { iconSvg } from '../../../lib/icons';
 
     const slug = JSON.parse(document.getElementById('current-slug')?.textContent || '""');
-    const isDbStory = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
     const section = document.getElementById('commentsSection')!;
     const list = document.getElementById('commentList')!;
     const countEl = document.getElementById('commentCount')!;
@@ -508,7 +506,6 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     const hint = document.getElementById('commentHint')!;
 
     let me: any = null;
-    let storyAuthorId: string | null = null;
     let meIsAdmin = false;
 
     // Interactive writes go through the dedicated write client (see lib/supabase-write.ts).
@@ -719,8 +716,6 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
         section.style.display = 'block';
         const { data: { session } } = await supabase.auth.getSession();
         me = session?.user || null;
-        const { data: storyRow } = await supabase.from('stories').select('author_id').eq('id', slug).maybeSingle();
-        storyAuthorId = storyRow?.author_id || null;
         if (me) {
             const { data: myProf } = await supabase.from('profiles').select('is_admin').eq('user_id', me.id).maybeSingle();
             meIsAdmin = !!myProf?.is_admin;

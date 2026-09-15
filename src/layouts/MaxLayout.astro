@@ -221,17 +221,17 @@ const navHref = {
             let qi = 0;
             let lastAuthor = 0;
 
-            function dropWord(text, isAuthor) {
-                if (rain.childElementCount > 60) return;
+            function dropWord(text: string, isAuthor: boolean) {
+                if (rain!.childElementCount > 60) return;
                 const el = document.createElement('span');
                 el.className = 'mx-rain-word' + (isAuthor ? ' is-author' : '');
                 el.textContent = isAuthor ? '\u2014 ' + text : text;
                 el.style.left = (2 + Math.random() * 92) + '%';
-                el.style.setProperty('--fall', (rain.offsetHeight + 90) + 'px');
+                el.style.setProperty('--fall', (rain!.offsetHeight + 90) + 'px');
                 el.style.setProperty('--rot', (Math.random() * 10 - 5).toFixed(1) + 'deg');
                 el.style.animationDuration = (2.4 + Math.random() * 2.2) + 's';
                 el.addEventListener('animationend', () => el.remove());
-                rain.appendChild(el);
+                rain!.appendChild(el);
             }
 
             setInterval(() => {
@@ -262,7 +262,7 @@ const navHref = {
             const WORDS = ['STORIES', 'POETRY', 'VERSE', 'PROSE', 'FICTION', 'EDIT', 'DRAFT', 'INK', 'CANON', 'CHAPTER'];
 
             function spawnWord() {
-                if (stage.childElementCount >= 3) return;
+                if (stage!.childElementCount >= 3) return;
                 const el = document.createElement('span');
                 el.className = 'mx-ghost-word';
                 el.textContent = WORDS[Math.floor(Math.random() * WORDS.length)];
@@ -274,12 +274,12 @@ const navHref = {
                 el.style.setProperty('--dy', (Math.random() * 8 - 4).toFixed(1) + 'vh');
                 el.style.setProperty('--rot', (Math.random() * 4 - 2).toFixed(1) + 'deg');
                 el.addEventListener('animationend', () => el.remove());
-                stage.appendChild(el);
+                stage!.appendChild(el);
             }
 
             if (reduced) {
                 spawnWord();
-                stage.querySelector('.mx-ghost-word')?.style.setProperty('animation', 'none');
+                stage!.querySelector<HTMLElement>('.mx-ghost-word')?.style.setProperty('animation', 'none');
                 return;
             }
             spawnWord();
@@ -316,12 +316,11 @@ const navHref = {
         // De-vibe DR4 — the colour fields respond to the reader: they swell gently
         // with scroll movement and settle when idle. Reduced-motion: stays quiet.
         {
-            const fields = document.querySelector('.mx-glass-field');
+            const fields = document.querySelector<HTMLElement>('.mx-glass-field');
             const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             if (fields && !reduced) {
                 let lastY = window.scrollY;
                 let boost = 0;
-                let decay = 0;
                 const tick = () => {
                     const y = window.scrollY;
                     const delta = Math.min(1, Math.abs(y - lastY) / 500);
@@ -332,11 +331,10 @@ const navHref = {
                 window.addEventListener('scroll', () => {
                     requestAnimationFrame(tick);
                 }, { passive: true });
-                decay = setInterval(() => {
+                setInterval(() => {
                     boost *= 0.94;
                     if (boost < 0.01) { boost = 0; fields.style.setProperty('--mx-field-boost', '0'); }
                     else fields.style.setProperty('--mx-field-boost', boost.toFixed(3));
-                    if (boost === 0) { /* keep interval, cheap */ }
                 }, 160);
             }
         }

@@ -3,6 +3,7 @@
 // read-time math, the plain-text parser (chapters/dividers/dropcaps) and the
 // DB-row → Story mapper (poem mode, excerpt fallback, chapter paging).
 import { describe, it, expect } from 'vitest';
+import type { StoryBlock } from '../src/data/stories';
 import { bandFromWords, buildStory, buildStoryFromDB } from '../src/lib/storyLoader';
 
 const meta = {
@@ -62,10 +63,12 @@ describe('buildStory — plain-text parsing', () => {
     it('blank lines split paragraphs; only the first gets the dropcap', () => {
         const s = buildStory(meta, 'First para here.\n\nSecond para.\n\nThird para.');
         expect(s.content.map((b: any) => b.type)).toEqual(['paragraph', 'paragraph', 'paragraph']);
-        expect(s.content[0].dropcap).toBe(true);
-        expect(s.content[1].dropcap).toBe(false);
-        expect(s.content[2].dropcap).toBe(false);
-        expect(s.content[0].text).toBe('First para here.');
+        // Narrow the union: only paragraph blocks carry the dropcap flag.
+        const paras = s.content.filter((b: any) => b.type === 'paragraph') as Extract<StoryBlock, { type: 'paragraph' }>[];
+        expect(paras[0].dropcap).toBe(true);
+        expect(paras[1].dropcap).toBe(false);
+        expect(paras[2].dropcap).toBe(false);
+        expect(paras[0].text).toBe('First para here.');
     });
 
     it('--- becomes the ✦ divider heading and advances the chapter', () => {
@@ -141,7 +144,8 @@ describe('buildStoryFromDB — the Supabase row mapper', () => {
         expect(s.genre).toBe('Poetry');
         expect(s.kind).toBe('poem');
         expect(s.content[0].text).toBe('line one<br>line two');
-        expect(s.content[0].dropcap).toBeFalsy();
+        const paras = s.content.filter((b: any) => b.type === 'paragraph') as Extract<StoryBlock, { type: 'paragraph' }>[];
+        expect(paras[0].dropcap).toBeFalsy();
     });
 
     it('"Chapter 1" paragraphs page the story like an ebook', () => {

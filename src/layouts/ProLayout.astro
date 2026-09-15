@@ -52,7 +52,7 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#06080a" />
+    <meta name="theme-color" content="#241a12" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
     <meta name="robots" content="noindex, nofollow" />
@@ -83,7 +83,7 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
     {/* Ambient glow fields — the desk lamp warmth + reading-nook cool */}
     <script>
         {
-            const amb = document.querySelector('.pro-ambient');
+            const amb = document.querySelector<HTMLElement>('.pro-ambient');
             const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             if (amb && !reduced) {
                 let lastY = window.scrollY;
@@ -215,17 +215,17 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
             let qi = 0;
             let lastAuthor = 0;
 
-            function dropWord(text, isAuthor) {
-                if (rain.childElementCount > 50) return;
+            function dropWord(text: string, isAuthor: boolean) {
+                if (rain!.childElementCount > 50) return;
                 const el = document.createElement('span');
                 el.className = 'pro-rain-word' + (isAuthor ? ' is-author' : '');
                 el.textContent = isAuthor ? '\u2014 ' + text : text;
                 el.style.left = (2 + Math.random() * 92) + '%';
-                el.style.setProperty('--fall', (rain.offsetHeight + 90) + 'px');
+                el.style.setProperty('--fall', (rain!.offsetHeight + 90) + 'px');
                 el.style.setProperty('--rot', (Math.random() * 10 - 5).toFixed(1) + 'deg');
                 el.style.animationDuration = (2.6 + Math.random() * 2.4) + 's';
                 el.addEventListener('animationend', () => el.remove());
-                rain.appendChild(el);
+                rain!.appendChild(el);
             }
 
             setInterval(() => {
@@ -611,7 +611,7 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
     .pro-search input:focus {
         width: 260px;
         border-color: var(--pro-amber);
-        background: rgba(6, 8, 10, 0.9);
+        background: rgba(22, 15, 10, 0.9);
     }
 
     .pro-search input::placeholder { color: var(--pro-text-3); }
@@ -631,7 +631,7 @@ const isHome = Astro.url.pathname === '/pro' || Astro.url.pathname === '/pro/';
         top: calc(100% + 8px);
         right: 0;
         width: 320px;
-        background: rgba(10, 13, 16, 0.97);
+        background: rgba(30, 21, 14, 0.97);
         border: 1px solid var(--pro-line-hi);
         border-radius: var(--pro-r-md);
         box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);

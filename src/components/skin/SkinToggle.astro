@@ -7,6 +7,7 @@
 // variant="editorial" — the paper pill used in the Raconteur Pro masthead;
 // default (no prop) keeps the classic cream pill untouched.
 import { isProPath, isMaxPath, isHomePath, toProPath, toMaxPath, toClassicPath } from '../../lib/skin';
+import Icon from '../Icon.astro';
 
 const here = Astro.url.pathname;
 const onPro = isProPath(here);
@@ -25,7 +26,7 @@ const maxHref = onMax ? toMaxPath(here) + q : toMaxPath(here) + q + suffix('welc
 interface Props {
     variant?: 'classic' | 'regal' | 'editorial';
 }
-const { variant = 'classic' } = Astro.props as any;
+const { variant = 'classic' } = Astro.props;
 
 // Boss mandate (Session 16): the skin switch appears on the home pages
 // ONLY — inner pages of every skin carry no toggle. The layouts also gate
@@ -34,40 +35,75 @@ const { variant = 'classic' } = Astro.props as any;
 if (!onHome) return;
 ---
 
-<div class={`skin-toggle ${variant === 'regal' ? 'regal' : variant === 'editorial' ? 'editorial' : ''}`} data-skin={onMax ? 'max' : (onPro ? 'pro' : 'classic')} role="group" aria-label="Choose site design">
-    <a
-        href={classicHref}
-        data-dest="classic"
-        data-cross={onNew ? '1' : undefined}
-        class={`toggle-btn classic ${!onNew ? 'active' : ''}`}
-        aria-current={!onNew ? 'page' : undefined}
-        title="The original Raconteur — the Classic edition"
+<div class={`skin-toggle-row ${variant === 'regal' ? 'regal' : variant === 'editorial' ? 'editorial' : ''}`}>
+    <div class={`skin-toggle ${variant === 'regal' ? 'regal' : variant === 'editorial' ? 'editorial' : ''}`} data-skin={onMax ? 'max' : (onPro ? 'pro' : 'classic')} role="group" aria-label="Choose site design">
+        <a
+            href={classicHref}
+            data-dest="classic"
+            data-cross={onNew ? '1' : undefined}
+            class={`toggle-btn classic ${!onNew ? 'active' : ''}`}
+            aria-current={!onNew ? 'page' : undefined}
+            title="The original Raconteur — the Classic edition"
+        >
+            Raconteur <span class="classic-sign">Classic</span>
+        </a>
+        <a
+            href={proHref}
+            data-dest="pro"
+            data-cross={onPro ? undefined : '1'}
+            class={`toggle-btn pro ${onPro ? 'active' : ''}`}
+            aria-current={onPro ? 'page' : undefined}
+            title="The Reader's Desk · the Raconteur+ edition"
+        >
+            Raconteur<span class="pro-sign">+</span>
+        </a>
+        <a
+            href={maxHref}
+            data-dest="max"
+            data-cross={onMax ? undefined : '1'}
+            class={`toggle-btn max ${onMax ? 'active' : ''}`}
+            aria-current={onMax ? 'page' : undefined}
+            title="The Editorial Split · the Raconteur Pro edition"
+        >
+            Raconteur <span class="max-sign">Pro</span>
+        </a>
+    </div>
+    {/* The ceremony voice — mute control (boss order, 2026-09-14). Both
+        glyphs ship server-rendered; CSS swaps them via aria-pressed, so
+        no JS-injected markup ever needs the scoped styles. */}
+    <button
+        type="button"
+        class="skin-mute-btn"
+        aria-pressed="true"
+        title="Mute the ceremony sounds"
+        aria-label="Toggle the skin ceremony sounds"
     >
-        Raconteur <span class="classic-sign">Classic</span>
-    </a>
-    <a
-        href={proHref}
-        data-dest="pro"
-        data-cross={onPro ? undefined : '1'}
-        class={`toggle-btn pro ${onPro ? 'active' : ''}`}
-        aria-current={onPro ? 'page' : undefined}
-        title="The Reader's Desk · the Raconteur+ edition"
-    >
-        Raconteur<span class="pro-sign">+</span>
-    </a>
-    <a
-        href={maxHref}
-        data-dest="max"
-        data-cross={onMax ? undefined : '1'}
-        class={`toggle-btn max ${onMax ? 'active' : ''}`}
-        aria-current={onMax ? 'page' : undefined}
-        title="The Editorial Split · the Raconteur Pro edition"
-    >
-        Raconteur <span class="max-sign">Pro</span>
-    </a>
+        <span class="snd-on"><Icon name="volume-2" size={14} stroke={2} /></span>
+        <span class="snd-off"><Icon name="volume-x" size={14} stroke={2} /></span>
+    </button>
 </div>
 
+<script is:inline>
+    // Born-correct glyph: sync the pressed state from localStorage the
+    // instant the row parses — no module import, no flash of the wrong
+    // icon for muted visitors. Key mirrors AUDIO_KEY in lib/ceremony-audio.
+    (function () {
+        try {
+            if (localStorage.getItem('raconteur.ceremony-audio') === 'off') {
+                var b = document.querySelector('.skin-mute-btn');
+                if (b) b.setAttribute('aria-pressed', 'false');
+            }
+        } catch (e) { /* no storage → default ON */ }
+    })();
+</script>
+
 <style>
+    .skin-toggle-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
     .skin-toggle {
         display: inline-flex;
         align-items: center;
@@ -106,13 +142,19 @@ if (!onHome) return;
         box-shadow: 0 2px 10px rgba(244, 237, 224, 0.25);
     }
 
-    /* The Classic button carries the aged-ink identity in every skin */
+    /* The Classic button carries the aged-ink identity in every skin.
+       Boss polish (2026-09-14): the edition word becomes a small raised
+       seal — 0.58em, lifted off the baseline like a superscript stamp —
+       so it stops crowding the pill. The "Pro" tail below gets the same
+       lift so both edition seals sit at one height. */
     .toggle-btn.classic .classic-sign {
         font-weight: 700;
-        margin-left: 2px;
-        font-size: 0.7em;
-        letter-spacing: 0.06em;
+        margin-left: 3px;
+        font-size: 0.58em;
+        letter-spacing: 0.1em;
         text-transform: uppercase;
+        position: relative;
+        top: -0.7em;
         color: #8a7f6a; /* the aged-ink grey of the classic paper */
         transition: color 0.25s;
     }
@@ -141,10 +183,12 @@ if (!onHome) return;
     /* The Raconteur Pro button carries the vermilion identity in every skin */
     .toggle-btn.max .max-sign {
         font-weight: 700;
-        margin-left: 2px;
-        font-size: 0.7em;
-        letter-spacing: 0.06em;
+        margin-left: 3px;
+        font-size: 0.62em;
+        letter-spacing: 0.1em;
         text-transform: uppercase;
+        position: relative;
+        top: -0.7em; /* the same raised seal as "Classic" — one height */
         color: #d8341c;
         transition: color 0.25s;
     }
@@ -163,7 +207,7 @@ if (!onHome) return;
         padding: 3px;
         gap: 3px;
         border: 1px solid rgba(201, 162, 75, 0.42);
-        background: rgba(11, 11, 14, 0.6);
+        background: rgba(26, 18, 12, 0.6);
         backdrop-filter: blur(12px) saturate(1.15);
         -webkit-backdrop-filter: blur(12px) saturate(1.15);
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(201, 162, 75, 0.08);
@@ -246,6 +290,53 @@ if (!onHome) return;
         .skin-toggle.regal .toggle-btn { font-size: 0.68rem; padding: 0.26rem 0.8rem; }
         .skin-toggle.editorial .toggle-btn { font-size: 0.66rem; padding: 0.26rem 0.62rem; }
     }
+
+    /* === THE CEREMONY VOICE — the mute button (boss order, 2026-09-14) ===
+       A quiet round switch beside the pill. Both glyphs ship server-rendered;
+       aria-pressed swaps them — zero JS-injected markup, so these scoped
+       styles always apply (the scoping-bug lesson from the bells). */
+    .skin-mute-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border: 1px solid rgba(228, 221, 200, 0.35);
+        border-radius: 50%;
+        background: rgba(30, 36, 32, 0.35);
+        color: rgba(228, 221, 200, 0.75);
+        cursor: pointer;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        transition: color 0.25s, border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .skin-mute-btn:hover { color: #f4ede0; }
+
+    .skin-mute-btn .snd-off { display: none; }
+    .skin-mute-btn[aria-pressed='false'] .snd-on { display: none; }
+    .skin-mute-btn[aria-pressed='false'] .snd-off { display: inline-flex; }
+    .skin-mute-btn[aria-pressed='false'] { color: rgba(228, 221, 200, 0.45); }
+
+    /* The regal crown beside the brass pill (Raconteur+ home) */
+    .skin-toggle-row.regal .skin-mute-btn {
+        border-color: rgba(201, 162, 75, 0.42);
+        background: rgba(26, 18, 12, 0.6);
+        color: rgba(242, 238, 227, 0.7);
+        box-shadow: inset 0 0 0 1px rgba(201, 162, 75, 0.08);
+    }
+
+    .skin-toggle-row.regal .skin-mute-btn:hover { color: #f2eee3; border-color: rgba(201, 162, 75, 0.6); }
+
+    /* The editorial paper pill beside the ink pill (Raconteur Pro home) */
+    .skin-toggle-row.editorial .skin-mute-btn {
+        border-color: rgba(28, 25, 23, 0.22);
+        background: rgba(250, 246, 239, 0.75);
+        color: rgba(28, 25, 23, 0.55);
+    }
+
+    .skin-toggle-row.editorial .skin-mute-btn:hover { color: #1c1917; }
 </style>
 
 <script is:inline>
@@ -285,7 +376,7 @@ if (!onHome) return;
             } else if (path === '/pro') {
                 bg = 'radial-gradient(85% 70% at 78% 6%, rgba(255, 106, 0, 0.34) 0%, rgba(255, 106, 0, 0) 60%),'
                    + 'radial-gradient(70% 60% at 8% 96%, rgba(46, 230, 168, 0.22) 0%, rgba(46, 230, 168, 0) 60%),'
-                   + '#06080a';
+                   + '#241a12';
             } else {
                 bg = 'radial-gradient(120% 100% at 50% 30%, #fffdf5 0%, #f7f0dd 61%, #efe5cc 100%)';
             }
@@ -336,6 +427,37 @@ if (!onHome) return;
             }
         });
     })();
+</script>
+
+<script>
+    // === THE CEREMONY VOICE (boss order, 2026-09-14) =========================
+    // Bundled (Vite-processed): the departure chime plays INSIDE the click
+    // gesture — the one moment every browser allows audio — and the mute
+    // button persists its state. The veil mechanic above stays is:inline
+    // and dependency-free by design.
+    import { playDeparture, readAudioEnabled, writeAudioEnabled } from '../../lib/ceremony-audio';
+
+    // The departure chime — one listener covers every toggle instance.
+    document.addEventListener('click', function (ev: MouseEvent) {
+        const target = ev.target as HTMLElement | null;
+        const a = target && target.closest ? target.closest<HTMLAnchorElement>('a[data-cross="1"]') : null;
+        if (!a) return;
+        if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
+        playDeparture(a.dataset.dest);
+    }, true);
+
+    // The mute button — one tap flips the glyph (aria-pressed) and the
+    // stored state; every ceremony on every skin goes silent until flipped
+    // back. Both glyphs ship server-rendered, CSS swaps them.
+    const muteBtn = document.querySelector<HTMLElement>('.skin-mute-btn');
+    if (muteBtn) {
+        muteBtn.addEventListener('click', function () {
+            const on = readAudioEnabled();
+            writeAudioEnabled(!on);
+            muteBtn.setAttribute('aria-pressed', String(!on));
+            muteBtn.title = !on ? 'Mute the ceremony sounds' : 'Play the ceremony sounds';
+        });
+    }
 </script>
 
 <style is:global>

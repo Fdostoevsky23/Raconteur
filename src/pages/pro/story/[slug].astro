@@ -331,9 +331,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     const likeBtn = document.getElementById('likeBtn')!;
     const likeHeart = document.getElementById('likeHeart')!;
     const likeCount = document.getElementById('likeCount')!;
-    const likeHint = document.getElementById('likeHint')!;
     const slug = JSON.parse(document.getElementById('current-slug')?.textContent || '""');
-    const isDbStory = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
 
     async function initLikes() {
         // story_id is text now — static-slug stories take likes too.
@@ -499,7 +497,6 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     import { iconSvg } from '../../../lib/icons';
 
     const slug = JSON.parse(document.getElementById('current-slug')?.textContent || '""');
-    const isDbStory = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
     const section = document.getElementById('commentsSection')!;
     const list = document.getElementById('commentList')!;
     const countEl = document.getElementById('commentCount')!;
@@ -508,7 +505,6 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     const hint = document.getElementById('commentHint')!;
 
     let me: any = null;
-    let storyAuthorId: string | null = null;
     let meIsAdmin = false;
 
     // Interactive writes go through the dedicated write client (see lib/supabase-write.ts).
@@ -719,8 +715,6 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
         section.style.display = 'block';
         const { data: { session } } = await supabase.auth.getSession();
         me = session?.user || null;
-        const { data: storyRow } = await supabase.from('stories').select('author_id').eq('id', slug).maybeSingle();
-        storyAuthorId = storyRow?.author_id || null;
         if (me) {
             const { data: myProf } = await supabase.from('profiles').select('is_admin').eq('user_id', me.id).maybeSingle();
             meIsAdmin = !!myProf?.is_admin;
@@ -895,7 +889,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
 
     /* === THE READING SHEET — the desk's focal surface === */
     .pro-sheet {
-        background: #0b0e11;
+        background: #2e2119;
         border: 1px solid var(--pro-line);
         border-radius: 24px;
         padding: 0 0 3rem;
@@ -913,7 +907,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
         gap: 1rem;
         margin: 1rem 1.2rem 0;
         padding: 0.65rem 1.1rem;
-        background: rgba(6, 8, 10, 0.85);
+        background: rgba(22, 15, 10, 0.85);
         border: 1px solid var(--pro-line-hi);
         border-radius: 999px;
         backdrop-filter: blur(16px) saturate(1.2);
@@ -1043,7 +1037,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
         width: min(100%, 380px);
         border: 1px solid var(--pro-line-hi);
         padding: 0.7rem;
-        background: #101418;
+        background: #2e2119;
         box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
     }
     .pro-cover-frame img {
@@ -1196,7 +1190,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     :global(body[data-theme='sepia']) .pro-chapter-btn { background: rgba(0, 0, 0, 0.06); color: #3a2f1e; }
     :global(body[data-theme='sepia']) .pro-cover-frame { background: #e2d5b8; }
 
-    :global(body[data-theme='dark']) .pro-sheet { background: #05070a; border-color: rgba(255, 255, 255, 0.12); }
+    :global(body[data-theme='dark']) .pro-sheet { background: #1a130e; border-color: rgba(255, 255, 255, 0.12); }
 
     /* === QUIET APPLAUSE === */
     .pro-like-row {
@@ -1335,10 +1329,10 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
     /* === REPORT MODAL — dark === */
     :global(.pro-report-modal) { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; }
     :global(.pro-report-modal.open) { display: flex; }
-    :global(.pro-report-backdrop) { position: absolute; inset: 0; background: rgba(4, 6, 8, 0.75); backdrop-filter: blur(4px); }
+    :global(.pro-report-backdrop) { position: absolute; inset: 0; background: rgba(12, 8, 5, 0.75); backdrop-filter: blur(4px); }
     :global(.pro-report-card) {
         position: relative; width: 90%; max-width: 400px;
-        background: rgba(11, 14, 17, 0.98);
+        background: rgba(30, 21, 14, 0.98);
         padding: 2rem 2.2rem;
         border-radius: 18px;
         border: 1px solid var(--pro-line-hi);
@@ -1375,7 +1369,7 @@ const authorSlug = story.author.toLowerCase().replace(/\s+/g, '-');
         width: 44px; height: 44px;
         border-radius: 50%;
         border: 1px solid var(--pro-line-hi);
-        background: rgba(6, 8, 10, 0.85);
+        background: rgba(22, 15, 10, 0.85);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
         color: var(--pro-amber);

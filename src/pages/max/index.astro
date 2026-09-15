@@ -496,16 +496,16 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
 
     const giantsData = JSON.parse(document.getElementById('giants-data')?.textContent || '[]');
     const giantModal = document.getElementById('mxGiantModal');
-    function fillGiant(i) {
+    function fillGiant(i: number) {
         const g = giantsData[i];
         if (!g || !giantModal) return;
-        giantModal.querySelector('.mx-gm-name').textContent = g.name;
-        giantModal.querySelector('.mx-gm-years').textContent = `${g.born} – ${g.died} · Active ${g.active}`;
-        giantModal.querySelector('.mx-gm-bio').textContent = g.bio;
-        giantModal.querySelector('.mx-gm-opus').textContent = g.magnumOpus;
-        giantModal.querySelector('.mx-gm-books').textContent = g.books.join(' · ');
-        giantModal.querySelector('.mx-gm-fact').textContent = g.unknownFact;
-        giantModal.querySelector('.mx-gm-line').textContent = '"' + g.greatestLine + '"';
+        giantModal.querySelector('.mx-gm-name')!.textContent = g.name;
+        giantModal.querySelector('.mx-gm-years')!.textContent = `${g.born} – ${g.died} · Active ${g.active}`;
+        giantModal.querySelector('.mx-gm-bio')!.textContent = g.bio;
+        giantModal.querySelector('.mx-gm-opus')!.textContent = g.magnumOpus;
+        giantModal.querySelector('.mx-gm-books')!.textContent = g.books.join(' · ');
+        giantModal.querySelector('.mx-gm-fact')!.textContent = g.unknownFact;
+        giantModal.querySelector('.mx-gm-line')!.textContent = '"' + g.greatestLine + '"';
     }
     document.querySelectorAll('.mx-giant').forEach((tile, i) => {
         tile.addEventListener('click', () => {
@@ -527,7 +527,7 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         let canonIdx = 0;
         const lineEl = document.getElementById('mxCanonLine');
         const nameEl = document.getElementById('mxCanonName');
-        const cameoEl = document.getElementById('mxCameoImg');
+        const cameoEl = document.getElementById('mxCameoImg') as HTMLImageElement | null;
         const dots = Array.from(document.querySelectorAll('.mx-canon-dot'));
         const show = (i: number) => {
             const g = giantsData[i];
@@ -579,10 +579,10 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         const statsIO = new IntersectionObserver((entries) => {
             entries.forEach((entry) => {
                 if (!entry.isIntersecting) return;
-                const el = entry.target;
+                const el = entry.target as HTMLElement;
                 const target = parseInt(el.dataset.target || '0', 10);
                 const start = performance.now();
-                const tick = (now) => {
+                const tick = (now: number) => {
                     const progress = Math.min((now - start) / 1400, 1);
                     const eased = 1 - Math.pow(1 - progress, 3);
                     el.textContent = Math.round(target * eased).toLocaleString();
@@ -606,7 +606,7 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     import { esc } from '../../lib/escape';
     import { restInsert } from '../../lib/supabase-write';
 
-    function timeAgo(iso) {
+    function timeAgo(iso: string) {
         const diff = Date.now() - new Date(iso).getTime();
         const m = Math.floor(diff / 60000);
         if (m < 1) return 'just now';
@@ -617,32 +617,32 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     }
 
     const BLOCKED_WORDS = ['fuck','shit','ass','bitch','cunt','dick','pussy','nigger','faggot','retard'];
-    function isVulgar(text) {
-        const words = (text.toLowerCase().match(/[a-z']+/g) || []);
+    function isVulgar(text: string) {
+        const words = (text.toLowerCase().match(/[a-z']+/g) || []) as string[];
         return BLOCKED_WORDS.some(w => words.includes(w));
     }
 
     const VISITOR_NAMES = ['Wandering Reader','Quiet Guest','Night Owl','Book Wanderer','Shelf Browser','Page Turner','Ink Dreamer','Story Seeker'];
 
-    async function loadNotes(type, listId) {
+    async function loadNotes(type: string, listId: string) {
         const { data: notes } = await supabase
             .from('community_notes')
             .select('*')
             .eq('note_type', type)
             .gt('expires_at', new Date().toISOString())
             .order('created_at', { ascending: true });
-        const list = document.getElementById(listId);
+        const list = document.getElementById(listId)!;
         if (!notes || notes.length === 0) {
             list.innerHTML = `<p class="mx-notes-empty">No ${type === 'whisper' ? 'whispers' : 'notes'} yet. Be the first.</p>`;
             return;
         }
-        const byParent = {};
-        notes.forEach(n => {
+        const byParent: Record<string, any[]> = {};
+        notes.forEach((n: any) => {
             const key = n.parent_id || 'root';
             (byParent[key] = byParent[key] || []).push(n);
         });
-        const renderNote = (n, isReply) => {
-            const replies = (byParent[n.id] || []).map(r => renderNote(r, true)).join('');
+        const renderNote = (n: any, isReply: boolean): string => {
+            const replies = (byParent[n.id] || []).map((r: any) => renderNote(r, true)).join('');
             const replyBtn = (!isReply && type === 'note')
                 ? `<button class="mx-note-reply" data-id="${esc(n.id)}" data-name="${esc(n.display_name)}">Reply</button>`
                 : '';
@@ -659,16 +659,16 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
                 </div>`;
         };
         const topLevel = (byParent['root'] || []).reverse();
-        list.innerHTML = topLevel.map(n => renderNote(n, false)).join('');
-        list.querySelectorAll('.mx-note-report').forEach(btn => {
-            btn.addEventListener('click', () => openReportModal(btn.dataset.id, btn.dataset.type));
+        list.innerHTML = topLevel.map((n: any) => renderNote(n, false)).join('');
+        list.querySelectorAll<HTMLElement>('.mx-note-report').forEach(btn => {
+            btn.addEventListener('click', () => openReportModal(btn.dataset.id || '', btn.dataset.type || 'note'));
         });
         if (type === 'note') {
-            list.querySelectorAll('.mx-note-reply').forEach(btn => {
+            list.querySelectorAll<HTMLElement>('.mx-note-reply').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const noteId = btn.dataset.id;
                     const name = btn.dataset.name;
-                    const input = document.getElementById('noteInput');
+                    const input = document.getElementById('noteInput') as HTMLInputElement;
                     input.value = `@${name} `;
                     input.focus();
                     input.dataset.replyTo = noteId;
@@ -679,19 +679,19 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         }
     }
 
-    async function postNote(type, inputId, listId) {
-        const input = document.getElementById(inputId);
+    async function postNote(type: string, inputId: string, listId: string) {
+        const input = document.getElementById(inputId) as HTMLInputElement;
         const body = input.value.trim();
         if (!body) return false;
         if (isVulgar(body)) {
             dvToast('Please keep it kind. Raconteur is a quiet place.');
             return false;
         }
-        const nameEl = document.getElementById(type === 'whisper' ? 'whisperName' : 'noteName');
+        const nameEl = document.getElementById(type === 'whisper' ? 'whisperName' : 'noteName') as HTMLInputElement | null;
         const displayName = (nameEl && nameEl.value.trim()) ? nameEl.value.trim()
             : (type === 'whisper' ? 'Anonymous' : VISITOR_NAMES[Math.floor(Math.random() * VISITOR_NAMES.length)]);
         const days = type === 'whisper' ? 7 : 30;
-        const payload = {
+        const payload: any = {
             note_type: type,
             body,
             display_name: displayName,
@@ -743,10 +743,10 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
 
     let lastWhisper = 0;
     const WHISPER_COOLDOWN = 15000;
-    document.getElementById('whisperForm').addEventListener('submit', async (e) => {
+    document.getElementById('whisperForm')!.addEventListener('submit', async (e) => {
         e.preventDefault();
         const now = Date.now();
-        const btn = document.querySelector('#whisperForm button[type="submit"]');
+        const btn = document.querySelector<HTMLButtonElement>('#whisperForm button[type="submit"]');
         const hint = document.getElementById('whisperHint');
         if (now - lastWhisper < WHISPER_COOLDOWN) {
             const wait = Math.ceil((WHISPER_COOLDOWN - (now - lastWhisper)) / 1000);
@@ -765,10 +765,10 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
 
     let lastNote = 0;
     const NOTE_COOLDOWN = 15000;
-    document.getElementById('noteForm').addEventListener('submit', async (e) => {
+    document.getElementById('noteForm')!.addEventListener('submit', async (e) => {
         e.preventDefault();
         const now = Date.now();
-        const btn = document.querySelector('#noteForm button[type="submit"]');
+        const btn = document.querySelector<HTMLButtonElement>('#noteForm button[type="submit"]');
         const hint = document.getElementById('noteHint');
         if (now - lastNote < NOTE_COOLDOWN) {
             const wait = Math.ceil((NOTE_COOLDOWN - (now - lastNote)) / 1000);
@@ -786,7 +786,7 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
     });
 
     // Report modal — glass
-    function openReportModal(targetId, targetType) {
+    function openReportModal(targetId: string, targetType: string) {
         let modal = document.getElementById('mxRoomReportModal');
         if (!modal) {
             modal = document.createElement('div');
@@ -810,12 +810,12 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
                     <p id="mxReportMsg" class="mx-report-msg"></p>
                 </div>`;
             document.body.appendChild(modal);
-            modal.querySelector('.mx-modal-close').addEventListener('click', () => modal.setAttribute('hidden', ''));
-            modal.querySelector('.mx-modal-backdrop').addEventListener('click', () => modal.setAttribute('hidden', ''));
+            modal.querySelector('.mx-modal-close')!.addEventListener('click', () => modal!.setAttribute('hidden', ''));
+            modal.querySelector('.mx-modal-backdrop')!.addEventListener('click', () => modal!.setAttribute('hidden', ''));
         }
-        const reasonSel = document.getElementById('mxReportReason');
-        const msg = document.getElementById('mxReportMsg');
-        const submitBtn = document.getElementById('mxReportSubmit');
+        const reasonSel = document.getElementById('mxReportReason') as HTMLSelectElement;
+        const msg = document.getElementById('mxReportMsg')!;
+        const submitBtn = document.getElementById('mxReportSubmit') as HTMLButtonElement;
         reasonSel.value = 'spam';
         msg.textContent = '';
         modal.removeAttribute('hidden');
@@ -831,7 +831,7 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
             if (error) { msg.textContent = 'Something went wrong.'; msg.style.color = '#b3261e'; }
             else { msg.textContent = 'Thank you. We will look into it.'; msg.style.color = '#2e7d32'; }
             submitBtn.textContent = 'Submit report';
-            setTimeout(() => modal.setAttribute('hidden', ''), 1400);
+            setTimeout(() => modal!.setAttribute('hidden', ''), 1400);
         };
     }
 </script>
@@ -1280,6 +1280,7 @@ const firstQuote = interludeQuotes[Math.floor(Math.random() * interludeQuotes.le
         margin: 1.1rem 0 0;
         display: -webkit-box;
         -webkit-line-clamp: 3;
+        line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
